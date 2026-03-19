@@ -1,0 +1,11 @@
+{
+  "import": [
+    "blem/image/image",
+    "blem/image/color",
+    "blem/image/color/palette",
+    "blem/image/draw",
+    "blem/image/internal/binary",
+    "bikallem/compress/lzw",
+    "moonbitlang/core/buffer"
+  ]
+}

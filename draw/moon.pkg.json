@@ -1,0 +1,7 @@
+{
+  "import": [
+    "blem/image/image",
+    "blem/image/color",
+    "blem/image/internal/imageutil"
+  ]
+}

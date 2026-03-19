@@ -1,0 +1,26 @@
+{
+  "name": "bikallem/compress",
+  "version": "0.1.1",
+  "deps": {
+    "moonbitlang/async": "0.16.7"
+  },
+  "readme": "README.md",
+  "repository": "https://github.com/bikallem/compress.git",
+  "license": "Apache-2.0",
+  "keywords": [
+    "compression",
+    "deflate",
+    "gzip",
+    "zlib",
+    "lzw",
+    "bzip2"
+  ],
+  "description": "Compression library for MoonBit: flate, gzip, zlib, lzw, bzip2",
+  "source": ".",
+  "exclude": [
+    "benchmarks",
+    "tools",
+    "testdata",
+    "examples"
+  ]
+}

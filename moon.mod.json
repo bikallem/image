@@ -1,0 +1,12 @@
+{
+  "name": "blem/image",
+  "version": "0.1.0",
+  "deps": {
+    "bikallem/compress": "0.1.1"
+  },
+  "source": ".",
+  "exclude": [
+    "vendor",
+    "testdata"
+  ]
+}
