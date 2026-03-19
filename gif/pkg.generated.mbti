@@ -1,0 +1,46 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "blem/image/gif"
+
+import {
+  "blem/image/image",
+}
+
+// Values
+pub fn decode(Bytes) -> @image.AnyImage raise
+
+pub fn decode_all(Bytes) -> GIF raise
+
+pub fn decode_config(Bytes) -> @image.Config raise
+
+pub let disposal_background : Byte
+
+pub let disposal_none : Byte
+
+pub let disposal_previous : Byte
+
+pub fn encode(@image.ImagePaletted) -> Bytes raise
+
+pub fn encode_all(GIF) -> Bytes raise
+
+// Errors
+pub(all) suberror GifError {
+  FormatError(String)
+  UnsupportedError(String)
+  UnexpectedEOF
+}
+pub impl Show for GifError
+
+// Types and methods
+pub(all) struct GIF {
+  image : Array[@image.ImagePaletted]
+  delay : Array[Int]
+  loop_count : Int
+  disposal : Array[Byte]
+  background_index : Byte
+  config : @image.Config
+}
+
+// Type aliases
+
+// Traits
+

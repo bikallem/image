@@ -26,7 +26,7 @@ pub fn ImageUniform::bounds(_self : ImageUniform) -> Rectangle {
 }
 
 ///|
-pub fn ImageUniform::opaque(self : ImageUniform) -> Bool {
+pub fn ImageUniform::is_opaque(self : ImageUniform) -> Bool {
   let (_, _, _, a) = self.c.rgba()
   a == 0xffffU
 }
@@ -41,4 +41,4 @@ pub let white : ImageUniform = { c: @color.AnyColor::Gray16({ y: 0xffffU }) }
 pub let transparent : ImageUniform = { c: @color.AnyColor::Alpha16({ a: 0U }) }
 
 ///|
-pub let opaque : ImageUniform = { c: @color.AnyColor::Alpha16({ a: 0xffffU }) }
+pub let fully_opaque : ImageUniform = { c: @color.AnyColor::Alpha16({ a: 0xffffU }) }

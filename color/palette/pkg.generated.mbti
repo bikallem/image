@@ -1,0 +1,20 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "blem/image/color/palette"
+
+import {
+  "blem/image/color",
+}
+
+// Values
+pub fn plan9() -> Array[@color.AnyColor]
+
+pub fn websafe() -> Array[@color.AnyColor]
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits
+

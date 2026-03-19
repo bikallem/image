@@ -61,7 +61,7 @@ pub fn ImageYCbCr::ycbcr_at(
 }
 
 ///|
-pub fn ImageYCbCr::opaque(_self : ImageYCbCr) -> Bool {
+pub fn ImageYCbCr::is_opaque(_self : ImageYCbCr) -> Bool {
   true
 }
 
@@ -93,20 +93,15 @@ pub fn new_image_ycbcr(
   if total < 0 {
     abort("image: NewYCbCr Rectangle has huge or negative dimensions")
   }
-  let i0 = w * h
-  let i1 = i0 + cw * ch
-  let buf = FixedArray::make(total, b'\x00')
   {
-    y_: buf,
-    cb: buf,
-    cr: buf,
+    y_: FixedArray::make(w * h, b'\x00'),
+    cb: FixedArray::make(cw * ch, b'\x00'),
+    cr: FixedArray::make(cw * ch, b'\x00'),
     y_stride: w,
     c_stride: cw,
     subsample_ratio,
     rect: r,
   }
-  // Note: In MoonBit we can't slice FixedArray, so we store the full buffer
-  // and use offsets. For simplicity, we use separate arrays here.
 }
 
 ///|
@@ -157,7 +152,7 @@ pub fn ImageNYCbCrA::a_offset(self : ImageNYCbCrA, x : Int, y : Int) -> Int {
 }
 
 ///|
-pub fn ImageNYCbCrA::opaque(self : ImageNYCbCrA) -> Bool {
+pub fn ImageNYCbCrA::is_opaque(self : ImageNYCbCrA) -> Bool {
   if self.ycbcr.rect.empty() {
     return true
   }

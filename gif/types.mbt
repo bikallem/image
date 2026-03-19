@@ -51,7 +51,7 @@ pub let disposal_background : Byte = b'\x01'
 pub let disposal_previous : Byte = b'\x02'
 
 ///|
-struct GifByteReader {
+priv struct GifByteReader {
   data : Bytes
   mut pos : Int
 }

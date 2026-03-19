@@ -351,7 +351,7 @@ fn write_dqt(e : Encoder, tq : Int, quant : FixedArray[Int]) -> Unit {
 
 ///|
 /// Encode an image as a baseline JPEG.
-pub fn encode(img : @image.AnyImage) -> Bytes raise JpegError {
+pub fn encode(img : @image.AnyImage) -> Bytes {
   let e = Encoder::new()
   let bounds = img.bounds()
   let width = bounds.dx()

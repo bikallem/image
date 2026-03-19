@@ -1,0 +1,93 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "blem/image/jpeg"
+
+import {
+  "blem/image/image",
+}
+
+// Values
+pub fn build_huffman_table(HuffmanTable, FixedArray[Int], FixedArray[Int]) -> Unit raise JpegError
+
+pub fn decode(Bytes) -> @image.AnyImage raise
+
+pub fn decode_config(Bytes) -> @image.Config raise
+
+pub fn decode_huffman(Decoder, HuffmanTable) -> Int raise JpegError
+
+pub fn encode(@image.AnyImage) -> Bytes
+
+pub fn fdct(FixedArray[Byte], FixedArray[Int]) -> Unit
+
+pub fn idct(FixedArray[Int], FixedArray[Byte]) -> Unit
+
+pub fn process_sos(Decoder) -> @image.AnyImage raise JpegError
+
+// Errors
+pub(all) suberror JpegError {
+  FormatError(String)
+  UnsupportedError(String)
+  UnexpectedEOF
+}
+pub impl Show for JpegError
+
+// Types and methods
+pub(all) struct BitReader {
+  mut buf : Int
+  mut n : Int
+}
+pub fn BitReader::new() -> Self
+
+pub(all) struct ByteReader {
+  data : Bytes
+  mut pos : Int
+}
+pub fn ByteReader::new(Bytes) -> Self
+pub fn ByteReader::peek_byte(Self) -> Byte raise JpegError
+pub fn ByteReader::read_byte(Self) -> Byte raise JpegError
+pub fn ByteReader::read_bytes(Self, Int) -> Bytes raise JpegError
+pub fn ByteReader::read_uint16_be(Self) -> UInt raise JpegError
+pub fn ByteReader::remaining(Self) -> Int
+pub fn ByteReader::skip(Self, Int) -> Unit raise JpegError
+
+pub(all) struct Component {
+  mut id : Int
+  mut h : Int
+  mut v : Int
+  mut qt : Int
+  mut dc_huff_idx : Int
+  mut ac_huff_idx : Int
+  mut dc_pred : Int
+}
+pub fn Component::new() -> Self
+
+pub(all) struct Decoder {
+  r : ByteReader
+  quant : FixedArray[QuantTable]
+  huff : FixedArray[FixedArray[HuffmanTable]]
+  mut num_components : Int
+  comp : FixedArray[Component]
+  mut width : Int
+  mut height : Int
+  mut restart_interval : Int
+  bits : BitReader
+}
+pub fn Decoder::new(Bytes) -> Self
+
+pub(all) struct HuffmanTable {
+  num_codes : FixedArray[Int]
+  symbols : FixedArray[Int]
+  min_code : FixedArray[Int]
+  max_code : FixedArray[Int]
+  val_ptr : FixedArray[Int]
+}
+pub fn HuffmanTable::new() -> Self
+
+pub(all) struct QuantTable {
+  data : FixedArray[Int]
+}
+pub fn QuantTable::new() -> Self
+
+// Type aliases
+
+// Traits
+

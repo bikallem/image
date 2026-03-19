@@ -117,7 +117,7 @@ pub fn decode(data : Bytes) -> @image.AnyImage raise Error {
 }
 
 ///|
-fn or_png_error[T](result : T) -> T raise PngError {
+fn[T] or_png_error(result : T) -> T {
   result
 }
 

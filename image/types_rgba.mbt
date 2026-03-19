@@ -82,7 +82,7 @@ pub fn ImageRGBA::sub_image(
 }
 
 ///|
-pub fn ImageRGBA::opaque(self : ImageRGBA) -> Bool {
+pub fn ImageRGBA::is_opaque(self : ImageRGBA) -> Bool {
   if self.rect.empty() {
     return true
   }
@@ -134,10 +134,10 @@ pub fn ImageRGBA64::rgba64_at(
   }
   let i = self.pix_offset(x, y)
   {
-    r: self.pix[i].to_uint() << 8 | self.pix[i + 1].to_uint(),
-    g: self.pix[i + 2].to_uint() << 8 | self.pix[i + 3].to_uint(),
-    b: self.pix[i + 4].to_uint() << 8 | self.pix[i + 5].to_uint(),
-    a: self.pix[i + 6].to_uint() << 8 | self.pix[i + 7].to_uint(),
+    r: (self.pix[i].to_uint() << 8) | self.pix[i + 1].to_uint(),
+    g: (self.pix[i + 2].to_uint() << 8) | self.pix[i + 3].to_uint(),
+    b: (self.pix[i + 4].to_uint() << 8) | self.pix[i + 5].to_uint(),
+    a: (self.pix[i + 6].to_uint() << 8) | self.pix[i + 7].to_uint(),
   }
 }
 
@@ -204,7 +204,7 @@ pub fn ImageRGBA64::sub_image(
 }
 
 ///|
-pub fn ImageRGBA64::opaque(self : ImageRGBA64) -> Bool {
+pub fn ImageRGBA64::is_opaque(self : ImageRGBA64) -> Bool {
   if self.rect.empty() {
     return true
   }

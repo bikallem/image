@@ -1,0 +1,265 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "blem/image/image"
+
+import {
+  "blem/image/color",
+}
+
+// Values
+pub let black : ImageUniform
+
+pub fn decode(Bytes) -> (AnyImage, String) raise
+
+pub fn decode_config(Bytes) -> (Config, String) raise
+
+pub let fully_opaque : ImageUniform
+
+pub fn new_image_alpha(Rectangle) -> ImageAlpha
+
+pub fn new_image_alpha16(Rectangle) -> ImageAlpha16
+
+pub fn new_image_gray(Rectangle) -> ImageGray
+
+pub fn new_image_gray16(Rectangle) -> ImageGray16
+
+pub fn new_image_nrgba(Rectangle) -> ImageNRGBA
+
+pub fn new_image_nrgba64(Rectangle) -> ImageNRGBA64
+
+pub fn new_image_nycbcra(Rectangle, YCbCrSubsampleRatio) -> ImageNYCbCrA
+
+pub fn new_image_paletted(Rectangle, @color.Palette) -> ImagePaletted
+
+pub fn new_image_rgba(Rectangle) -> ImageRGBA
+
+pub fn new_image_rgba64(Rectangle) -> ImageRGBA64
+
+pub fn new_image_ycbcr(Rectangle, YCbCrSubsampleRatio) -> ImageYCbCr
+
+pub fn new_image_ycbcr_separate(Rectangle, YCbCrSubsampleRatio) -> ImageYCbCr
+
+pub fn pixel_buffer_length(Int, Rectangle, String) -> Int
+
+pub fn pt(Int, Int) -> Point
+
+pub fn rect(Int, Int, Int, Int) -> Rectangle
+
+pub fn register_format(String, String, (Bytes) -> AnyImage raise, (Bytes) -> Config raise) -> Unit
+
+pub let transparent : ImageUniform
+
+pub let white : ImageUniform
+
+// Errors
+pub(all) suberror ImageError {
+  FormatError(String)
+}
+pub impl Show for ImageError
+
+// Types and methods
+pub(all) enum AnyImage {
+  RGBA(ImageRGBA)
+  RGBA64(ImageRGBA64)
+  NRGBA(ImageNRGBA)
+  NRGBA64(ImageNRGBA64)
+  Alpha(ImageAlpha)
+  Alpha16(ImageAlpha16)
+  Gray(ImageGray)
+  Gray16(ImageGray16)
+  Paletted(ImagePaletted)
+  YCbCr(ImageYCbCr)
+  NYCbCrA(ImageNYCbCrA)
+  Uniform(ImageUniform)
+}
+pub impl Image for AnyImage
+
+pub(all) struct Config {
+  color_model : @color.AnyModel
+  width : Int
+  height : Int
+}
+pub impl Show for Config
+
+pub(all) struct ImageAlpha {
+  pix : FixedArray[Byte]
+  pix_offset : Int
+  stride : Int
+  rect : Rectangle
+}
+pub fn ImageAlpha::alpha_at(Self, Int, Int) -> @color.Alpha
+pub fn ImageAlpha::is_opaque(Self) -> Bool
+pub fn ImageAlpha::pix_offset(Self, Int, Int) -> Int
+pub fn ImageAlpha::set_alpha(Self, Int, Int, @color.Alpha) -> Unit
+
+pub(all) struct ImageAlpha16 {
+  pix : FixedArray[Byte]
+  pix_offset : Int
+  stride : Int
+  rect : Rectangle
+}
+pub fn ImageAlpha16::alpha16_at(Self, Int, Int) -> @color.Alpha16
+pub fn ImageAlpha16::pix_offset(Self, Int, Int) -> Int
+pub fn ImageAlpha16::set_alpha16(Self, Int, Int, @color.Alpha16) -> Unit
+
+pub(all) struct ImageGray {
+  pix : FixedArray[Byte]
+  pix_offset : Int
+  stride : Int
+  rect : Rectangle
+}
+pub fn ImageGray::gray_at(Self, Int, Int) -> @color.Gray
+pub fn ImageGray::pix_offset(Self, Int, Int) -> Int
+pub fn ImageGray::set_gray(Self, Int, Int, @color.Gray) -> Unit
+
+pub(all) struct ImageGray16 {
+  pix : FixedArray[Byte]
+  pix_offset : Int
+  stride : Int
+  rect : Rectangle
+}
+pub fn ImageGray16::gray16_at(Self, Int, Int) -> @color.Gray16
+pub fn ImageGray16::pix_offset(Self, Int, Int) -> Int
+pub fn ImageGray16::set_gray16(Self, Int, Int, @color.Gray16) -> Unit
+
+pub(all) struct ImageNRGBA {
+  pix : FixedArray[Byte]
+  pix_offset : Int
+  stride : Int
+  rect : Rectangle
+}
+pub fn ImageNRGBA::is_opaque(Self) -> Bool
+pub fn ImageNRGBA::nrgba_at(Self, Int, Int) -> @color.NRGBA
+pub fn ImageNRGBA::pix_offset(Self, Int, Int) -> Int
+pub fn ImageNRGBA::set_nrgba(Self, Int, Int, @color.NRGBA) -> Unit
+
+pub(all) struct ImageNRGBA64 {
+  pix : FixedArray[Byte]
+  pix_offset : Int
+  stride : Int
+  rect : Rectangle
+}
+pub fn ImageNRGBA64::nrgba64_at(Self, Int, Int) -> @color.NRGBA64
+pub fn ImageNRGBA64::pix_offset(Self, Int, Int) -> Int
+pub fn ImageNRGBA64::set_nrgba64(Self, Int, Int, @color.NRGBA64) -> Unit
+
+pub(all) struct ImageNYCbCrA {
+  ycbcr : ImageYCbCr
+  a : FixedArray[Byte]
+  a_stride : Int
+}
+pub fn ImageNYCbCrA::a_offset(Self, Int, Int) -> Int
+pub fn ImageNYCbCrA::is_opaque(Self) -> Bool
+pub fn ImageNYCbCrA::nycbcra_at(Self, Int, Int) -> @color.NYCbCrA
+
+pub(all) struct ImagePaletted {
+  pix : FixedArray[Byte]
+  pix_offset : Int
+  stride : Int
+  rect : Rectangle
+  palette : @color.Palette
+}
+pub fn ImagePaletted::at(Self, Int, Int) -> @color.AnyColor
+pub fn ImagePaletted::color_index_at(Self, Int, Int) -> Byte
+pub fn ImagePaletted::pix_offset(Self, Int, Int) -> Int
+pub fn ImagePaletted::set_color_index(Self, Int, Int, Byte) -> Unit
+
+pub(all) struct ImageRGBA {
+  pix : FixedArray[Byte]
+  pix_offset : Int
+  stride : Int
+  rect : Rectangle
+}
+pub fn ImageRGBA::is_opaque(Self) -> Bool
+pub fn ImageRGBA::pix_offset(Self, Int, Int) -> Int
+pub fn ImageRGBA::rgba_at(Self, Int, Int) -> @color.RGBA
+pub fn ImageRGBA::set(Self, Int, Int, @color.AnyColor) -> Unit
+pub fn ImageRGBA::set_rgba(Self, Int, Int, @color.RGBA) -> Unit
+pub fn ImageRGBA::sub_image(Self, Rectangle) -> Self
+
+pub(all) struct ImageRGBA64 {
+  pix : FixedArray[Byte]
+  pix_offset : Int
+  stride : Int
+  rect : Rectangle
+}
+pub fn ImageRGBA64::is_opaque(Self) -> Bool
+pub fn ImageRGBA64::pix_offset(Self, Int, Int) -> Int
+pub fn ImageRGBA64::rgba64_at(Self, Int, Int) -> @color.RGBA64
+pub fn ImageRGBA64::set(Self, Int, Int, @color.AnyColor) -> Unit
+pub fn ImageRGBA64::set_rgba64(Self, Int, Int, @color.RGBA64) -> Unit
+pub fn ImageRGBA64::sub_image(Self, Rectangle) -> Self
+
+pub(all) struct ImageUniform {
+  c : @color.AnyColor
+}
+pub fn ImageUniform::bounds(Self) -> Rectangle
+pub fn ImageUniform::color_model(Self) -> @color.AnyModel
+pub fn ImageUniform::is_opaque(Self) -> Bool
+
+pub(all) struct ImageYCbCr {
+  y_ : FixedArray[Byte]
+  cb : FixedArray[Byte]
+  cr : FixedArray[Byte]
+  y_stride : Int
+  c_stride : Int
+  subsample_ratio : YCbCrSubsampleRatio
+  rect : Rectangle
+}
+pub fn ImageYCbCr::c_offset(Self, Int, Int) -> Int
+pub fn ImageYCbCr::is_opaque(Self) -> Bool
+pub fn ImageYCbCr::y_offset(Self, Int, Int) -> Int
+pub fn ImageYCbCr::ycbcr_at(Self, Int, Int) -> @color.YCbCr
+
+pub(all) struct Point {
+  x : Int
+  y : Int
+}
+pub fn Point::add(Self, Self) -> Self
+pub fn Point::div(Self, Int) -> Self
+pub fn Point::in_(Self, Rectangle) -> Bool
+pub fn Point::mod(Self, Rectangle) -> Self
+pub fn Point::mul(Self, Int) -> Self
+pub fn Point::sub(Self, Self) -> Self
+pub impl Eq for Point
+pub impl Show for Point
+
+pub(all) struct Rectangle {
+  min : Point
+  max : Point
+}
+pub fn Rectangle::add(Self, Point) -> Self
+pub fn Rectangle::canon(Self) -> Self
+pub fn Rectangle::dx(Self) -> Int
+pub fn Rectangle::dy(Self) -> Int
+pub fn Rectangle::empty(Self) -> Bool
+pub fn Rectangle::eq(Self, Self) -> Bool
+pub fn Rectangle::in_(Self, Self) -> Bool
+pub fn Rectangle::inset(Self, Int) -> Self
+pub fn Rectangle::intersect(Self, Self) -> Self
+pub fn Rectangle::overlaps(Self, Self) -> Bool
+pub fn Rectangle::size(Self) -> Point
+pub fn Rectangle::sub(Self, Point) -> Self
+pub fn Rectangle::union(Self, Self) -> Self
+pub impl Eq for Rectangle
+pub impl Show for Rectangle
+
+pub(all) enum YCbCrSubsampleRatio {
+  Ratio444
+  Ratio422
+  Ratio420
+  Ratio440
+  Ratio411
+  Ratio410
+}
+pub impl Eq for YCbCrSubsampleRatio
+pub impl Show for YCbCrSubsampleRatio
+
+// Type aliases
+
+// Traits
+pub(open) trait Image {
+  color_model(Self) -> @color.AnyModel
+  bounds(Self) -> Rectangle
+  at(Self, Int, Int) -> @color.AnyColor
+}
+

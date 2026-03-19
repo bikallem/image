@@ -78,7 +78,7 @@ pub fn encode_all(gif : GIF) -> Bytes raise Error {
     let pixels = pixel_buf.to_bytes()
     // Compress with LZW
     let compressed = @lzw.compress(pixels, @lzw.BitOrder::LSB, lit_width)
-      |> or_gif_error!()
+      |> or_gif_error()
     // Write as sub-blocks
     write_sub_blocks(buf, compressed)
   }

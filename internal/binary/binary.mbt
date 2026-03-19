@@ -10,14 +10,18 @@ pub fn read_uint16_le(b : FixedArray[Byte], off : Int) -> UInt {
 
 ///|
 pub fn read_uint32_be(b : FixedArray[Byte], off : Int) -> UInt {
-  (b[off].to_uint() << 24) | (b[off + 1].to_uint() << 16) |
-  (b[off + 2].to_uint() << 8) | b[off + 3].to_uint()
+  (b[off].to_uint() << 24) |
+  (b[off + 1].to_uint() << 16) |
+  (b[off + 2].to_uint() << 8) |
+  b[off + 3].to_uint()
 }
 
 ///|
 pub fn read_uint32_le(b : FixedArray[Byte], off : Int) -> UInt {
-  b[off].to_uint() | (b[off + 1].to_uint() << 8) |
-  (b[off + 2].to_uint() << 16) | (b[off + 3].to_uint() << 24)
+  b[off].to_uint() |
+  (b[off + 1].to_uint() << 8) |
+  (b[off + 2].to_uint() << 16) |
+  (b[off + 3].to_uint() << 24)
 }
 
 ///|
@@ -55,8 +59,10 @@ pub fn read_uint16_be_bytes(b : Bytes, off : Int) -> UInt {
 
 ///|
 pub fn read_uint32_be_bytes(b : Bytes, off : Int) -> UInt {
-  (b[off].to_uint() << 24) | (b[off + 1].to_uint() << 16) |
-  (b[off + 2].to_uint() << 8) | b[off + 3].to_uint()
+  (b[off].to_uint() << 24) |
+  (b[off + 1].to_uint() << 16) |
+  (b[off + 2].to_uint() << 8) |
+  b[off + 3].to_uint()
 }
 
 ///|
@@ -66,6 +72,8 @@ pub fn read_uint16_le_bytes(b : Bytes, off : Int) -> UInt {
 
 ///|
 pub fn read_uint32_le_bytes(b : Bytes, off : Int) -> UInt {
-  b[off].to_uint() | (b[off + 1].to_uint() << 8) |
-  (b[off + 2].to_uint() << 16) | (b[off + 3].to_uint() << 24)
+  b[off].to_uint() |
+  (b[off + 1].to_uint() << 8) |
+  (b[off + 2].to_uint() << 16) |
+  (b[off + 3].to_uint() << 24)
 }

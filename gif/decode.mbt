@@ -27,7 +27,7 @@ pub fn decode_config(data : Bytes) -> @image.Config raise Error {
 fn bytes_to_string(b : Bytes) -> String {
   let buf = StringBuilder::new()
   for i in 0..<b.length() {
-    buf.write_char(Char::from_int(b[i].to_int()))
+    buf.write_char(b[i].to_int().unsafe_to_char())
   }
   buf.to_string()
 }
@@ -160,7 +160,7 @@ pub fn decode_all(data : Bytes) -> GIF raise Error {
 }
 
 ///|
-fn or_gif_error[T](result : T) -> T raise GifError {
+fn[T] or_gif_error(result : T) -> T {
   result
 }
 

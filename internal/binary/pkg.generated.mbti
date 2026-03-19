@@ -1,0 +1,36 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "blem/image/internal/binary"
+
+// Values
+pub fn read_uint16_be(FixedArray[Byte], Int) -> UInt
+
+pub fn read_uint16_be_bytes(Bytes, Int) -> UInt
+
+pub fn read_uint16_le(FixedArray[Byte], Int) -> UInt
+
+pub fn read_uint16_le_bytes(Bytes, Int) -> UInt
+
+pub fn read_uint32_be(FixedArray[Byte], Int) -> UInt
+
+pub fn read_uint32_be_bytes(Bytes, Int) -> UInt
+
+pub fn read_uint32_le(FixedArray[Byte], Int) -> UInt
+
+pub fn read_uint32_le_bytes(Bytes, Int) -> UInt
+
+pub fn write_uint16_be(FixedArray[Byte], Int, UInt) -> Unit
+
+pub fn write_uint16_le(FixedArray[Byte], Int, UInt) -> Unit
+
+pub fn write_uint32_be(FixedArray[Byte], Int, UInt) -> Unit
+
+pub fn write_uint32_le(FixedArray[Byte], Int, UInt) -> Unit
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits
+

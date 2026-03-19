@@ -1,0 +1,160 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "blem/image/color"
+
+// Values
+pub fn cmyk_to_rgb(Byte, Byte, Byte, Byte) -> (Byte, Byte, Byte)
+
+pub fn rgb_to_cmyk(Byte, Byte, Byte) -> (Byte, Byte, Byte, Byte)
+
+pub fn rgb_to_ycbcr(Byte, Byte, Byte) -> (Byte, Byte, Byte)
+
+pub fn sq_diff(UInt, UInt) -> UInt
+
+pub fn ycbcr_to_rgb(Byte, Byte, Byte) -> (Byte, Byte, Byte)
+
+// Errors
+
+// Types and methods
+pub(all) struct Alpha {
+  a : Byte
+}
+pub impl Color for Alpha
+pub impl Eq for Alpha
+pub impl Show for Alpha
+
+pub(all) struct Alpha16 {
+  a : UInt
+}
+pub impl Color for Alpha16
+pub impl Eq for Alpha16
+pub impl Show for Alpha16
+
+pub(all) enum AnyColor {
+  RGBA(RGBA)
+  RGBA64(RGBA64)
+  NRGBA(NRGBA)
+  NRGBA64(NRGBA64)
+  Alpha(Alpha)
+  Alpha16(Alpha16)
+  Gray(Gray)
+  Gray16(Gray16)
+  YCbCr(YCbCr)
+  NYCbCrA(NYCbCrA)
+  CMYK(CMYK)
+}
+pub impl Color for AnyColor
+pub impl Eq for AnyColor
+pub impl Show for AnyColor
+
+pub(all) enum AnyModel {
+  RGBAModel
+  RGBA64Model
+  NRGBAModel
+  NRGBA64Model
+  AlphaModel
+  Alpha16Model
+  GrayModel
+  Gray16Model
+  YCbCrModel
+  NYCbCrAModel
+  CMYKModel
+  PaletteModel(Palette)
+}
+pub fn AnyModel::convert(Self, AnyColor) -> AnyColor
+pub impl Show for AnyModel
+
+pub(all) struct CMYK {
+  c : Byte
+  m : Byte
+  y : Byte
+  k : Byte
+}
+pub impl Color for CMYK
+pub impl Eq for CMYK
+pub impl Show for CMYK
+
+pub(all) struct Gray {
+  y : Byte
+}
+pub impl Color for Gray
+pub impl Eq for Gray
+pub impl Show for Gray
+
+pub(all) struct Gray16 {
+  y : UInt
+}
+pub impl Color for Gray16
+pub impl Eq for Gray16
+pub impl Show for Gray16
+
+pub(all) struct NRGBA {
+  r : Byte
+  g : Byte
+  b : Byte
+  a : Byte
+}
+pub impl Color for NRGBA
+pub impl Eq for NRGBA
+pub impl Show for NRGBA
+
+pub(all) struct NRGBA64 {
+  r : UInt
+  g : UInt
+  b : UInt
+  a : UInt
+}
+pub impl Color for NRGBA64
+pub impl Eq for NRGBA64
+pub impl Show for NRGBA64
+
+pub(all) struct NYCbCrA {
+  ycbcr : YCbCr
+  a : Byte
+}
+pub impl Color for NYCbCrA
+pub impl Eq for NYCbCrA
+pub impl Show for NYCbCrA
+
+pub(all) struct Palette {
+  colors : Array[AnyColor]
+}
+pub fn Palette::convert(Self, AnyColor) -> AnyColor?
+pub fn Palette::index(Self, AnyColor) -> Int
+pub impl Show for Palette
+
+pub(all) struct RGBA {
+  r : Byte
+  g : Byte
+  b : Byte
+  a : Byte
+}
+pub impl Color for RGBA
+pub impl Eq for RGBA
+pub impl Show for RGBA
+
+pub(all) struct RGBA64 {
+  r : UInt
+  g : UInt
+  b : UInt
+  a : UInt
+}
+pub impl Color for RGBA64
+pub impl Eq for RGBA64
+pub impl Show for RGBA64
+
+pub(all) struct YCbCr {
+  y : Byte
+  cb : Byte
+  cr : Byte
+}
+pub impl Color for YCbCr
+pub impl Eq for YCbCr
+pub impl Show for YCbCr
+
+// Type aliases
+
+// Traits
+pub(open) trait Color {
+  rgba(Self) -> (UInt, UInt, UInt, UInt)
+}
+

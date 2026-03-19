@@ -1,0 +1,40 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "blem/image/png"
+
+import {
+  "blem/image/image",
+}
+
+// Values
+pub fn decode(Bytes) -> @image.AnyImage raise
+
+pub fn decode_config(Bytes) -> @image.Config raise
+
+pub fn encode(@image.AnyImage) -> Bytes raise
+
+pub fn paeth(Int, Int, Int) -> Int
+
+// Errors
+pub(all) suberror PngError {
+  FormatError(String)
+  UnsupportedError(String)
+  UnexpectedEOF
+}
+pub impl Show for PngError
+
+// Types and methods
+pub(all) struct ByteReader {
+  data : Bytes
+  mut pos : Int
+}
+pub fn ByteReader::new(Bytes) -> Self
+pub fn ByteReader::read_byte(Self) -> Byte raise PngError
+pub fn ByteReader::read_bytes(Self, Int) -> Bytes raise PngError
+pub fn ByteReader::read_uint32_be(Self) -> UInt raise PngError
+pub fn ByteReader::remaining(Self) -> Int
+pub fn ByteReader::skip(Self, Int) -> Unit raise PngError
+
+// Type aliases
+
+// Traits
+

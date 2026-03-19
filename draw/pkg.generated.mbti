@@ -1,0 +1,28 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "blem/image/draw"
+
+import {
+  "blem/image/image",
+}
+
+// Values
+pub fn draw(@image.AnyImage, @image.Rectangle, @image.AnyImage, @image.Point, Op) -> Unit
+
+pub fn draw_mask(@image.AnyImage, @image.Rectangle, @image.AnyImage, @image.Point, @image.AnyImage?, @image.Point, Op) -> Unit
+
+pub fn floyd_steinberg_draw(@image.ImagePaletted, @image.Rectangle, @image.AnyImage, @image.Point) -> Unit
+
+// Errors
+
+// Types and methods
+pub(all) enum Op {
+  Over
+  Src
+}
+pub impl Eq for Op
+pub impl Show for Op
+
+// Type aliases
+
+// Traits
+

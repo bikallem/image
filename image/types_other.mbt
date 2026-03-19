@@ -39,7 +39,7 @@ pub fn ImageNRGBA::set_nrgba(
 }
 
 ///|
-pub fn ImageNRGBA::opaque(self : ImageNRGBA) -> Bool {
+pub fn ImageNRGBA::is_opaque(self : ImageNRGBA) -> Bool {
   if self.rect.empty() {
     return true
   }
@@ -90,10 +90,10 @@ pub fn ImageNRGBA64::nrgba64_at(
   }
   let i = self.pix_offset(x, y)
   {
-    r: self.pix[i].to_uint() << 8 | self.pix[i + 1].to_uint(),
-    g: self.pix[i + 2].to_uint() << 8 | self.pix[i + 3].to_uint(),
-    b: self.pix[i + 4].to_uint() << 8 | self.pix[i + 5].to_uint(),
-    a: self.pix[i + 6].to_uint() << 8 | self.pix[i + 7].to_uint(),
+    r: (self.pix[i].to_uint() << 8) | self.pix[i + 1].to_uint(),
+    g: (self.pix[i + 2].to_uint() << 8) | self.pix[i + 3].to_uint(),
+    b: (self.pix[i + 4].to_uint() << 8) | self.pix[i + 5].to_uint(),
+    a: (self.pix[i + 6].to_uint() << 8) | self.pix[i + 7].to_uint(),
   }
 }
 
@@ -165,7 +165,7 @@ pub fn ImageAlpha::set_alpha(
 }
 
 ///|
-pub fn ImageAlpha::opaque(self : ImageAlpha) -> Bool {
+pub fn ImageAlpha::is_opaque(self : ImageAlpha) -> Bool {
   if self.rect.empty() {
     return true
   }
@@ -215,7 +215,7 @@ pub fn ImageAlpha16::alpha16_at(
     return { a: 0U }
   }
   let i = self.pix_offset(x, y)
-  { a: self.pix[i].to_uint() << 8 | self.pix[i + 1].to_uint() }
+  { a: (self.pix[i].to_uint() << 8) | self.pix[i + 1].to_uint() }
 }
 
 ///|
@@ -314,7 +314,7 @@ pub fn ImageGray16::gray16_at(
     return { y: 0U }
   }
   let i = self.pix_offset(x, y)
-  { y: self.pix[i].to_uint() << 8 | self.pix[i + 1].to_uint() }
+  { y: (self.pix[i].to_uint() << 8) | self.pix[i + 1].to_uint() }
 }
 
 ///|
