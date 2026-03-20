@@ -20,7 +20,7 @@ pub fn ImageCMYK::cmyk_at(self : ImageCMYK, x : Int, y : Int) -> @color.CMYK {
   if x < r.min_x || x >= r.max_x || y < r.min_y || y >= r.max_y {
     return { c: b'\x00', m: b'\x00', y: b'\x00', k: b'\x00' }
   }
-  let i = self.pix_offset(x, y)
+  let i = self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x) * 4
   {
     c: self.pix.unsafe_get(i),
     m: self.pix.unsafe_get(i + 1),
@@ -40,7 +40,7 @@ pub fn ImageCMYK::set_cmyk(
   if x < r.min_x || x >= r.max_x || y < r.min_y || y >= r.max_y {
     return
   }
-  let i = self.pix_offset(x, y)
+  let i = self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x) * 4
   self.pix.unsafe_set(i, c.c)
   self.pix.unsafe_set(i + 1, c.m)
   self.pix.unsafe_set(i + 2, c.y)
@@ -60,7 +60,7 @@ pub fn ImageCMYK::set(
   }
   let c1 = @color.AnyModel::CMYKModel.convert(c)
   guard c1 is @color.AnyColor::CMYK(cc) else { return }
-  let i = self.pix_offset(x, y)
+  let i = self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x) * 4
   self.pix.unsafe_set(i, cc.c)
   self.pix.unsafe_set(i + 1, cc.m)
   self.pix.unsafe_set(i + 2, cc.y)

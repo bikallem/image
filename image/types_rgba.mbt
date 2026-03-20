@@ -20,7 +20,7 @@ pub fn ImageRGBA::rgba_at(self : ImageRGBA, x : Int, y : Int) -> @color.RGBA {
   if x < r.min_x || x >= r.max_x || y < r.min_y || y >= r.max_y {
     return { r: b'\x00', g: b'\x00', b: b'\x00', a: b'\x00' }
   }
-  let i = self.pix_offset(x, y)
+  let i = self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x) * 4
   {
     r: self.pix.unsafe_get(i),
     g: self.pix.unsafe_get(i + 1),
@@ -42,7 +42,7 @@ pub fn ImageRGBA::set(
   }
   let c1 = @color.AnyModel::RGBAModel.convert(c)
   guard c1 is @color.AnyColor::RGBA(rgba) else { return }
-  let i = self.pix_offset(x, y)
+  let i = self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x) * 4
   self.pix.unsafe_set(i, rgba.r)
   self.pix.unsafe_set(i + 1, rgba.g)
   self.pix.unsafe_set(i + 2, rgba.b)
@@ -60,7 +60,7 @@ pub fn ImageRGBA::set_rgba(
   if x < r.min_x || x >= r.max_x || y < r.min_y || y >= r.max_y {
     return
   }
-  let i = self.pix_offset(x, y)
+  let i = self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x) * 4
   self.pix.unsafe_set(i, c.r)
   self.pix.unsafe_set(i + 1, c.g)
   self.pix.unsafe_set(i + 2, c.b)
@@ -135,7 +135,7 @@ pub fn ImageRGBA64::rgba64_at(
   if x < r.min_x || x >= r.max_x || y < r.min_y || y >= r.max_y {
     return { r: 0U, g: 0U, b: 0U, a: 0U }
   }
-  let i = self.pix_offset(x, y)
+  let i = self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x) * 8
   {
     r: (self.pix.unsafe_get(i).to_uint() << 8) |
     self.pix.unsafe_get(i + 1).to_uint(),
@@ -161,7 +161,7 @@ pub fn ImageRGBA64::set(
   }
   let c1 = @color.AnyModel::RGBA64Model.convert(c)
   guard c1 is @color.AnyColor::RGBA64(rgba64) else { return }
-  let i = self.pix_offset(x, y)
+  let i = self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x) * 8
   self.pix.unsafe_set(i, (rgba64.r >> 8).to_byte())
   self.pix.unsafe_set(i + 1, rgba64.r.to_byte())
   self.pix.unsafe_set(i + 2, (rgba64.g >> 8).to_byte())
@@ -183,7 +183,7 @@ pub fn ImageRGBA64::set_rgba64(
   if x < r.min_x || x >= r.max_x || y < r.min_y || y >= r.max_y {
     return
   }
-  let i = self.pix_offset(x, y)
+  let i = self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x) * 8
   self.pix.unsafe_set(i, (c.r >> 8).to_byte())
   self.pix.unsafe_set(i + 1, c.r.to_byte())
   self.pix.unsafe_set(i + 2, (c.g >> 8).to_byte())
