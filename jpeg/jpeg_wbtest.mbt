@@ -57,7 +57,7 @@ test "zig_unzig" {
 
 ///|
 /// Port of Go's TestWriter from writer_test.go.
-/// JPEG encode produces valid output bytes.
+/// JPEG encode -> decode roundtrip with delta check.
 test "jpeg_writer" {
   let r = @image.rect(0, 0, 64, 64)
   let m = @image.new_image_rgba(r)
@@ -76,13 +76,33 @@ test "jpeg_writer" {
     }
   }
   let encoded = encode(@image.AnyImage::RGBA(m))
-  // Verify it starts with JPEG SOI marker (0xFF 0xD8)
-  assert_true(encoded.length() > 2)
+  // Verify markers
   assert_eq(encoded[0], b'\xFF')
   assert_eq(encoded[1], b'\xD8')
-  // Verify it ends with JPEG EOI marker (0xFF 0xD9)
-  assert_eq(encoded[encoded.length() - 2], b'\xFF')
-  assert_eq(encoded[encoded.length() - 1], b'\xD9')
+  // Decode roundtrip
+  let decoded = decode(encoded)
+  let b = decoded.bounds()
+  assert_eq(b.dx(), 64)
+  assert_eq(b.dy(), 64)
+  // JPEG is lossy — check average delta is small
+  let mut total_delta = 0
+  let mut num_pixels = 0
+  for y in 0..<64 {
+    for x in 0..<64 {
+      let (r1, _, _, _) = (@image.AnyImage::RGBA(m)).at(x, y).rgba()
+      let (r2, _, _, _) = decoded.at(x, y).rgba()
+      let d = if r1 >= r2 {
+        (r1 - r2).reinterpret_as_int()
+      } else {
+        (r2 - r1).reinterpret_as_int()
+      }
+      total_delta += d >> 8
+      num_pixels += 1
+    }
+  }
+  let avg = total_delta / num_pixels
+  // Quality 75 default — verify reasonable fidelity
+  assert_true(avg < 80)
 }
 
 ///|

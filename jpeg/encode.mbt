@@ -1,24 +1,23 @@
 ///|
-// Standard JPEG luminance (Y) quantization table (quality 50)
-let luma_quant : FixedArray[Int] = [
-  16, 11, 10, 16, 24, 40, 51, 61, 12, 12, 14, 19, 26, 58, 60, 55, 14, 13, 16, 24,
-  40, 57, 69, 56, 14, 17, 22, 29, 51, 87, 80, 62, 18, 22, 37, 56, 68, 109, 103, 77,
-  24, 35, 55, 64, 81, 104, 113, 92, 49, 64, 78, 87, 103, 121, 120, 101, 72, 92, 95,
-  98, 112, 100, 103, 99,
+// Unscaled quantization tables in zig-zag order (from JPEG spec section K.1).
+// Scaled by quality at encode time.
+let unscaled_quant_luma : FixedArray[Int] = [
+  16, 11, 12, 14, 12, 10, 16, 14, 13, 14, 18, 17, 16, 19, 24, 40, 26, 24, 22,
+  22, 24, 49, 35, 37, 29, 40, 58, 51, 61, 60, 57, 51, 56, 55, 64, 72, 92, 78,
+  64, 68, 87, 69, 55, 56, 80, 109, 81, 87, 95, 98, 103, 104, 103, 62, 77, 113,
+  121, 112, 100, 120, 92, 101, 103, 99,
 ]
 
 ///|
-// Standard JPEG chrominance (Cb/Cr) quantization table (quality 50)
-let chroma_quant : FixedArray[Int] = [
-  17, 18, 24, 47, 99, 99, 99, 99, 18, 21, 26, 66, 99, 99, 99, 99, 24, 26, 56, 99,
-  99, 99, 99, 99, 47, 66, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99,
-  99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99,
-  99, 99, 99, 99,
+let unscaled_quant_chroma : FixedArray[Int] = [
+  17, 18, 18, 24, 21, 24, 47, 26, 26, 47, 99, 66, 56, 66, 99, 99, 99, 99, 99,
+  99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99,
+  99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99,
+  99, 99, 99, 99, 99, 99, 99,
 ]
 
 ///|
 // Standard JPEG luminance DC Huffman table
-// (counts, symbols)
 let luma_dc_counts : FixedArray[Int] = [
   0, 1, 5, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0,
 ]
@@ -29,20 +28,27 @@ let luma_dc_symbols : FixedArray[Int] = [
 ]
 
 ///|
-// Standard JPEG luminance AC Huffman table
+// Standard JPEG luminance AC Huffman table (162 symbols)
 let luma_ac_counts : FixedArray[Int] = [
   0, 2, 1, 3, 3, 2, 4, 3, 5, 5, 4, 4, 0, 0, 1, 125,
 ]
 
 ///|
 let luma_ac_symbols : FixedArray[Int] = [
-  1, 2, 3, 0, 4, 17, 5, 18, 33, 49, 65, 6, 19, 34, 50, 80, 20, 66, 114, 16, 32, 48,
-  64, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 145, 146, 147, 148, 149,
-  150, 151, 152, 153, 154, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 177,
-  178, 179, 180, 181, 182, 183, 184, 185, 186, 193, 194, 195, 196, 197, 198, 199,
-  200, 201, 202, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 225, 226, 227,
-  228, 229, 230, 231, 232, 233, 234, 241, 242, 243, 244, 245, 246, 247, 248, 249,
-  250,
+  0x01, 0x02, 0x03, 0x00, 0x04, 0x11, 0x05, 0x12, 0x21, 0x31, 0x41, 0x06,
+  0x13, 0x51, 0x61, 0x07, 0x22, 0x71, 0x14, 0x32, 0x81, 0x91, 0xa1, 0x08,
+  0x23, 0x42, 0xb1, 0xc1, 0x15, 0x52, 0xd1, 0xf0, 0x24, 0x33, 0x62, 0x72,
+  0x82, 0x09, 0x0a, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x25, 0x26, 0x27, 0x28,
+  0x29, 0x2a, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x43, 0x44, 0x45,
+  0x46, 0x47, 0x48, 0x49, 0x4a, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59,
+  0x5a, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x73, 0x74, 0x75,
+  0x76, 0x77, 0x78, 0x79, 0x7a, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89,
+  0x8a, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9a, 0xa2, 0xa3,
+  0xa4, 0xa5, 0xa6, 0xa7, 0xa8, 0xa9, 0xaa, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6,
+  0xb7, 0xb8, 0xb9, 0xba, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7, 0xc8, 0xc9,
+  0xca, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7, 0xd8, 0xd9, 0xda, 0xe1, 0xe2,
+  0xe3, 0xe4, 0xe5, 0xe6, 0xe7, 0xe8, 0xe9, 0xea, 0xf1, 0xf2, 0xf3, 0xf4,
+  0xf5, 0xf6, 0xf7, 0xf8, 0xf9, 0xfa,
 ]
 
 ///|
@@ -57,23 +63,27 @@ let chroma_dc_symbols : FixedArray[Int] = [
 ]
 
 ///|
-// Standard JPEG chrominance AC Huffman table
+// Standard JPEG chrominance AC Huffman table (162 symbols)
 let chroma_ac_counts : FixedArray[Int] = [
   0, 2, 1, 2, 4, 4, 3, 4, 7, 5, 4, 4, 0, 1, 2, 119,
 ]
 
 ///|
 let chroma_ac_symbols : FixedArray[Int] = [
-  0, 1, 2, 3, 17, 4, 5, 33, 49, 6, 18, 65, 81, 7, 97, 113, 19, 34, 50, 129, 8, 20,
-  66, 130, 145, 161, 177, 193, 9, 35, 51, 82, 240, 21, 98, 114, 209, 10, 22, 36, 52,
-  225, 37, 241, 23, 24, 25, 26, 38, 39, 40, 41, 42, 53, 54, 55, 56, 57, 58, 67, 68,
-  69, 70, 71, 72, 73, 74, 83, 84, 85, 86, 87, 88, 89, 90, 99, 100, 101, 102, 103,
-  104, 105, 106, 115, 116, 117, 118, 119, 120, 121, 122, 131, 132, 133, 134, 135,
-  136, 137, 138, 146, 147, 148, 149, 150, 151, 152, 153, 154, 162, 163, 164, 165,
-  166, 167, 168, 169, 170, 178, 179, 180, 181, 182, 183, 184, 185, 186, 194, 195,
-  196, 197, 198, 199, 200, 201, 202, 210, 211, 212, 213, 214, 215, 216, 217, 218,
-  226, 227, 228, 229, 230, 231, 232, 233, 234, 242, 243, 244, 245, 246, 247, 248,
-  249, 250,
+  0x00, 0x01, 0x02, 0x03, 0x11, 0x04, 0x05, 0x21, 0x31, 0x06, 0x12, 0x41,
+  0x51, 0x07, 0x61, 0x71, 0x13, 0x22, 0x32, 0x81, 0x08, 0x14, 0x42, 0x91,
+  0xa1, 0xb1, 0xc1, 0x09, 0x23, 0x33, 0x52, 0xf0, 0x15, 0x62, 0x72, 0xd1,
+  0x0a, 0x16, 0x24, 0x34, 0xe1, 0x25, 0xf1, 0x17, 0x18, 0x19, 0x1a, 0x26,
+  0x27, 0x28, 0x29, 0x2a, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x43, 0x44,
+  0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58,
+  0x59, 0x5a, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x73, 0x74,
+  0x75, 0x76, 0x77, 0x78, 0x79, 0x7a, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87,
+  0x88, 0x89, 0x8a, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9a,
+  0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8, 0xa9, 0xaa, 0xb2, 0xb3, 0xb4,
+  0xb5, 0xb6, 0xb7, 0xb8, 0xb9, 0xba, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7,
+  0xc8, 0xc9, 0xca, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7, 0xd8, 0xd9, 0xda,
+  0xe2, 0xe3, 0xe4, 0xe5, 0xe6, 0xe7, 0xe8, 0xe9, 0xea, 0xf2, 0xf3, 0xf4,
+  0xf5, 0xf6, 0xf7, 0xf8, 0xf9, 0xfa,
 ]
 
 ///|
@@ -115,7 +125,8 @@ fn enc_write_bits(e : Encoder, v : Int, n : Int) -> Unit {
 fn enc_flush_bits(e : Encoder) -> Unit {
   if e.bit_count > 0 {
     let remaining = 8 - e.bit_count
-    let byte_val = (((e.bit_buf << remaining) | ((1 << remaining) - 1)) & 0xFF).to_byte()
+    let byte_val = (((e.bit_buf << remaining) | ((1 << remaining) - 1)) &
+      0xFF).to_byte()
     enc_write_byte(e, byte_val)
     e.bit_buf = 0
     e.bit_count = 0
@@ -221,21 +232,30 @@ fn coeff_to_size_value(v : Int) -> (Int, Int) {
     return (0, 0)
   }
   let abs_v = if v < 0 { -v } else { v }
-  // Size = number of bits needed to represent abs_v
   let mut size = 0
   let mut tmp = abs_v
   while tmp > 0 {
     size += 1
     tmp = tmp >> 1
   }
-  // Value: if positive, use abs_v; if negative, use abs_v - 2^size
   let value = if v > 0 { v } else { v + (1 << size) - 1 }
   (size, value)
 }
 
 ///|
+/// Divide a by b, rounding to nearest (not toward zero), matching Go's div().
+fn jpeg_div(a : Int, b : Int) -> Int {
+  if a >= 0 {
+    (a + (b >> 1)) / b
+  } else {
+    -((-a + (b >> 1)) / b)
+  }
+}
+
+///|
 /// Encode a single 8x8 block.
-/// block[] is in natural (row-major) order.
+/// block[] is in natural (row-major) order after FDCT.
+/// quant[] is in zig-zag order.
 /// Returns the new DC predictor.
 fn encode_block(
   e : Encoder,
@@ -247,48 +267,28 @@ fn encode_block(
   ac_codes : FixedArray[Int],
   ac_lengths : FixedArray[Int]
 ) -> Int {
-  // Quantize in zig-zag order
-  let zig = FixedArray::make(64, 0)
-  for k in 0..<64 {
-    let qval = quant[k]
-    let coeff = block[unzig[k]]
-    // Round to nearest integer after dividing by quantization step
-    let rounded = if coeff >= 0 {
-      (coeff + qval / 2) / qval
-    } else {
-      -((-coeff + qval / 2) / qval)
-    }
-    zig[k] = rounded
-  }
-  // DC coefficient
-  let dc_diff = zig[0] - dc_pred
-  enc_dc_coeff(e, dc_codes, dc_lengths, dc_diff)
-  // AC coefficients
+  // DC coefficient: quantize with 8x scale factor (matching Go)
+  let dc = jpeg_div(block[0], 8 * quant[0])
+  enc_dc_coeff(e, dc_codes, dc_lengths, dc - dc_pred)
+  // AC coefficients in zig-zag order
   let mut run = 0
-  for k = 1; k < 64; k = k + 1 {
-    let coeff = zig[k]
-    if coeff == 0 {
+  for zig = 1; zig < 64; zig = zig + 1 {
+    let ac = jpeg_div(block[unzig[zig]], 8 * quant[zig])
+    if ac == 0 {
       run += 1
-      if run == 16 {
-        // ZRL
-        enc_emit_symbol(e, ac_codes, ac_lengths, 0xF0)
-        run = 0
-      }
     } else {
-      // Emit ZRL for full runs of 16
-      while run >= 16 {
+      while run > 15 {
         enc_emit_symbol(e, ac_codes, ac_lengths, 0xF0)
         run -= 16
       }
-      enc_ac_coeff(e, ac_codes, ac_lengths, run, coeff)
+      enc_ac_coeff(e, ac_codes, ac_lengths, run, ac)
       run = 0
     }
   }
-  // EOB if needed
   if run > 0 {
     enc_emit_symbol(e, ac_codes, ac_lengths, 0x00) // EOB
   }
-  zig[0]
+  dc
 }
 
 ///|
@@ -305,7 +305,6 @@ fn extract_block(
     for px in 0..<8 {
       let sx = bx * 8 + px
       let sy = by * 8 + py
-      // Clamp to plane dimensions (edge replication)
       let csx = if sx >= plane_w { plane_w - 1 } else { sx }
       let csy = if sy >= plane_h { plane_h - 1 } else { sy }
       dst[py * 8 + px] = plane[csy * plane_w + csx]
@@ -323,7 +322,6 @@ fn write_dht(
   symbols : FixedArray[Int]
 ) -> Unit {
   let num_symbols = symbols.length()
-  // Length = 2 (length field) + 1 (tc/th) + 16 (counts) + num_symbols
   let seg_len = (1 + 16 + num_symbols + 2).reinterpret_as_uint()
   enc_write_marker(e, marker_dht)
   enc_write_u16(e, seg_len)
@@ -338,38 +336,67 @@ fn write_dht(
 
 ///|
 /// Write a DQT (Define Quantization Table) segment.
-fn write_dqt(e : Encoder, tq : Int, quant : FixedArray[Int]) -> Unit {
-  // Length = 2 + 1 + 64 = 67
+/// quant[] is in zig-zag order.
+fn write_dqt(e : Encoder, tq : Int, quant : FixedArray[Byte]) -> Unit {
   enc_write_marker(e, marker_dqt)
   enc_write_u16(e, 67U)
   enc_write_raw(e, tq.to_byte())
-  // Write in zig-zag order
   for k in 0..<64 {
-    enc_write_raw(e, quant[k].to_byte())
+    enc_write_raw(e, quant[k])
   }
 }
 
 ///|
+/// Scale quantization table by quality (1-100). Returns table in zig-zag order.
+fn scale_quant(
+  unscaled : FixedArray[Int],
+  quality : Int
+) -> FixedArray[Byte] {
+  let q = if quality < 1 {
+    1
+  } else if quality > 100 {
+    100
+  } else {
+    quality
+  }
+  let scale = if q < 50 { 5000 / q } else { 200 - q * 2 }
+  let result = FixedArray::make(64, b'\x00')
+  for i in 0..<64 {
+    let x = (unscaled[i] * scale + 50) / 100
+    let clamped = if x < 1 { 1 } else if x > 255 { 255 } else { x }
+    result[i] = clamped.to_byte()
+  }
+  result
+}
+
+///|
 /// Encode an image as a baseline JPEG.
-pub fn encode(img : @image.AnyImage) -> Bytes {
+/// quality: 1 (worst) to 100 (best), default 75.
+pub fn encode(
+  img : @image.AnyImage,
+  quality~ : Int = 75
+) -> Bytes {
   let e = Encoder::new()
   let bounds = img.bounds()
   let width = bounds.dx()
   let height = bounds.dy()
+  // Scale quantization tables by quality
+  let luma_q = scale_quant(unscaled_quant_luma, quality)
+  let chroma_q = scale_quant(unscaled_quant_chroma, quality)
   // Build code tables
-  let (luma_dc_codes, luma_dc_lengths) = build_enc_huffman_table(
+  let (luma_dc_codes, luma_dc_lens) = build_enc_huffman_table(
     luma_dc_counts,
     luma_dc_symbols,
   )
-  let (luma_ac_codes, luma_ac_lengths) = build_enc_huffman_table(
+  let (luma_ac_codes, luma_ac_lens) = build_enc_huffman_table(
     luma_ac_counts,
     luma_ac_symbols,
   )
-  let (chroma_dc_codes, chroma_dc_lengths) = build_enc_huffman_table(
+  let (chroma_dc_codes, chroma_dc_lens) = build_enc_huffman_table(
     chroma_dc_counts,
     chroma_dc_symbols,
   )
-  let (chroma_ac_codes, chroma_ac_lengths) = build_enc_huffman_table(
+  let (chroma_ac_codes, chroma_ac_lens) = build_enc_huffman_table(
     chroma_ac_counts,
     chroma_ac_symbols,
   )
@@ -381,7 +408,7 @@ pub fn encode(img : @image.AnyImage) -> Bytes {
   let num_components = if is_gray { 1 } else { 3 }
   // Convert image to component planes
   let y_plane = FixedArray::make(width * height, b'\x00')
-  let cb_plane = FixedArray::make(width * height, b'\x80') // default 128
+  let cb_plane = FixedArray::make(width * height, b'\x80')
   let cr_plane = FixedArray::make(width * height, b'\x80')
   for py in 0..<height {
     for px in 0..<width {
@@ -389,23 +416,20 @@ pub fn encode(img : @image.AnyImage) -> Bytes {
       let ay = bounds.min.y + py
       let idx = py * width + px
       match img {
-        @image.AnyImage::Gray(g) => {
-          y_plane[idx] = g.gray_at(ax, ay).y
-        }
-        @image.AnyImage::Gray16(g) => {
+        @image.AnyImage::Gray(g) => y_plane[idx] = g.gray_at(ax, ay).y
+        @image.AnyImage::Gray16(g) =>
           y_plane[idx] = (g.gray16_at(ax, ay).y >> 8).to_byte()
-        }
         _ => {
           let c = img.at(ax, ay)
           let (rv, gv, bv, av) = c.rgba()
-          // Convert premultiplied to 8-bit
           let (r8, g8, b8) = if av == 0U {
             (b'\x00', b'\x00', b'\x00')
           } else {
-            let r8 = (rv * 255U / av).to_byte()
-            let g8 = (gv * 255U / av).to_byte()
-            let b8 = (bv * 255U / av).to_byte()
-            (r8, g8, b8)
+            (
+              (rv * 255U / av).to_byte(),
+              (gv * 255U / av).to_byte(),
+              (bv * 255U / av).to_byte(),
+            )
           }
           let (yv, cbv, crv) = @color.rgb_to_ycbcr(r8, g8, b8)
           y_plane[idx] = yv
@@ -419,47 +443,43 @@ pub fn encode(img : @image.AnyImage) -> Bytes {
   enc_write_marker(e, marker_soi)
   // APP0 (JFIF)
   enc_write_marker(e, marker_app0)
-  enc_write_u16(e, 16U) // length
-  // "JFIF\0"
+  enc_write_u16(e, 16U)
   enc_write_raw(e, b'\x4a') // J
   enc_write_raw(e, b'\x46') // F
   enc_write_raw(e, b'\x49') // I
   enc_write_raw(e, b'\x46') // F
-  enc_write_raw(e, b'\x00') // null
-  enc_write_raw(e, b'\x01') // version major
-  enc_write_raw(e, b'\x01') // version minor
-  enc_write_raw(e, b'\x00') // pixel aspect ratio units: 0=no units
-  enc_write_u16(e, 1U) // X density
-  enc_write_u16(e, 1U) // Y density
-  enc_write_raw(e, b'\x00') // thumbnail width
-  enc_write_raw(e, b'\x00') // thumbnail height
+  enc_write_raw(e, b'\x00')
+  enc_write_raw(e, b'\x01')
+  enc_write_raw(e, b'\x01')
+  enc_write_raw(e, b'\x00')
+  enc_write_u16(e, 1U)
+  enc_write_u16(e, 1U)
+  enc_write_raw(e, b'\x00')
+  enc_write_raw(e, b'\x00')
   // DQT segments
-  write_dqt(e, 0, luma_quant)
+  write_dqt(e, 0, luma_q)
   if !is_gray {
-    write_dqt(e, 1, chroma_quant)
+    write_dqt(e, 1, chroma_q)
   }
   // SOF0
   enc_write_marker(e, marker_sof0)
   let sof_len = if is_gray { 11U } else { 17U }
   enc_write_u16(e, sof_len)
-  enc_write_raw(e, b'\x08') // 8-bit precision
+  enc_write_raw(e, b'\x08')
   enc_write_u16(e, height.reinterpret_as_uint())
   enc_write_u16(e, width.reinterpret_as_uint())
   enc_write_raw(e, num_components.to_byte())
   if is_gray {
-    enc_write_raw(e, b'\x01') // component ID 1
-    enc_write_raw(e, b'\x11') // H=1, V=1
-    enc_write_raw(e, b'\x00') // quant table 0
-  } else {
-    // Y component: 1x1 sampling
     enc_write_raw(e, b'\x01')
     enc_write_raw(e, b'\x11')
     enc_write_raw(e, b'\x00')
-    // Cb component
+  } else {
+    enc_write_raw(e, b'\x01')
+    enc_write_raw(e, b'\x11')
+    enc_write_raw(e, b'\x00')
     enc_write_raw(e, b'\x02')
     enc_write_raw(e, b'\x11')
     enc_write_raw(e, b'\x01')
-    // Cr component
     enc_write_raw(e, b'\x03')
     enc_write_raw(e, b'\x11')
     enc_write_raw(e, b'\x01')
@@ -477,15 +497,15 @@ pub fn encode(img : @image.AnyImage) -> Bytes {
   enc_write_u16(e, sos_len)
   enc_write_raw(e, num_components.to_byte())
   if is_gray {
-    enc_write_raw(e, b'\x01') // component 1
-    enc_write_raw(e, b'\x00') // DC table 0, AC table 0
+    enc_write_raw(e, b'\x01')
+    enc_write_raw(e, b'\x00')
   } else {
-    enc_write_raw(e, b'\x01') // Y
-    enc_write_raw(e, b'\x00') // DC 0, AC 0
-    enc_write_raw(e, b'\x02') // Cb
-    enc_write_raw(e, b'\x11') // DC 1, AC 1
-    enc_write_raw(e, b'\x03') // Cr
-    enc_write_raw(e, b'\x11') // DC 1, AC 1
+    enc_write_raw(e, b'\x01')
+    enc_write_raw(e, b'\x00')
+    enc_write_raw(e, b'\x02')
+    enc_write_raw(e, b'\x11')
+    enc_write_raw(e, b'\x03')
+    enc_write_raw(e, b'\x11')
   }
   enc_write_raw(e, b'\x00') // Ss
   enc_write_raw(e, b'\x3f') // Se
@@ -498,53 +518,34 @@ pub fn encode(img : @image.AnyImage) -> Bytes {
   let mut y_dc_pred = 0
   let mut cb_dc_pred = 0
   let mut cr_dc_pred = 0
+  // quant tables as Int arrays for encode_block
+  let luma_qi = FixedArray::makei(64, fn(i) { luma_q[i].to_int() })
+  let chroma_qi = FixedArray::makei(64, fn(i) { chroma_q[i].to_int() })
   for by in 0..<block_h {
     for bx in 0..<block_w {
-      // Y
       extract_block(y_plane, width, height, bx, by, pixels)
       fdct(pixels, block)
       y_dc_pred = encode_block(
-        e,
-        block,
-        luma_quant,
-        y_dc_pred,
-        luma_dc_codes,
-        luma_dc_lengths,
-        luma_ac_codes,
-        luma_ac_lengths,
+        e, block, luma_qi, y_dc_pred, luma_dc_codes, luma_dc_lens,
+        luma_ac_codes, luma_ac_lens,
       )
       if !is_gray {
-        // Cb
         extract_block(cb_plane, width, height, bx, by, pixels)
         fdct(pixels, block)
         cb_dc_pred = encode_block(
-          e,
-          block,
-          chroma_quant,
-          cb_dc_pred,
-          chroma_dc_codes,
-          chroma_dc_lengths,
-          chroma_ac_codes,
-          chroma_ac_lengths,
+          e, block, chroma_qi, cb_dc_pred, chroma_dc_codes, chroma_dc_lens,
+          chroma_ac_codes, chroma_ac_lens,
         )
-        // Cr
         extract_block(cr_plane, width, height, bx, by, pixels)
         fdct(pixels, block)
         cr_dc_pred = encode_block(
-          e,
-          block,
-          chroma_quant,
-          cr_dc_pred,
-          chroma_dc_codes,
-          chroma_dc_lengths,
-          chroma_ac_codes,
-          chroma_ac_lengths,
+          e, block, chroma_qi, cr_dc_pred, chroma_dc_codes, chroma_dc_lens,
+          chroma_ac_codes, chroma_ac_lens,
         )
       }
     }
   }
   enc_flush_bits(e)
-  // EOI
   enc_write_marker(e, marker_eoi)
   e.buf.to_bytes()
 }
