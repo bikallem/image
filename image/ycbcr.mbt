@@ -66,6 +66,36 @@ pub fn ImageYCbCr::is_opaque(_self : ImageYCbCr) -> Bool {
 }
 
 ///|
+pub fn ImageYCbCr::sub_image(
+  self : ImageYCbCr,
+  r : Rectangle
+) -> ImageYCbCr {
+  let r = r.intersect(self.rect)
+  if r.empty() {
+    return {
+      y_: FixedArray::make(0, b'\x00'),
+      cb: FixedArray::make(0, b'\x00'),
+      cr: FixedArray::make(0, b'\x00'),
+      y_stride: self.y_stride,
+      c_stride: self.c_stride,
+      subsample_ratio: self.subsample_ratio,
+      rect: r,
+    }
+  }
+  // YCbCr sub-images share the same underlying buffers
+  // with adjusted rect (offsets computed on access via y_offset/c_offset)
+  {
+    y_: self.y_,
+    cb: self.cb,
+    cr: self.cr,
+    y_stride: self.y_stride,
+    c_stride: self.c_stride,
+    subsample_ratio: self.subsample_ratio,
+    rect: r,
+  }
+}
+
+///|
 fn ycbcr_size(
   r : Rectangle,
   subsample_ratio : YCbCrSubsampleRatio
@@ -149,6 +179,42 @@ pub fn ImageNYCbCrA::nycbcra_at(
 ///|
 pub fn ImageNYCbCrA::a_offset(self : ImageNYCbCrA, x : Int, y : Int) -> Int {
   (y - self.ycbcr.rect.min.y) * self.a_stride + (x - self.ycbcr.rect.min.x)
+}
+
+///|
+pub fn ImageNYCbCrA::sub_image(
+  self : ImageNYCbCrA,
+  r : Rectangle
+) -> ImageNYCbCrA {
+  let r = r.intersect(self.ycbcr.rect)
+  if r.empty() {
+    return {
+      ycbcr: {
+        y_: FixedArray::make(0, b'\x00'),
+        cb: FixedArray::make(0, b'\x00'),
+        cr: FixedArray::make(0, b'\x00'),
+        y_stride: self.ycbcr.y_stride,
+        c_stride: self.ycbcr.c_stride,
+        subsample_ratio: self.ycbcr.subsample_ratio,
+        rect: r,
+      },
+      a: FixedArray::make(0, b'\x00'),
+      a_stride: self.a_stride,
+    }
+  }
+  {
+    ycbcr: {
+      y_: self.ycbcr.y_,
+      cb: self.ycbcr.cb,
+      cr: self.ycbcr.cr,
+      y_stride: self.ycbcr.y_stride,
+      c_stride: self.ycbcr.c_stride,
+      subsample_ratio: self.ycbcr.subsample_ratio,
+      rect: r,
+    },
+    a: self.a,
+    a_stride: self.a_stride,
+  }
 }
 
 ///|

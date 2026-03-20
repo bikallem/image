@@ -26,6 +26,7 @@ pub(all) enum AnyImage {
   Paletted(ImagePaletted)
   YCbCr(ImageYCbCr)
   NYCbCrA(ImageNYCbCrA)
+  CMYK(ImageCMYK)
   Uniform(ImageUniform)
 }
 
@@ -43,6 +44,7 @@ pub impl Image for AnyImage with color_model(self) -> @color.AnyModel {
     Paletted(p) => @color.AnyModel::PaletteModel(p.palette)
     YCbCr(_) => @color.AnyModel::YCbCrModel
     NYCbCrA(_) => @color.AnyModel::NYCbCrAModel
+    CMYK(_) => @color.AnyModel::CMYKModel
     Uniform(u) => u.color_model()
   }
 }
@@ -61,6 +63,7 @@ pub impl Image for AnyImage with bounds(self) -> Rectangle {
     Paletted(img) => img.rect
     YCbCr(img) => img.rect
     NYCbCrA(img) => img.ycbcr.rect
+    CMYK(img) => img.rect
     Uniform(u) => u.bounds()
   }
 }
@@ -79,6 +82,7 @@ pub impl Image for AnyImage with at(self, x, y) -> @color.AnyColor {
     Paletted(img) => img.at(x, y)
     YCbCr(img) => @color.AnyColor::YCbCr(img.ycbcr_at(x, y))
     NYCbCrA(img) => @color.AnyColor::NYCbCrA(img.nycbcra_at(x, y))
+    CMYK(img) => @color.AnyColor::CMYK(img.cmyk_at(x, y))
     Uniform(u) => u.c
   }
 }

@@ -168,6 +168,19 @@ pub impl Color for AnyColor with rgba(self) -> (UInt, UInt, UInt, UInt) {
 }
 
 ///|
+/// Standard color constants matching Go's color package.
+pub let black : AnyColor = AnyColor::Gray16({ y: 0 })
+
+///|
+pub let white : AnyColor = AnyColor::Gray16({ y: 0xffff })
+
+///|
+pub let transparent : AnyColor = AnyColor::Alpha16({ a: 0 })
+
+///|
+pub let opaque : AnyColor = AnyColor::Alpha16({ a: 0xffff })
+
+///|
 /// sqDiff returns the squared-difference of x and y, shifted by 2 so that
 /// adding four of those won't overflow a uint32.
 /// x and y are both assumed to be in the range [0, 0xffff].
