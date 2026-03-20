@@ -3,7 +3,7 @@ fn clamp_uint8(v : Int) -> Int {
   if (v.reinterpret_as_uint() & 0xff000000U) == 0U {
     v >> 16
   } else {
-    (v.reinterpret_as_uint() >> 31).reinterpret_as_int().lnot()
+    (v >> 31).lnot()
   }
 }
 
@@ -12,7 +12,7 @@ fn clamp_uint16(v : Int) -> Int {
   if (v.reinterpret_as_uint() & 0xff000000U) == 0U {
     v >> 8
   } else {
-    (v.reinterpret_as_uint() >> 31).reinterpret_as_int().lnot() & 0xffff
+    (v >> 31).lnot() & 0xffff
   }
 }
 

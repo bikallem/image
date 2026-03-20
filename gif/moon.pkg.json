@@ -5,5 +5,9 @@
     "blem/image/internal/binary",
     "bikallem/compress/lzw",
     "moonbitlang/core/buffer"
+  ],
+  "wbtest-import": [
+    "moonbitlang/x/fs",
+    "moonbitlang/core/bench"
   ]
 }

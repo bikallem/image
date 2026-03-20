@@ -4,5 +4,9 @@
     "blem/image/color",
     "blem/image/internal/binary",
     "moonbitlang/core/buffer"
+  ],
+  "wbtest-import": [
+    "moonbitlang/x/fs",
+    "moonbitlang/core/bench"
   ]
 }

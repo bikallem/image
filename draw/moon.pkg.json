@@ -3,5 +3,12 @@
     "blem/image/image",
     "blem/image/color",
     "blem/image/internal/imageutil"
+  ],
+  "wbtest-import": [
+    "moonbitlang/x/fs",
+    "moonbitlang/core/bench",
+    "blem/image/png",
+    "blem/image/jpeg",
+    "blem/image/gif"
   ]
 }

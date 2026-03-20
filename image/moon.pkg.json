@@ -1,5 +1,12 @@
 {
   "import": [
     "blem/image/color"
+  ],
+  "wbtest-import": [
+    "moonbitlang/x/fs",
+    "moonbitlang/core/bench",
+    "blem/image/png",
+    "blem/image/jpeg",
+    "blem/image/gif"
   ]
 }

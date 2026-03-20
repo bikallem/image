@@ -6,5 +6,9 @@
     "bikallem/compress/zlib",
     "bikallem/compress/checksum",
     "moonbitlang/core/buffer"
+  ],
+  "wbtest-import": [
+    "moonbitlang/x/fs",
+    "moonbitlang/core/bench"
   ]
 }
