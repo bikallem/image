@@ -28,15 +28,15 @@ fn clip(
   mask : @image.AnyImage?,
   mp : @image.Point,
 ) -> (@image.Rectangle, @image.Point, @image.Point) {
-  let orig = r.min
+  let orig = r.min()
   let mut r2 = r.intersect(dst.bounds())
   r2 = r2.intersect(src.bounds().add(orig.sub(sp)))
   match mask {
     Some(mask_img) => r2 = r2.intersect(mask_img.bounds().add(orig.sub(mp)))
     None => ()
   }
-  let dx = r2.min.x - orig.x
-  let dy = r2.min.y - orig.y
+  let dx = r2.min_x - orig.x
+  let dy = r2.min_y - orig.y
   let sp2 : @image.Point = { x: sp.x + dx, y: sp.y + dy }
   let mp2 : @image.Point = { x: mp.x + dx, y: mp.y + dy }
   (r2, sp2, mp2)
@@ -101,9 +101,9 @@ pub fn draw_mask(
           let idx = dst0.palette.index(u.c).to_byte()
           let dx = r.dx()
           let mut row_off = dst0.pix_offset +
-            (r.min.y - dst0.rect.min.y) * dst0.stride +
-            (r.min.x - dst0.rect.min.x)
-          for _y = r.min.y; _y < r.max.y; _y = _y + 1 {
+            (r.min_y - dst0.rect.min_y) * dst0.stride +
+            (r.min_x - dst0.rect.min_x)
+          for _y = r.min_y; _y < r.max_y; _y = _y + 1 {
             for i = 0; i < dx; i = i + 1 {
               dst0.pix[row_off + i] = idx
             }
@@ -138,11 +138,11 @@ fn draw_fill_src(
   let dx = r.dx()
   let n = dx * 4
   let mut row_off = dst.pix_offset +
-    (r.min.y - dst.rect.min.y) * dst.stride +
-    (r.min.x - dst.rect.min.x) * 4
+    (r.min_y - dst.rect.min_y) * dst.stride +
+    (r.min_x - dst.rect.min_x) * 4
   if r_byte == g_byte && g_byte == b_byte && b_byte == a_byte {
     // All channels same value — single memset per row
-    for _y = r.min.y; _y < r.max.y; _y = _y + 1 {
+    for _y = r.min_y; _y < r.max_y; _y = _y + 1 {
       @blit.fill_bytes(dst.pix, row_off, r_byte, n)
       row_off += dst.stride
     }
@@ -158,7 +158,7 @@ fn draw_fill_src(
     }
     let first_row = row_off
     row_off += dst.stride
-    for _y = r.min.y + 1; _y < r.max.y; _y = _y + 1 {
+    for _y = r.min_y + 1; _y < r.max_y; _y = _y + 1 {
       @blit.blit_fixed_array(dst.pix, row_off, dst.pix, first_row, n)
       row_off += dst.stride
     }
@@ -177,9 +177,9 @@ fn draw_fill_over(
   let a = max_color - sa
   let dx = r.dx()
   let mut row_off = dst.pix_offset +
-    (r.min.y - dst.rect.min.y) * dst.stride +
-    (r.min.x - dst.rect.min.x) * 4
-  for _y = r.min.y; _y < r.max.y; _y = _y + 1 {
+    (r.min_y - dst.rect.min_y) * dst.stride +
+    (r.min_x - dst.rect.min_x) * 4
+  for _y = r.min_y; _y < r.max_y; _y = _y + 1 {
     let mut i = row_off
     for _x = 0; _x < dx; _x = _x + 1 {
       let dr = dst.pix[i].to_uint()
@@ -206,12 +206,12 @@ fn draw_copy_src(
   let dx = r.dx()
   let n = dx * 4
   let mut d_row = dst.pix_offset +
-    (r.min.y - dst.rect.min.y) * dst.stride +
-    (r.min.x - dst.rect.min.x) * 4
+    (r.min_y - dst.rect.min_y) * dst.stride +
+    (r.min_x - dst.rect.min_x) * 4
   let mut s_row = src.pix_offset +
-    (sp.y - src.rect.min.y) * src.stride +
-    (sp.x - src.rect.min.x) * 4
-  for _y = r.min.y; _y < r.max.y; _y = _y + 1 {
+    (sp.y - src.rect.min_y) * src.stride +
+    (sp.x - src.rect.min_x) * 4
+  for _y = r.min_y; _y < r.max_y; _y = _y + 1 {
     @blit.blit_fixed_array(dst.pix, d_row, src.pix, s_row, n)
     d_row += dst.stride
     s_row += src.stride
@@ -227,12 +227,12 @@ fn draw_copy_over(
 ) -> Unit {
   let dx = r.dx()
   let mut d_row = dst.pix_offset +
-    (r.min.y - dst.rect.min.y) * dst.stride +
-    (r.min.x - dst.rect.min.x) * 4
+    (r.min_y - dst.rect.min_y) * dst.stride +
+    (r.min_x - dst.rect.min_x) * 4
   let mut s_row = src.pix_offset +
-    (sp.y - src.rect.min.y) * src.stride +
-    (sp.x - src.rect.min.x) * 4
-  for _y = r.min.y; _y < r.max.y; _y = _y + 1 {
+    (sp.y - src.rect.min_y) * src.stride +
+    (sp.x - src.rect.min_x) * 4
+  for _y = r.min_y; _y < r.max_y; _y = _y + 1 {
     let mut di = d_row
     let mut si = s_row
     for _x = 0; _x < dx; _x = _x + 1 {
@@ -275,12 +275,12 @@ fn draw_nrgba(
 ) -> Unit {
   let dx = r.dx()
   let mut d_row = dst.pix_offset +
-    (r.min.y - dst.rect.min.y) * dst.stride +
-    (r.min.x - dst.rect.min.x) * 4
+    (r.min_y - dst.rect.min_y) * dst.stride +
+    (r.min_x - dst.rect.min_x) * 4
   let mut s_row = src.pix_offset +
-    (sp.y - src.rect.min.y) * src.stride +
-    (sp.x - src.rect.min.x) * 4
-  for _y = r.min.y; _y < r.max.y; _y = _y + 1 {
+    (sp.y - src.rect.min_y) * src.stride +
+    (sp.x - src.rect.min_x) * 4
+  for _y = r.min_y; _y < r.max_y; _y = _y + 1 {
     let mut di = d_row
     let mut si = s_row
     for _x = 0; _x < dx; _x = _x + 1 {
@@ -333,12 +333,12 @@ fn draw_gray(
 ) -> Unit {
   let dx = r.dx()
   let mut d_row = dst.pix_offset +
-    (r.min.y - dst.rect.min.y) * dst.stride +
-    (r.min.x - dst.rect.min.x) * 4
+    (r.min_y - dst.rect.min_y) * dst.stride +
+    (r.min_x - dst.rect.min_x) * 4
   let mut s_row = src.pix_offset +
-    (sp.y - src.rect.min.y) * src.stride +
-    (sp.x - src.rect.min.x)
-  for _y = r.min.y; _y < r.max.y; _y = _y + 1 {
+    (sp.y - src.rect.min_y) * src.stride +
+    (sp.x - src.rect.min_x)
+  for _y = r.min_y; _y < r.max_y; _y = _y + 1 {
     let mut di = d_row
     let mut si = s_row
     for _x = 0; _x < dx; _x = _x + 1 {
@@ -364,10 +364,10 @@ fn draw_rgba(
   mask : @image.AnyImage?,
   op : Op,
 ) -> Unit {
-  for y = r.min.y; y < r.max.y; y = y + 1 {
-    let sy = sp.y + y - r.min.y
-    for x = r.min.x; x < r.max.x; x = x + 1 {
-      let sx = sp.x + x - r.min.x
+  for y = r.min_y; y < r.max_y; y = y + 1 {
+    let sy = sp.y + y - r.min_y
+    for x = r.min_x; x < r.max_x; x = x + 1 {
+      let sx = sp.x + x - r.min_x
       let (sr0, sg0, sb0, sa0) = src.at(sx, sy).rgba()
       let (sr, sg, sb, sa) = match mask {
         Some(mask_img) => {
@@ -415,10 +415,10 @@ fn draw_paletted(
 ) -> Unit {
   let dx = r.dx()
   let mut d_row = dst.pix_offset +
-    (r.min.y - dst.rect.min.y) * dst.stride +
-    (r.min.x - dst.rect.min.x)
-  for _y = r.min.y; _y < r.max.y; _y = _y + 1 {
-    let sy = sp.y + _y - r.min.y
+    (r.min_y - dst.rect.min_y) * dst.stride +
+    (r.min_x - dst.rect.min_x)
+  for _y = r.min_y; _y < r.max_y; _y = _y + 1 {
+    let sy = sp.y + _y - r.min_y
     for _x = 0; _x < dx; _x = _x + 1 {
       let sx = sp.x + _x
       let c = src.at(sx, sy)
@@ -438,12 +438,12 @@ fn draw_generic(
   mp : @image.Point,
   op : Op,
 ) -> Unit {
-  for y = r.min.y; y < r.max.y; y = y + 1 {
-    let sy = sp.y + y - r.min.y
-    let my = mp.y + y - r.min.y
-    for x = r.min.x; x < r.max.x; x = x + 1 {
-      let sx = sp.x + x - r.min.x
-      let mx = mp.x + x - r.min.x
+  for y = r.min_y; y < r.max_y; y = y + 1 {
+    let sy = sp.y + y - r.min_y
+    let my = mp.y + y - r.min_y
+    for x = r.min_x; x < r.max_x; x = x + 1 {
+      let sx = sp.x + x - r.min_x
+      let mx = mp.x + x - r.min_x
       let (sr0, sg0, sb0, sa0) = src.at(sx, sy).rgba()
       let (sr1, sg1, sb1, sa1) = match mask {
         Some(mask_img) => {

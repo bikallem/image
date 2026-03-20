@@ -387,8 +387,8 @@ pub fn encode(img : @image.AnyImage, quality? : Int = 75) -> Bytes {
   let cr_plane = FixedArray::make(width * height, b'\x80')
   for py in 0..<height {
     for px in 0..<width {
-      let ax = bounds.min.x + px
-      let ay = bounds.min.y + py
+      let ax = bounds.min_x + px
+      let ay = bounds.min_y + py
       let idx = py * width + px
       match img {
         @image.AnyImage::Gray(g) => y_plane[idx] = g.gray_at(ax, ay).y

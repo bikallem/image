@@ -10,10 +10,10 @@ test (b : @bench.T) {
   let mask_alpha = @image.new_image_alpha(r)
   let src_rgba64 = @image.new_image_rgba64(r)
   // Initialize pixels with non-zero values
-  let mut y = r.min.y
-  while y < r.max.y {
-    let mut x = r.min.x
-    while x < r.max.x {
+  let mut y = r.min_y
+  while y < r.max_y {
+    let mut x = r.min_x
+    while x < r.max_x {
       src_rgba.set_rgba(x, y, {
         r: (x * y).to_byte(),
         g: b'\x00',

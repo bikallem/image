@@ -66,27 +66,27 @@ pub fn encode(
   }
   // Build raw image data (filter byte + row data)
   let raw_buf = @buffer.new()
-  for y = bounds.min.y; y < bounds.max.y; y = y + 1 {
+  for y = bounds.min_y; y < bounds.max_y; y = y + 1 {
     // Write filter byte (None for simplicity)
     raw_buf.write_byte(ft_none)
     match img {
       @image.AnyImage::Gray(g) =>
-        for x = bounds.min.x; x < bounds.max.x; x = x + 1 {
+        for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
           let c = g.gray_at(x, y)
           raw_buf.write_byte(c.y)
         }
       @image.AnyImage::Gray16(g) =>
-        for x = bounds.min.x; x < bounds.max.x; x = x + 1 {
+        for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
           let c = g.gray16_at(x, y)
           raw_buf.write_byte((c.y >> 8).to_byte())
           raw_buf.write_byte(c.y.to_byte())
         }
       @image.AnyImage::Paletted(p) =>
-        for x = bounds.min.x; x < bounds.max.x; x = x + 1 {
+        for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
           raw_buf.write_byte(p.color_index_at(x, y))
         }
       @image.AnyImage::NRGBA(n) =>
-        for x = bounds.min.x; x < bounds.max.x; x = x + 1 {
+        for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
           let c = n.nrgba_at(x, y)
           raw_buf.write_byte(c.r)
           raw_buf.write_byte(c.g)
@@ -94,7 +94,7 @@ pub fn encode(
           raw_buf.write_byte(c.a)
         }
       _ =>
-        for x = bounds.min.x; x < bounds.max.x; x = x + 1 {
+        for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
           let (r, g, b, a) = img.at(x, y).rgba()
           // Convert premultiplied to non-premultiplied for RGBA output
           if a == 0U {

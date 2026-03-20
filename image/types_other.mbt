@@ -9,8 +9,8 @@ pub(all) struct ImageNRGBA {
 ///|
 pub fn ImageNRGBA::pix_offset(self : ImageNRGBA, x : Int, y : Int) -> Int {
   self.pix_offset +
-  (y - self.rect.min.y) * self.stride +
-  (x - self.rect.min.x) * 4
+  (y - self.rect.min_y) * self.stride +
+  (x - self.rect.min_x) * 4
 }
 
 ///|
@@ -48,8 +48,8 @@ pub fn ImageNRGBA::is_opaque(self : ImageNRGBA) -> Bool {
   if self.rect.empty() {
     return true
   }
-  for y = self.rect.min.y; y < self.rect.max.y; y = y + 1 {
-    let row_start = self.pix_offset + (y - self.rect.min.y) * self.stride
+  for y = self.rect.min_y; y < self.rect.max_y; y = y + 1 {
+    let row_start = self.pix_offset + (y - self.rect.min_y) * self.stride
     for x = 0; x < self.rect.dx(); x = x + 1 {
       if self.pix.unsafe_get(row_start + x * 4 + 3) != b'\xff' {
         return false
@@ -89,7 +89,7 @@ pub fn ImageNRGBA::sub_image(self : ImageNRGBA, r : Rectangle) -> ImageNRGBA {
       rect: r,
     }
   }
-  let i = self.pix_offset(r.min.x, r.min.y)
+  let i = self.pix_offset(r.min_x, r.min_y)
   { pix: self.pix, pix_offset: i, stride: self.stride, rect: r }
 }
 
@@ -115,8 +115,8 @@ pub(all) struct ImageNRGBA64 {
 ///|
 pub fn ImageNRGBA64::pix_offset(self : ImageNRGBA64, x : Int, y : Int) -> Int {
   self.pix_offset +
-  (y - self.rect.min.y) * self.stride +
-  (x - self.rect.min.x) * 8
+  (y - self.rect.min_y) * self.stride +
+  (x - self.rect.min_x) * 8
 }
 
 ///|
@@ -187,7 +187,7 @@ pub fn ImageNRGBA64::sub_image(
       rect: r,
     }
   }
-  let i = self.pix_offset(r.min.x, r.min.y)
+  let i = self.pix_offset(r.min_x, r.min_y)
   { pix: self.pix, pix_offset: i, stride: self.stride, rect: r }
 }
 
@@ -212,7 +212,7 @@ pub(all) struct ImageAlpha {
 
 ///|
 pub fn ImageAlpha::pix_offset(self : ImageAlpha, x : Int, y : Int) -> Int {
-  self.pix_offset + (y - self.rect.min.y) * self.stride + (x - self.rect.min.x)
+  self.pix_offset + (y - self.rect.min_y) * self.stride + (x - self.rect.min_x)
 }
 
 ///|
@@ -246,8 +246,8 @@ pub fn ImageAlpha::is_opaque(self : ImageAlpha) -> Bool {
   if self.rect.empty() {
     return true
   }
-  for y = self.rect.min.y; y < self.rect.max.y; y = y + 1 {
-    let row_start = self.pix_offset + (y - self.rect.min.y) * self.stride
+  for y = self.rect.min_y; y < self.rect.max_y; y = y + 1 {
+    let row_start = self.pix_offset + (y - self.rect.min_y) * self.stride
     for x = 0; x < self.rect.dx(); x = x + 1 {
       if self.pix.unsafe_get(row_start + x) != b'\xff' {
         return false
@@ -283,7 +283,7 @@ pub fn ImageAlpha::sub_image(self : ImageAlpha, r : Rectangle) -> ImageAlpha {
       rect: r,
     }
   }
-  let i = self.pix_offset(r.min.x, r.min.y)
+  let i = self.pix_offset(r.min_x, r.min_y)
   { pix: self.pix, pix_offset: i, stride: self.stride, rect: r }
 }
 
@@ -309,8 +309,8 @@ pub(all) struct ImageAlpha16 {
 ///|
 pub fn ImageAlpha16::pix_offset(self : ImageAlpha16, x : Int, y : Int) -> Int {
   self.pix_offset +
-  (y - self.rect.min.y) * self.stride +
-  (x - self.rect.min.x) * 2
+  (y - self.rect.min_y) * self.stride +
+  (x - self.rect.min_x) * 2
 }
 
 ///|
@@ -370,7 +370,7 @@ pub fn ImageAlpha16::sub_image(
       rect: r,
     }
   }
-  let i = self.pix_offset(r.min.x, r.min.y)
+  let i = self.pix_offset(r.min_x, r.min_y)
   { pix: self.pix, pix_offset: i, stride: self.stride, rect: r }
 }
 
@@ -395,7 +395,7 @@ pub(all) struct ImageGray {
 
 ///|
 pub fn ImageGray::pix_offset(self : ImageGray, x : Int, y : Int) -> Int {
-  self.pix_offset + (y - self.rect.min.y) * self.stride + (x - self.rect.min.x)
+  self.pix_offset + (y - self.rect.min_y) * self.stride + (x - self.rect.min_x)
 }
 
 ///|
@@ -446,7 +446,7 @@ pub fn ImageGray::sub_image(self : ImageGray, r : Rectangle) -> ImageGray {
       rect: r,
     }
   }
-  let i = self.pix_offset(r.min.x, r.min.y)
+  let i = self.pix_offset(r.min_x, r.min_y)
   { pix: self.pix, pix_offset: i, stride: self.stride, rect: r }
 }
 
@@ -472,8 +472,8 @@ pub(all) struct ImageGray16 {
 ///|
 pub fn ImageGray16::pix_offset(self : ImageGray16, x : Int, y : Int) -> Int {
   self.pix_offset +
-  (y - self.rect.min.y) * self.stride +
-  (x - self.rect.min.x) * 2
+  (y - self.rect.min_y) * self.stride +
+  (x - self.rect.min_x) * 2
 }
 
 ///|
@@ -530,7 +530,7 @@ pub fn ImageGray16::sub_image(self : ImageGray16, r : Rectangle) -> ImageGray16 
       rect: r,
     }
   }
-  let i = self.pix_offset(r.min.x, r.min.y)
+  let i = self.pix_offset(r.min_x, r.min_y)
   { pix: self.pix, pix_offset: i, stride: self.stride, rect: r }
 }
 
@@ -556,7 +556,7 @@ pub(all) struct ImagePaletted {
 
 ///|
 pub fn ImagePaletted::pix_offset(self : ImagePaletted, x : Int, y : Int) -> Int {
-  self.pix_offset + (y - self.rect.min.y) * self.stride + (x - self.rect.min.x)
+  self.pix_offset + (y - self.rect.min_y) * self.stride + (x - self.rect.min_x)
 }
 
 ///|
@@ -634,7 +634,7 @@ pub fn ImagePaletted::sub_image(
       palette: self.palette,
     }
   }
-  let i = self.pix_offset(r.min.x, r.min.y)
+  let i = self.pix_offset(r.min_x, r.min_y)
   {
     pix: self.pix,
     pix_offset: i,

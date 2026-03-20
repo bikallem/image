@@ -28,14 +28,14 @@ pub fn Point::div(self : Point, k : Int) -> Point {
 
 ///|
 pub fn Point::in_(self : Point, r : Rectangle) -> Bool {
-  r.min.x <= self.x && self.x < r.max.x && r.min.y <= self.y && self.y < r.max.y
+  r.min_x <= self.x && self.x < r.max_x && r.min_y <= self.y && self.y < r.max_y
 }
 
 ///|
 pub fn Point::mod(self : Point, r : Rectangle) -> Point {
   let w = r.dx()
   let h = r.dy()
-  let p = self.sub(r.min)
+  let p = self.sub(r.min())
   let mut px = p.x % w
   if px < 0 {
     px = px + w
@@ -44,7 +44,7 @@ pub fn Point::mod(self : Point, r : Rectangle) -> Point {
   if py < 0 {
     py = py + h
   }
-  { x: px, y: py }.add(r.min)
+  { x: px, y: py }.add(r.min())
 }
 
 ///|
@@ -54,89 +54,102 @@ pub fn pt(x : Int, y : Int) -> Point {
 
 ///|
 /// A Rectangle contains the points with Min.X <= X < Max.X, Min.Y <= Y < Max.Y.
+#valtype
 pub(all) struct Rectangle {
-  min : Point
-  max : Point
+  min_x : Int
+  min_y : Int
+  max_x : Int
+  max_y : Int
 } derive(Eq, Show)
 
 ///|
+pub fn Rectangle::min(self : Rectangle) -> Point {
+  { x: self.min_x, y: self.min_y }
+}
+
+///|
+pub fn Rectangle::max(self : Rectangle) -> Point {
+  { x: self.max_x, y: self.max_y }
+}
+
+///|
 pub fn Rectangle::dx(self : Rectangle) -> Int {
-  self.max.x - self.min.x
+  self.max_x - self.min_x
 }
 
 ///|
 pub fn Rectangle::dy(self : Rectangle) -> Int {
-  self.max.y - self.min.y
+  self.max_y - self.min_y
 }
 
 ///|
 pub fn Rectangle::size(self : Rectangle) -> Point {
-  { x: self.max.x - self.min.x, y: self.max.y - self.min.y }
+  { x: self.max_x - self.min_x, y: self.max_y - self.min_y }
 }
 
 ///|
 pub fn Rectangle::add(self : Rectangle, p : Point) -> Rectangle {
   {
-    min: { x: self.min.x + p.x, y: self.min.y + p.y },
-    max: { x: self.max.x + p.x, y: self.max.y + p.y },
+    min_x: self.min_x + p.x, min_y: self.min_y + p.y,
+    max_x: self.max_x + p.x, max_y: self.max_y + p.y,
   }
 }
 
 ///|
 pub fn Rectangle::sub(self : Rectangle, p : Point) -> Rectangle {
   {
-    min: { x: self.min.x - p.x, y: self.min.y - p.y },
-    max: { x: self.max.x - p.x, y: self.max.y - p.y },
+    min_x: self.min_x - p.x, min_y: self.min_y - p.y,
+    max_x: self.max_x - p.x, max_y: self.max_y - p.y,
   }
 }
 
 ///|
 pub fn Rectangle::inset(self : Rectangle, n : Int) -> Rectangle {
-  let mut min_x = self.min.x
-  let mut min_y = self.min.y
-  let mut max_x = self.max.x
-  let mut max_y = self.max.y
+  let mut min_x = self.min_x
+  let mut min_y = self.min_y
+  let mut max_x = self.max_x
+  let mut max_y = self.max_y
   if self.dx() < 2 * n {
-    min_x = (self.min.x + self.max.x) / 2
+    min_x = (self.min_x + self.max_x) / 2
     max_x = min_x
   } else {
     min_x = min_x + n
     max_x = max_x - n
   }
   if self.dy() < 2 * n {
-    min_y = (self.min.y + self.max.y) / 2
+    min_y = (self.min_y + self.max_y) / 2
     max_y = min_y
   } else {
     min_y = min_y + n
     max_y = max_y - n
   }
-  { min: { x: min_x, y: min_y }, max: { x: max_x, y: max_y } }
+  { min_x: min_x, min_y: min_y, max_x: max_x, max_y: max_y }
 }
 
 ///|
 pub fn Rectangle::intersect(self : Rectangle, s : Rectangle) -> Rectangle {
-  let mut min_x = self.min.x
-  let mut min_y = self.min.y
-  let mut max_x = self.max.x
-  let mut max_y = self.max.y
-  if min_x < s.min.x {
-    min_x = s.min.x
+  let mut min_x = self.min_x
+  let mut min_y = self.min_y
+  let mut max_x = self.max_x
+  let mut max_y = self.max_y
+  if min_x < s.min_x {
+    min_x = s.min_x
   }
-  if min_y < s.min.y {
-    min_y = s.min.y
+  if min_y < s.min_y {
+    min_y = s.min_y
   }
-  if max_x > s.max.x {
-    max_x = s.max.x
+  if max_x > s.max_x {
+    max_x = s.max_x
   }
-  if max_y > s.max.y {
-    max_y = s.max.y
+  if max_y > s.max_y {
+    max_y = s.max_y
   }
   let r : Rectangle = {
-    min: { x: min_x, y: min_y },
-    max: { x: max_x, y: max_y },
+    min_x: min_x, min_y: min_y,
+    max_x: max_x, max_y: max_y,
   }
   if r.empty() {
-    return { min: { x: 0, y: 0 }, max: { x: 0, y: 0 } }
+    return { min_x: 0, min_y: 0, max_x: 0, max_y: 0 }
   }
   r
 }
@@ -149,28 +162,28 @@ pub fn Rectangle::union(self : Rectangle, s : Rectangle) -> Rectangle {
   if s.empty() {
     return self
   }
-  let mut min_x = self.min.x
-  let mut min_y = self.min.y
-  let mut max_x = self.max.x
-  let mut max_y = self.max.y
-  if min_x > s.min.x {
-    min_x = s.min.x
+  let mut min_x = self.min_x
+  let mut min_y = self.min_y
+  let mut max_x = self.max_x
+  let mut max_y = self.max_y
+  if min_x > s.min_x {
+    min_x = s.min_x
   }
-  if min_y > s.min.y {
-    min_y = s.min.y
+  if min_y > s.min_y {
+    min_y = s.min_y
   }
-  if max_x < s.max.x {
-    max_x = s.max.x
+  if max_x < s.max_x {
+    max_x = s.max_x
   }
-  if max_y < s.max.y {
-    max_y = s.max.y
+  if max_y < s.max_y {
+    max_y = s.max_y
   }
-  { min: { x: min_x, y: min_y }, max: { x: max_x, y: max_y } }
+  { min_x: min_x, min_y: min_y, max_x: max_x, max_y: max_y }
 }
 
 ///|
 pub fn Rectangle::empty(self : Rectangle) -> Bool {
-  self.min.x >= self.max.x || self.min.y >= self.max.y
+  self.min_x >= self.max_x || self.min_y >= self.max_y
 }
 
 ///|
@@ -182,10 +195,10 @@ pub fn Rectangle::eq(self : Rectangle, s : Rectangle) -> Bool {
 pub fn Rectangle::overlaps(self : Rectangle, s : Rectangle) -> Bool {
   !self.empty() &&
   !s.empty() &&
-  self.min.x < s.max.x &&
-  s.min.x < self.max.x &&
-  self.min.y < s.max.y &&
-  s.min.y < self.max.y
+  self.min_x < s.max_x &&
+  s.min_x < self.max_x &&
+  self.min_y < s.max_y &&
+  s.min_y < self.max_y
 }
 
 ///|
@@ -193,18 +206,18 @@ pub fn Rectangle::in_(self : Rectangle, s : Rectangle) -> Bool {
   if self.empty() {
     return true
   }
-  s.min.x <= self.min.x &&
-  self.max.x <= s.max.x &&
-  s.min.y <= self.min.y &&
-  self.max.y <= s.max.y
+  s.min_x <= self.min_x &&
+  self.max_x <= s.max_x &&
+  s.min_y <= self.min_y &&
+  self.max_y <= s.max_y
 }
 
 ///|
 pub fn Rectangle::canon(self : Rectangle) -> Rectangle {
-  let mut min_x = self.min.x
-  let mut min_y = self.min.y
-  let mut max_x = self.max.x
-  let mut max_y = self.max.y
+  let mut min_x = self.min_x
+  let mut min_y = self.min_y
+  let mut max_x = self.max_x
+  let mut max_y = self.max_y
   if max_x < min_x {
     let tmp = min_x
     min_x = max_x
@@ -215,14 +228,14 @@ pub fn Rectangle::canon(self : Rectangle) -> Rectangle {
     min_y = max_y
     max_y = tmp
   }
-  { min: { x: min_x, y: min_y }, max: { x: max_x, y: max_y } }
+  { min_x: min_x, min_y: min_y, max_x: max_x, max_y: max_y }
 }
 
 ///|
 pub fn rect(x0 : Int, y0 : Int, x1 : Int, y1 : Int) -> Rectangle {
   let (x0, x1) = if x0 > x1 { (x1, x0) } else { (x0, x1) }
   let (y0, y1) = if y0 > y1 { (y1, y0) } else { (y0, y1) }
-  { min: { x: x0, y: y0 }, max: { x: x1, y: y1 } }
+  { min_x: x0, min_y: y0, max_x: x1, max_y: y1 }
 }
 
 ///|

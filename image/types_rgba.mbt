@@ -10,8 +10,8 @@ pub(all) struct ImageRGBA {
 ///|
 pub fn ImageRGBA::pix_offset(self : ImageRGBA, x : Int, y : Int) -> Int {
   self.pix_offset +
-  (y - self.rect.min.y) * self.stride +
-  (x - self.rect.min.x) * 4
+  (y - self.rect.min_y) * self.stride +
+  (x - self.rect.min_x) * 4
 }
 
 ///|
@@ -70,7 +70,7 @@ pub fn ImageRGBA::sub_image(self : ImageRGBA, r : Rectangle) -> ImageRGBA {
       rect: r,
     }
   }
-  let i = self.pix_offset(r.min.x, r.min.y)
+  let i = self.pix_offset(r.min_x, r.min_y)
   { pix: self.pix, pix_offset: i, stride: self.stride, rect: r }
 }
 
@@ -79,8 +79,8 @@ pub fn ImageRGBA::is_opaque(self : ImageRGBA) -> Bool {
   if self.rect.empty() {
     return true
   }
-  for y = self.rect.min.y; y < self.rect.max.y; y = y + 1 {
-    let row_start = self.pix_offset + (y - self.rect.min.y) * self.stride
+  for y = self.rect.min_y; y < self.rect.max_y; y = y + 1 {
+    let row_start = self.pix_offset + (y - self.rect.min_y) * self.stride
     for x = 0; x < self.rect.dx(); x = x + 1 {
       if self.pix.unsafe_get(row_start + x * 4 + 3) != b'\xff' {
         return false
@@ -113,8 +113,8 @@ pub(all) struct ImageRGBA64 {
 ///|
 pub fn ImageRGBA64::pix_offset(self : ImageRGBA64, x : Int, y : Int) -> Int {
   self.pix_offset +
-  (y - self.rect.min.y) * self.stride +
-  (x - self.rect.min.x) * 8
+  (y - self.rect.min_y) * self.stride +
+  (x - self.rect.min_x) * 8
 }
 
 ///|
@@ -190,7 +190,7 @@ pub fn ImageRGBA64::sub_image(self : ImageRGBA64, r : Rectangle) -> ImageRGBA64 
       rect: r,
     }
   }
-  let i = self.pix_offset(r.min.x, r.min.y)
+  let i = self.pix_offset(r.min_x, r.min_y)
   { pix: self.pix, pix_offset: i, stride: self.stride, rect: r }
 }
 
@@ -199,8 +199,8 @@ pub fn ImageRGBA64::is_opaque(self : ImageRGBA64) -> Bool {
   if self.rect.empty() {
     return true
   }
-  for y = self.rect.min.y; y < self.rect.max.y; y = y + 1 {
-    let row_start = self.pix_offset + (y - self.rect.min.y) * self.stride
+  for y = self.rect.min_y; y < self.rect.max_y; y = y + 1 {
+    let row_start = self.pix_offset + (y - self.rect.min_y) * self.stride
     for x = 0; x < self.rect.dx(); x = x + 1 {
       let i = row_start + x * 8 + 6
       if self.pix.unsafe_get(i) != b'\xff' || self.pix.unsafe_get(i + 1) != b'\xff' {

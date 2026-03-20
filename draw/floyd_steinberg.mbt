@@ -14,16 +14,16 @@ pub fn floyd_steinberg_draw(
   // We use two rows: current and next.
   let quant_err_cur = FixedArray::make(w * 4, 0)
   let quant_err_next = FixedArray::make(w * 4, 0)
-  for y = r.min.y; y < r.max.y; y = y + 1 {
+  for y = r.min_y; y < r.max_y; y = y + 1 {
     // Clear next row
     for i in 0..<(w * 4) {
       quant_err_next[i] = 0
     }
-    let sy = sp.y + y - r.min.y
-    for x = r.min.x; x < r.max.x; x = x + 1 {
-      let sx = sp.x + x - r.min.x
+    let sy = sp.y + y - r.min_y
+    for x = r.min_x; x < r.max_x; x = x + 1 {
+      let sx = sp.x + x - r.min_x
       let (sr, sg, sb, sa) = src.at(sx, sy).rgba()
-      let ei = (x - r.min.x) * 4
+      let ei = (x - r.min_x) * 4
       // Add quantization error from previous pixels.
       let er = sr.reinterpret_as_int() + quant_err_cur[ei]
       let eg = sg.reinterpret_as_int() + quant_err_cur[ei + 1]
@@ -70,7 +70,7 @@ pub fn floyd_steinberg_draw(
       // Distribute error to neighbors using Floyd-Steinberg coefficients:
       //   _ X 7/16
       // 3/16 5/16 1/16
-      let xi = x - r.min.x
+      let xi = x - r.min_x
       if xi + 1 < w {
         quant_err_cur[(xi + 1) * 4] = quant_err_cur[(xi + 1) * 4] +
           diff_r * 7 / 16

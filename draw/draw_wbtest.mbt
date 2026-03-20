@@ -242,14 +242,14 @@ test "fill" {
         )
     }
     let src = @image.AnyImage::Uniform(@image.ImageUniform::{ c, })
-    draw(@image.AnyImage::RGBA(dst), r, src, r.min, Src)
+    draw(@image.AnyImage::RGBA(dst), r, src, r.min(), Src)
     // Verify pixels inside r have the fill color
     let (cr, cg, cb, ca) = c.rgba()
     let clipped = r.intersect(@image.rect(0, 0, 10, 10))
-    let mut y = clipped.min.y
-    while y < clipped.max.y {
-      let mut x = clipped.min.x
-      while x < clipped.max.x {
+    let mut y = clipped.min_y
+    while y < clipped.max_y {
+      let mut x = clipped.min_x
+      while x < clipped.max_x {
         let (pr, pg, pb, pa) = dst.rgba_at(x, y).rgba()
         assert_eq(pr, cr)
         assert_eq(pg, cg)
@@ -302,10 +302,10 @@ test "floyd_steinberg_checkerboard" {
   })
   floyd_steinberg_draw(dst, b, src, { x: 0, y: 0 })
   let mut n_err = 0
-  let mut y = b.min.y
-  while y < b.max.y {
-    let mut x = b.min.x
-    while x < b.max.x {
+  let mut y = b.min_y
+  while y < b.max_y {
+    let mut x = b.min_x
+    while x < b.max_x {
       let got = dst.color_index_at(x, y).to_int()
       let want = (x + y) % 2
       if got != want {
@@ -345,12 +345,12 @@ test "draw_overlap" {
         // Draw region of m onto itself with offset
         let sr = @image.rect(4, 4, 12, 12)
         let dr = sr.add({ x: xoff, y: yoff })
-        draw(@image.AnyImage::RGBA(m), dr, @image.AnyImage::RGBA(m), sr.min, op)
+        draw(@image.AnyImage::RGBA(m), dr, @image.AnyImage::RGBA(m), sr.min(), op)
         // Just verify it doesn't crash and produces valid pixels
-        y = dr.min.y
-        while y < dr.max.y {
-          let mut x = dr.min.x
-          while x < dr.max.x {
+        y = dr.min_y
+        while y < dr.max_y {
+          let mut x = dr.min_x
+          while x < dr.max_x {
             if ({ x, y } : @image.Point).in_(m.rect) {
               let c = m.rgba_at(x, y)
               assert_true(c.a == b'\xff')

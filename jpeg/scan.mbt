@@ -139,10 +139,7 @@ pub fn process_sos(d : Decoder) -> @image.AnyImage raise JpegError {
     }
   }
   // Build output image
-  let rect : @image.Rectangle = {
-    min: { x: 0, y: 0 },
-    max: { x: d.width, y: d.height },
-  }
+  let rect : @image.Rectangle = { min_x: 0, min_y: 0, max_x: d.width, max_y: d.height }
   if d.num_components == 1 {
     // Grayscale
     let img = @image.new_image_gray(rect)
@@ -551,10 +548,7 @@ fn reconstruct_progressive(d : Decoder) -> @image.AnyImage {
     }
   }
   // Build output image (same as sequential)
-  let rect : @image.Rectangle = {
-    min: { x: 0, y: 0 },
-    max: { x: d.width, y: d.height },
-  }
+  let rect : @image.Rectangle = { min_x: 0, min_y: 0, max_x: d.width, max_y: d.height }
   if d.num_components == 1 {
     let img = @image.new_image_gray(rect)
     for y in 0..<d.height {

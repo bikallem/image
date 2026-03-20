@@ -10,8 +10,8 @@ fn quantize_image(
   let n = if n_colors < 2 { 2 } else if n_colors > 256 { 256 } else { n_colors }
   // Collect pixel samples (sample if image is large)
   let pixels = Array::new(capacity=w * h)
-  for y = bounds.min.y; y < bounds.max.y; y = y + 1 {
-    for x = bounds.min.x; x < bounds.max.x; x = x + 1 {
+  for y = bounds.min_y; y < bounds.max_y; y = y + 1 {
+    for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
       let (rv, gv, bv, _) = img.at(x, y).rgba()
       pixels.push(
         ((rv >> 8).to_byte(), (gv >> 8).to_byte(), (bv >> 8).to_byte()),
@@ -24,8 +24,8 @@ fn quantize_image(
   let pal = @color.Palette::{ colors: palette }
   let result = @image.new_image_paletted(bounds, pal)
   // Map each pixel to nearest palette entry
-  for y = bounds.min.y; y < bounds.max.y; y = y + 1 {
-    for x = bounds.min.x; x < bounds.max.x; x = x + 1 {
+  for y = bounds.min_y; y < bounds.max_y; y = y + 1 {
+    for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
       let c = img.at(x, y)
       let idx = pal.index(c)
       result.set_color_index(x, y, idx.to_byte())

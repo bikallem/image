@@ -15,10 +15,10 @@ pub fn draw_ycbcr(
   src : @image.ImageYCbCr,
   sp : @image.Point,
 ) -> Unit {
-  let x0 = r.min.x
-  let x1 = r.max.x
-  let y0 = r.min.y
-  let y1 = r.max.y
+  let x0 = r.min_x
+  let x1 = r.max_x
+  let y0 = r.min_y
+  let y1 = r.max_y
   for y = y0; y < y1; y = y + 1 {
     let sy = sp.y + y - y0
     for x = x0; x < x1; x = x + 1 {

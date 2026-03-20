@@ -72,7 +72,7 @@ fn decode_jpeg(d : Decoder) -> @image.AnyImage raise JpegError {
   }
   let mut done = false
   let mut img : @image.AnyImage = @image.AnyImage::Gray(
-    @image.new_image_gray({ min: { x: 0, y: 0 }, max: { x: 0, y: 0 } }),
+    @image.new_image_gray({ min_x: 0, min_y: 0, max_x: 0, max_y: 0 }),
   )
   while !done && d.r.remaining() > 0 {
     let marker = read_marker(d)

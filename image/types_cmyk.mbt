@@ -9,8 +9,8 @@ pub(all) struct ImageCMYK {
 ///|
 pub fn ImageCMYK::pix_offset(self : ImageCMYK, x : Int, y : Int) -> Int {
   self.pix_offset +
-  (y - self.rect.min.y) * self.stride +
-  (x - self.rect.min.x) * 4
+  (y - self.rect.min_y) * self.stride +
+  (x - self.rect.min_x) * 4
 }
 
 ///|
@@ -69,7 +69,7 @@ pub fn ImageCMYK::sub_image(self : ImageCMYK, r : Rectangle) -> ImageCMYK {
       rect: r,
     }
   }
-  let i = self.pix_offset(r.min.x, r.min.y)
+  let i = self.pix_offset(r.min_x, r.min_y)
   { pix: self.pix, pix_offset: i, stride: self.stride, rect: r }
 }
 

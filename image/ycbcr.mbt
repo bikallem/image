@@ -21,25 +21,25 @@ pub(all) struct ImageYCbCr {
 
 ///|
 pub fn ImageYCbCr::y_offset(self : ImageYCbCr, x : Int, y : Int) -> Int {
-  (y - self.rect.min.y) * self.y_stride + (x - self.rect.min.x)
+  (y - self.rect.min_y) * self.y_stride + (x - self.rect.min_x)
 }
 
 ///|
 pub fn ImageYCbCr::c_offset(self : ImageYCbCr, x : Int, y : Int) -> Int {
   match self.subsample_ratio {
     Ratio422 =>
-      (y - self.rect.min.y) * self.c_stride + (x / 2 - self.rect.min.x / 2)
+      (y - self.rect.min_y) * self.c_stride + (x / 2 - self.rect.min_x / 2)
     Ratio420 =>
-      (y / 2 - self.rect.min.y / 2) * self.c_stride +
-      (x / 2 - self.rect.min.x / 2)
+      (y / 2 - self.rect.min_y / 2) * self.c_stride +
+      (x / 2 - self.rect.min_x / 2)
     Ratio440 =>
-      (y / 2 - self.rect.min.y / 2) * self.c_stride + (x - self.rect.min.x)
+      (y / 2 - self.rect.min_y / 2) * self.c_stride + (x - self.rect.min_x)
     Ratio411 =>
-      (y - self.rect.min.y) * self.c_stride + (x / 4 - self.rect.min.x / 4)
+      (y - self.rect.min_y) * self.c_stride + (x / 4 - self.rect.min_x / 4)
     Ratio410 =>
-      (y / 2 - self.rect.min.y / 2) * self.c_stride +
-      (x / 4 - self.rect.min.x / 4)
-    _ => (y - self.rect.min.y) * self.c_stride + (x - self.rect.min.x)
+      (y / 2 - self.rect.min_y / 2) * self.c_stride +
+      (x / 4 - self.rect.min_x / 4)
+    _ => (y - self.rect.min_y) * self.c_stride + (x - self.rect.min_x)
   }
 }
 
@@ -97,13 +97,13 @@ fn ycbcr_size(
   let w = r.dx()
   let h = r.dy()
   let (cw, ch) = match subsample_ratio {
-    Ratio422 => ((r.max.x + 1) / 2 - r.min.x / 2, h)
+    Ratio422 => ((r.max_x + 1) / 2 - r.min_x / 2, h)
     Ratio420 =>
-      ((r.max.x + 1) / 2 - r.min.x / 2, (r.max.y + 1) / 2 - r.min.y / 2)
-    Ratio440 => (w, (r.max.y + 1) / 2 - r.min.y / 2)
-    Ratio411 => ((r.max.x + 3) / 4 - r.min.x / 4, h)
+      ((r.max_x + 1) / 2 - r.min_x / 2, (r.max_y + 1) / 2 - r.min_y / 2)
+    Ratio440 => (w, (r.max_y + 1) / 2 - r.min_y / 2)
+    Ratio411 => ((r.max_x + 3) / 4 - r.min_x / 4, h)
     Ratio410 =>
-      ((r.max.x + 3) / 4 - r.min.x / 4, (r.max.y + 1) / 2 - r.min.y / 2)
+      ((r.max_x + 3) / 4 - r.min_x / 4, (r.max_y + 1) / 2 - r.min_y / 2)
     _ => (w, h)
   }
   (w, h, cw, ch)
@@ -178,7 +178,7 @@ pub fn ImageNYCbCrA::nycbcra_at(
 
 ///|
 pub fn ImageNYCbCrA::a_offset(self : ImageNYCbCrA, x : Int, y : Int) -> Int {
-  (y - self.ycbcr.rect.min.y) * self.a_stride + (x - self.ycbcr.rect.min.x)
+  (y - self.ycbcr.rect.min_y) * self.a_stride + (x - self.ycbcr.rect.min_x)
 }
 
 ///|
@@ -222,8 +222,8 @@ pub fn ImageNYCbCrA::is_opaque(self : ImageNYCbCrA) -> Bool {
   if self.ycbcr.rect.empty() {
     return true
   }
-  for y = self.ycbcr.rect.min.y; y < self.ycbcr.rect.max.y; y = y + 1 {
-    let row_start = (y - self.ycbcr.rect.min.y) * self.a_stride
+  for y = self.ycbcr.rect.min_y; y < self.ycbcr.rect.max_y; y = y + 1 {
+    let row_start = (y - self.ycbcr.rect.min_y) * self.a_stride
     for x = 0; x < self.ycbcr.rect.dx(); x = x + 1 {
       if self.a[row_start + x] != b'\xff' {
         return false

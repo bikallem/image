@@ -142,10 +142,10 @@ test "png_writer" {
     assert_eq(b1.dx(), b2.dx())
     assert_eq(b1.dy(), b2.dy())
     // Compare pixels
-    let mut y = b1.min.y
-    while y < b1.max.y {
-      let mut x = b1.min.x
-      while x < b1.max.x {
+    let mut y = b1.min_y
+    while y < b1.max_y {
+      let mut x = b1.min_x
+      while x < b1.max_x {
         let (r1, g1, b1c, a1) = img.at(x, y).rgba()
         let (r2, g2, b2c, a2) = img2.at(x, y).rgba()
         assert_eq(r1, r2)

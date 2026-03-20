@@ -141,10 +141,7 @@ fn decode_interlaced(
   // Each pass is a sub-image with dimensions:
   //   pass_w = ceil((width - x_offset) / x_stride)
   //   pass_h = ceil((height - y_offset) / y_stride)
-  let rect : @image.Rectangle = {
-    min: { x: 0, y: 0 },
-    max: { x: width, y: height },
-  }
+  let rect : @image.Rectangle = { min_x: 0, min_y: 0, max_x: width, max_y: height }
   // Create the final image
   let final_img = decode_image(
     // Decode a dummy to get the right type, then overwrite
@@ -284,10 +281,7 @@ fn decode_image(
       data.length().to_string(),
     )
   }
-  let rect : @image.Rectangle = {
-    min: { x: 0, y: 0 },
-    max: { x: width, y: height },
-  }
+  let rect : @image.Rectangle = { min_x: 0, min_y: 0, max_x: width, max_y: height }
   // Unfilter rows — prev_row must be zero, cur_row will be fully written
   let prev_row = FixedArray::make(stride, b'\x00')
   let cur_row = @blit.make_uninit(stride)

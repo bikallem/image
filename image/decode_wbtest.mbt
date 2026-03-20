@@ -15,10 +15,10 @@ test "cross_codec" {
   assert_eq(gb.dx(), gib.dx())
   assert_eq(gb.dy(), gib.dy())
   let mut gif_max_delta = 0
-  let mut y = gb.min.y
-  while y < gb.max.y {
-    let mut x = gb.min.x
-    while x < gb.max.x {
+  let mut y = gb.min_y
+  while y < gb.max_y {
+    let mut x = gb.min_x
+    while x < gb.max_x {
       let (r1, g1, b1, _) = golden.at(x, y).rgba()
       let (r2, g2, b2, _) = gif_img.at(x, y).rgba()
       fn abs_d(a : UInt, b : UInt) -> Int {
@@ -51,10 +51,10 @@ test "cross_codec" {
   assert_true(jb.dx() > 0)
   assert_true(jb.dy() > 0)
   let mut jpeg_max_delta = 0
-  let jminy = if gb.min.y > jb.min.y { gb.min.y } else { jb.min.y }
-  let jmaxy = if gb.max.y < jb.max.y { gb.max.y } else { jb.max.y }
-  let jminx = if gb.min.x > jb.min.x { gb.min.x } else { jb.min.x }
-  let jmaxx = if gb.max.x < jb.max.x { gb.max.x } else { jb.max.x }
+  let jminy = if gb.min_y > jb.min_y { gb.min_y } else { jb.min_y }
+  let jmaxy = if gb.max_y < jb.max_y { gb.max_y } else { jb.max_y }
+  let jminx = if gb.min_x > jb.min_x { gb.min_x } else { jb.min_x }
+  let jmaxx = if gb.max_x < jb.max_x { gb.max_x } else { jb.max_x }
   y = jminy
   while y < jmaxy {
     let mut x = jminx

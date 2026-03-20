@@ -6,10 +6,10 @@ test "rectangle" {
     if !f.in_(g) {
       return false
     }
-    let mut y = f.min.y
-    while y < f.max.y {
-      let mut x = f.min.x
-      while x < f.max.x {
+    let mut y = f.min_y
+    while y < f.max_y {
+      let mut x = f.min_x
+      while x < f.max_x {
         let p : Point = { x, y }
         if !p.in_(g) {
           return false
@@ -48,14 +48,14 @@ test "rectangle" {
       let a = r.intersect(s)
       assert_true(rect_all_points_in(a, r))
       assert_true(rect_all_points_in(a, s))
-      let is_zero = a.eq({ min: { x: 0, y: 0 }, max: { x: 0, y: 0 } })
+      let is_zero = a.eq({ min_x: 0, min_y: 0, max_x: 0, max_y: 0 })
       let overlaps = r.overlaps(s)
       assert_true(is_zero != overlaps)
       let larger : Array[Rectangle] = [
-        { min: { x: a.min.x - 1, y: a.min.y }, max: a.max },
-        { min: { x: a.min.x, y: a.min.y - 1 }, max: a.max },
-        { min: a.min, max: { x: a.max.x + 1, y: a.max.y } },
-        { min: a.min, max: { x: a.max.x, y: a.max.y + 1 } },
+        { min_x: a.min_x - 1, min_y: a.min_y, max_x: a.max_x, max_y: a.max_y },
+        { min_x: a.min_x, min_y: a.min_y - 1, max_x: a.max_x, max_y: a.max_y },
+        { min_x: a.min_x, min_y: a.min_y, max_x: a.max_x + 1, max_y: a.max_y },
+        { min_x: a.min_x, min_y: a.min_y, max_x: a.max_x, max_y: a.max_y + 1 },
       ]
       for b in larger {
         if b.empty() {
@@ -78,10 +78,10 @@ test "rectangle" {
         continue
       }
       let smaller : Array[Rectangle] = [
-        { min: { x: a.min.x + 1, y: a.min.y }, max: a.max },
-        { min: { x: a.min.x, y: a.min.y + 1 }, max: a.max },
-        { min: a.min, max: { x: a.max.x - 1, y: a.max.y } },
-        { min: a.min, max: { x: a.max.x, y: a.max.y - 1 } },
+        { min_x: a.min_x + 1, min_y: a.min_y, max_x: a.max_x, max_y: a.max_y },
+        { min_x: a.min_x, min_y: a.min_y + 1, max_x: a.max_x, max_y: a.max_y },
+        { min_x: a.min_x, min_y: a.min_y, max_x: a.max_x - 1, max_y: a.max_y },
+        { min_x: a.min_x, min_y: a.min_y, max_x: a.max_x, max_y: a.max_y - 1 },
       ]
       for b in smaller {
         if rect_all_points_in(r, b) && rect_all_points_in(s, b) {

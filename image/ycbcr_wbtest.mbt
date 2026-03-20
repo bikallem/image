@@ -46,10 +46,10 @@ test "ycbcr_image" {
         // Buffer should be reasonably small
         assert_true(m.y_.length() <= 100 * 100)
         // Initialize pixels
-        let mut y = r1.min.y
-        while y < r1.max.y {
-          let mut x = r1.min.x
-          while x < r1.max.x {
+        let mut y = r1.min_y
+        while y < r1.max_y {
+          let mut x = r1.min_x
+          while x < r1.max_x {
             let yi = m.y_offset(x, y)
             let ci = m.c_offset(x, y)
             m.y_[yi] = (16 * y + x).to_byte()
@@ -60,10 +60,10 @@ test "ycbcr_image" {
           y += 1
         }
         // Verify pixel access works correctly
-        y = r1.min.y
-        while y < r1.max.y {
-          let mut x = r1.min.x
-          while x < r1.max.x {
+        y = r1.min_y
+        while y < r1.max_y {
+          let mut x = r1.min_x
+          while x < r1.max_x {
             let c = m.ycbcr_at(x, y)
             let yi = m.y_offset(x, y)
             assert_eq(c.y, m.y_[yi])
