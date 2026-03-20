@@ -51,11 +51,7 @@ pub fn decode_all(data : Bytes) -> GIF raise Error {
   // Global color table
   let has_gct = (packed.to_int() & 0x80) != 0
   let gct_size = 1 << ((packed.to_int() & 0x07) + 1)
-  let global_palette = if has_gct {
-    read_color_table(r, gct_size)
-  } else {
-    []
-  }
+  let global_palette = if has_gct { read_color_table(r, gct_size) } else { [] }
   let images : Array[@image.ImagePaletted] = []
   let delays : Array[Int] = []
   let disposals : Array[Byte] = []
@@ -82,14 +78,12 @@ pub fn decode_all(data : Bytes) -> GIF raise Error {
               transparent_index = -1
             }
           }
-          l if l == ext_application => {
+          l if l == ext_application =>
             // Skip application extension
             skip_sub_blocks(r)
-          }
-          _ => {
+          _ =>
             // Skip other extensions
             skip_sub_blocks(r)
-          }
         }
       }
       b if b == image_descriptor => {
@@ -107,9 +101,12 @@ pub fn decode_all(data : Bytes) -> GIF raise Error {
         }
         // Apply transparency
         if transparent_index >= 0 && transparent_index < palette.length() {
-          palette[transparent_index] = @color.AnyColor::RGBA(
-            { r: b'\x00', g: b'\x00', b: b'\x00', a: b'\x00' },
-          )
+          palette[transparent_index] = @color.AnyColor::RGBA({
+            r: b'\x00',
+            g: b'\x00',
+            b: b'\x00',
+            a: b'\x00',
+          })
         }
         // Read LZW minimum code size
         let lzw_min = r.read_byte()
@@ -167,7 +164,7 @@ fn[T] or_gif_error(result : T) -> T {
 ///|
 fn read_color_table(
   r : GifByteReader,
-  size : Int
+  size : Int,
 ) -> Array[@color.AnyColor] raise GifError {
   let palette : Array[@color.AnyColor] = Array::new(capacity=size)
   for _i in 0..<size {

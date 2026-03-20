@@ -6,22 +6,12 @@ test (b : @bench.T) {
   // RGBA
   let m_rgba = new_image_rgba(r)
   b.bench(name="at/rgba", fn() { b.keep(m_rgba.rgba_at(4, 5)) })
-  let c_rgba : @color.RGBA = {
-    r: b'\xff',
-    g: b'\xff',
-    b: b'\xff',
-    a: b'\x13',
-  }
+  let c_rgba : @color.RGBA = { r: b'\xff', g: b'\xff', b: b'\xff', a: b'\x13' }
   b.bench(name="set/rgba", fn() { m_rgba.set_rgba(4, 5, c_rgba) })
   // RGBA64
   let m_rgba64 = new_image_rgba64(r)
   b.bench(name="at/rgba64", fn() { b.keep(m_rgba64.rgba64_at(4, 5)) })
-  let c_rgba64 : @color.RGBA64 = {
-    r: 0xffff,
-    g: 0xffff,
-    b: 0xffff,
-    a: 0x1357,
-  }
+  let c_rgba64 : @color.RGBA64 = { r: 0xffff, g: 0xffff, b: 0xffff, a: 0x1357 }
   b.bench(name="set/rgba64", fn() { m_rgba64.set_rgba64(4, 5, c_rgba64) })
   // NRGBA
   let m_nrgba = new_image_nrgba(r)
@@ -42,10 +32,7 @@ test (b : @bench.T) {
     b: 0xffff,
     a: 0x1357,
   }
-  b.bench(
-    name="set/nrgba64",
-    fn() { m_nrgba64.set_nrgba64(4, 5, c_nrgba64) },
-  )
+  b.bench(name="set/nrgba64", fn() { m_nrgba64.set_nrgba64(4, 5, c_nrgba64) })
   // Alpha
   let m_alpha = new_image_alpha(r)
   b.bench(name="at/alpha", fn() { b.keep(m_alpha.alpha_at(4, 5)) })
@@ -55,10 +42,7 @@ test (b : @bench.T) {
   let m_alpha16 = new_image_alpha16(r)
   b.bench(name="at/alpha16", fn() { b.keep(m_alpha16.alpha16_at(4, 5)) })
   let c_alpha16 : @color.Alpha16 = { a: 0x13 }
-  b.bench(
-    name="set/alpha16",
-    fn() { m_alpha16.set_alpha16(4, 5, c_alpha16) },
-  )
+  b.bench(name="set/alpha16", fn() { m_alpha16.set_alpha16(4, 5, c_alpha16) })
   // Gray
   let m_gray = new_image_gray(r)
   b.bench(name="at/gray", fn() { b.keep(m_gray.gray_at(4, 5)) })

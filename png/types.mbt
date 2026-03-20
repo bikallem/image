@@ -88,7 +88,7 @@ pub fn ByteReader::read_byte(self : ByteReader) -> Byte raise PngError {
 ///|
 pub fn ByteReader::read_bytes(
   self : ByteReader,
-  n : Int
+  n : Int,
 ) -> Bytes raise PngError {
   if self.pos + n > self.data.length() {
     raise UnexpectedEOF

@@ -1,0 +1,12 @@
+import {
+  "bikallem/image/image",
+  "bikallem/image/color",
+  "bikallem/image/internal/binary",
+  "bikallem/compress/lzw",
+  "moonbitlang/core/buffer",
+}
+
+import {
+  "moonbitlang/x/fs",
+  "moonbitlang/core/bench",
+} for "wbtest"

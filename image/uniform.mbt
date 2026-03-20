@@ -22,7 +22,10 @@ pub fn ImageUniform::color_model(self : ImageUniform) -> @color.AnyModel {
 
 ///|
 pub fn ImageUniform::bounds(_self : ImageUniform) -> Rectangle {
-  { min: { x: -1000000000, y: -1000000000 }, max: { x: 1000000000, y: 1000000000 } }
+  {
+    min: { x: -1000000000, y: -1000000000 },
+    max: { x: 1000000000, y: 1000000000 },
+  }
 }
 
 ///|
@@ -41,4 +44,6 @@ pub let white : ImageUniform = { c: @color.AnyColor::Gray16({ y: 0xffffU }) }
 pub let transparent : ImageUniform = { c: @color.AnyColor::Alpha16({ a: 0U }) }
 
 ///|
-pub let fully_opaque : ImageUniform = { c: @color.AnyColor::Alpha16({ a: 0xffffU }) }
+pub let fully_opaque : ImageUniform = {
+  c: @color.AnyColor::Alpha16({ a: 0xffffU }),
+}

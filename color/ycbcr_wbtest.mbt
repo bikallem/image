@@ -2,14 +2,15 @@
 fn byte_delta(x : Byte, y : Byte) -> Int {
   let xi = x.to_int()
   let yi = y.to_int()
-  if xi >= yi { xi - yi } else { yi - xi }
+  if xi >= yi {
+    xi - yi
+  } else {
+    yi - xi
+  }
 }
 
 ///|
-fn color_eq(
-  c0 : AnyColor,
-  c1 : AnyColor
-) -> Bool {
+fn color_eq(c0 : AnyColor, c1 : AnyColor) -> Bool {
   let (r0, g0, b0, a0) = c0.rgba()
   let (r1, g1, b1, a1) = c1.rgba()
   r0 == r1 && g0 == g1 && b0 == b1 && a0 == a1
@@ -51,20 +52,12 @@ test "ycbcr_to_rgb_consistency" {
     while cb < 256 {
       let mut cr = 0
       while cr < 256 {
-        let x : YCbCr = {
-          y: y.to_byte(),
-          cb: cb.to_byte(),
-          cr: cr.to_byte(),
-        }
+        let x : YCbCr = { y: y.to_byte(), cb: cb.to_byte(), cr: cr.to_byte() }
         let (r0, g0, b0, _) = x.rgba()
         let r1 = (r0 >> 8).to_byte()
         let g1 = (g0 >> 8).to_byte()
         let b1 = (b0 >> 8).to_byte()
-        let (r2, g2, b2) = ycbcr_to_rgb(
-          y.to_byte(),
-          cb.to_byte(),
-          cr.to_byte(),
-        )
+        let (r2, g2, b2) = ycbcr_to_rgb(y.to_byte(), cb.to_byte(), cr.to_byte())
         assert_eq(r1, r2)
         assert_eq(g1, g2)
         assert_eq(b1, b2)
@@ -81,9 +74,11 @@ test "ycbcr_to_rgb_consistency" {
 /// YCbCr{i, 0x80, 0x80}.rgba() == Gray{i}.rgba() for all i.
 test "ycbcr_gray" {
   for i in 0..<256 {
-    let c0 : AnyColor = AnyColor::YCbCr(
-      { y: i.to_byte(), cb: b'\x80', cr: b'\x80' },
-    )
+    let c0 : AnyColor = AnyColor::YCbCr({
+      y: i.to_byte(),
+      cb: b'\x80',
+      cr: b'\x80',
+    })
     let c1 : AnyColor = AnyColor::Gray({ y: i.to_byte() })
     assert_true(color_eq(c0, c1))
   }
@@ -94,12 +89,10 @@ test "ycbcr_gray" {
 /// NYCbCrA alpha channel matches Alpha{i}.
 test "nycbcra_alpha" {
   for i in 0..<256 {
-    let c0 : AnyColor = AnyColor::NYCbCrA(
-      {
-        ycbcr: { y: b'\xff', cb: b'\x80', cr: b'\x80' },
-        a: i.to_byte(),
-      },
-    )
+    let c0 : AnyColor = AnyColor::NYCbCrA({
+      ycbcr: { y: b'\xff', cb: b'\x80', cr: b'\x80' },
+      a: i.to_byte(),
+    })
     let c1 : AnyColor = AnyColor::Alpha({ a: i.to_byte() })
     assert_true(color_eq(c0, c1))
   }
@@ -110,15 +103,15 @@ test "nycbcra_alpha" {
 /// NYCbCrA{.., 0xFF} matches YCbCr for r,g,b channels.
 test "nycbcra_ycbcr" {
   for i in 0..<256 {
-    let c0 : AnyColor = AnyColor::NYCbCrA(
-      {
-        ycbcr: { y: i.to_byte(), cb: b'\x40', cr: b'\xc0' },
-        a: b'\xff',
-      },
-    )
-    let c1 : AnyColor = AnyColor::YCbCr(
-      { y: i.to_byte(), cb: b'\x40', cr: b'\xc0' },
-    )
+    let c0 : AnyColor = AnyColor::NYCbCrA({
+      ycbcr: { y: i.to_byte(), cb: b'\x40', cr: b'\xc0' },
+      a: b'\xff',
+    })
+    let c1 : AnyColor = AnyColor::YCbCr({
+      y: i.to_byte(),
+      cb: b'\x40',
+      cr: b'\xc0',
+    })
     assert_true(color_eq(c0, c1))
   }
 }
@@ -195,14 +188,12 @@ test "cmyk_to_rgb_consistency" {
 /// CMYK{0,0,0,255-i}.rgba() == Gray{i}.rgba().
 test "cmyk_gray" {
   for i in 0..<256 {
-    let c0 : AnyColor = AnyColor::CMYK(
-      {
-        c: b'\x00',
-        m: b'\x00',
-        y: b'\x00',
-        k: (255 - i).to_byte(),
-      },
-    )
+    let c0 : AnyColor = AnyColor::CMYK({
+      c: b'\x00',
+      m: b'\x00',
+      y: b'\x00',
+      k: (255 - i).to_byte(),
+    })
     let c1 : AnyColor = AnyColor::Gray({ y: i.to_byte() })
     assert_true(color_eq(c0, c1))
   }
@@ -231,8 +222,6 @@ test "palette" {
   let got = p.convert(
     AnyColor::RGBA({ r: b'\x80', g: b'\x00', b: b'\x00', a: b'\x80' }),
   )
-  let want = AnyColor::RGBA(
-    { r: b'\x7f', g: b'\x00', b: b'\x00', a: b'\x7f' },
-  )
+  let want = AnyColor::RGBA({ r: b'\x7f', g: b'\x00', b: b'\x00', a: b'\x7f' })
   assert_eq(got, Some(want))
 }

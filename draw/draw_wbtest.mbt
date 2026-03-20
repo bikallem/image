@@ -154,7 +154,16 @@ test "clip" {
   ]
   for tc in tests {
     let (
-      _desc, r, dr, sr, mr, sp, mp, nil_mask, r0_expected, sp0_expected,
+      _desc,
+      r,
+      dr,
+      sr,
+      mr,
+      sp,
+      mp,
+      nil_mask,
+      r0_expected,
+      sp0_expected,
       mp0_expected,
     ) = tc
     let dst = @image.AnyImage::RGBA(dst0.sub_image(dr))
@@ -168,9 +177,7 @@ test "clip" {
     assert_true(r_got.eq(r0_expected))
     assert_true(sp_got.x == sp0_expected.x && sp_got.y == sp0_expected.y)
     if !nil_mask {
-      assert_true(
-        _mp_got.x == mp0_expected.x && _mp_got.y == mp0_expected.y,
-      )
+      assert_true(_mp_got.x == mp0_expected.x && _mp_got.y == mp0_expected.y)
     }
     // Verify clipped rect is within bounds
     assert_true(r_got.in_(dr))
@@ -183,20 +190,59 @@ test "fill" {
   for i in 0..<5 {
     let dst = @image.new_image_rgba(@image.rect(0, 0, 10, 10))
     let (r, c) = match i {
-      0 => (@image.rect(0, 0, 10, 10), @color.AnyColor::RGBA({ r: b'\xff', g: b'\x00', b: b'\x00', a: b'\xff' }))
-      1 => (@image.rect(3, 3, 7, 7), @color.AnyColor::RGBA({ r: b'\x00', g: b'\xff', b: b'\x00', a: b'\xff' }))
-      2 => (@image.rect(0, 0, 0, 0), @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\xff', a: b'\xff' }))
-      3 => (@image.rect(-10, -10, 20, 20), @color.AnyColor::RGBA({ r: b'\xff', g: b'\xff', b: b'\x00', a: b'\xff' }))
-      _ => (@image.rect(5, 5, 10, 10), @color.AnyColor::RGBA({ r: b'\xff', g: b'\x00', b: b'\xff', a: b'\xff' }))
+      0 =>
+        (
+          @image.rect(0, 0, 10, 10),
+          @color.AnyColor::RGBA({
+            r: b'\xff',
+            g: b'\x00',
+            b: b'\x00',
+            a: b'\xff',
+          }),
+        )
+      1 =>
+        (
+          @image.rect(3, 3, 7, 7),
+          @color.AnyColor::RGBA({
+            r: b'\x00',
+            g: b'\xff',
+            b: b'\x00',
+            a: b'\xff',
+          }),
+        )
+      2 =>
+        (
+          @image.rect(0, 0, 0, 0),
+          @color.AnyColor::RGBA({
+            r: b'\x00',
+            g: b'\x00',
+            b: b'\xff',
+            a: b'\xff',
+          }),
+        )
+      3 =>
+        (
+          @image.rect(-10, -10, 20, 20),
+          @color.AnyColor::RGBA({
+            r: b'\xff',
+            g: b'\xff',
+            b: b'\x00',
+            a: b'\xff',
+          }),
+        )
+      _ =>
+        (
+          @image.rect(5, 5, 10, 10),
+          @color.AnyColor::RGBA({
+            r: b'\xff',
+            g: b'\x00',
+            b: b'\xff',
+            a: b'\xff',
+          }),
+        )
     }
-    let src = @image.AnyImage::Uniform(@image.ImageUniform::{ c })
-    draw(
-      @image.AnyImage::RGBA(dst),
-      r,
-      src,
-      r.min,
-      Src,
-    )
+    let src = @image.AnyImage::Uniform(@image.ImageUniform::{ c, })
+    draw(@image.AnyImage::RGBA(dst), r, src, r.min, Src)
     // Verify pixels inside r have the fill color
     let (cr, cg, cb, ca) = c.rgba()
     let clipped = r.intersect(@image.rect(0, 0, 10, 10))
@@ -244,17 +290,16 @@ test "floyd_steinberg_checkerboard" {
   let b = @image.rect(0, 0, 640, 480)
   // Floyd-Steinberg dithering of 50% gray on a 2-color palette should
   // produce a checkerboard
-  let dst = @image.new_image_paletted(
-    b,
-    {
-      colors: [
-        @color.AnyColor::Gray({ y: b'\x00' }),
-        @color.AnyColor::Gray({ y: b'\xff' }),
-      ],
-    },
-  )
+  let dst = @image.new_image_paletted(b, {
+    colors: [
+      @color.AnyColor::Gray({ y: b'\x00' }),
+      @color.AnyColor::Gray({ y: b'\xff' }),
+    ],
+  })
   // Use Gray16{0x7fff} for close-to-50% gray, matching Go's test
-  let src = @image.AnyImage::Uniform(@image.ImageUniform::{ c: @color.AnyColor::Gray16({ y: 0x7fff }) })
+  let src = @image.AnyImage::Uniform(@image.ImageUniform::{
+    c: @color.AnyColor::Gray16({ y: 0x7fff }),
+  })
   floyd_steinberg_draw(dst, b, src, { x: 0, y: 0 })
   let mut n_err = 0
   let mut y = b.min.y
@@ -287,16 +332,12 @@ test "draw_overlap" {
         while y < 16 {
           let mut x = 0
           while x < 16 {
-            m.set_rgba(
-              x,
-              y,
-              {
-                r: (y * 16 + x).to_byte(),
-                g: b'\x00',
-                b: b'\x00',
-                a: b'\xff',
-              },
-            )
+            m.set_rgba(x, y, {
+              r: (y * 16 + x).to_byte(),
+              g: b'\x00',
+              b: b'\x00',
+              a: b'\xff',
+            })
             x += 1
           }
           y += 1
@@ -304,13 +345,7 @@ test "draw_overlap" {
         // Draw region of m onto itself with offset
         let sr = @image.rect(4, 4, 12, 12)
         let dr = sr.add({ x: xoff, y: yoff })
-        draw(
-          @image.AnyImage::RGBA(m),
-          dr,
-          @image.AnyImage::RGBA(m),
-          sr.min,
-          op,
-        )
+        draw(@image.AnyImage::RGBA(m), dr, @image.AnyImage::RGBA(m), sr.min, op)
         // Just verify it doesn't crash and produces valid pixels
         y = dr.min.y
         while y < dr.max.y {

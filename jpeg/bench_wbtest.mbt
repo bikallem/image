@@ -17,29 +17,21 @@ test (b : @bench.T) {
   let progressive = @fs.read_file_to_bytes(
     "testdata/video-001.progressive.jpeg",
   )
-  b.bench(
-    name="decode_progressive",
-    fn() { b.keep(try? decode(progressive)) },
-  )
+  b.bench(name="decode_progressive", fn() { b.keep(try? decode(progressive)) })
   // Encode benchmarks
   let r = @image.rect(0, 0, 640, 480)
   let rgba_img = @image.new_image_rgba(r)
   for y in 0..<480 {
     for x in 0..<640 {
-      rgba_img.set_rgba(
-        x,
-        y,
-        {
-          r: (x % 256).to_byte(),
-          g: (y % 256).to_byte(),
-          b: ((x + y) % 256).to_byte(),
-          a: b'\xff',
-        },
-      )
+      rgba_img.set_rgba(x, y, {
+        r: (x % 256).to_byte(),
+        g: (y % 256).to_byte(),
+        b: ((x + y) % 256).to_byte(),
+        a: b'\xff',
+      })
     }
   }
-  b.bench(
-    name="encode_rgba",
-    fn() { b.keep(encode(@image.AnyImage::RGBA(rgba_img))) },
-  )
+  b.bench(name="encode_rgba", fn() {
+    b.keep(encode(@image.AnyImage::RGBA(rgba_img)))
+  })
 }

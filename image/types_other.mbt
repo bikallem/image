@@ -8,12 +8,17 @@ pub(all) struct ImageNRGBA {
 
 ///|
 pub fn ImageNRGBA::pix_offset(self : ImageNRGBA, x : Int, y : Int) -> Int {
-  self.pix_offset + (y - self.rect.min.y) * self.stride +
+  self.pix_offset +
+  (y - self.rect.min.y) * self.stride +
   (x - self.rect.min.x) * 4
 }
 
 ///|
-pub fn ImageNRGBA::nrgba_at(self : ImageNRGBA, x : Int, y : Int) -> @color.NRGBA {
+pub fn ImageNRGBA::nrgba_at(
+  self : ImageNRGBA,
+  x : Int,
+  y : Int,
+) -> @color.NRGBA {
   if !({ x, y } : Point).in_(self.rect) {
     return { r: b'\x00', g: b'\x00', b: b'\x00', a: b'\x00' }
   }
@@ -26,7 +31,7 @@ pub fn ImageNRGBA::set_nrgba(
   self : ImageNRGBA,
   x : Int,
   y : Int,
-  c : @color.NRGBA
+  c : @color.NRGBA,
 ) -> Unit {
   if !({ x, y } : Point).in_(self.rect) {
     return
@@ -55,8 +60,15 @@ pub fn ImageNRGBA::is_opaque(self : ImageNRGBA) -> Bool {
 }
 
 ///|
-pub fn ImageNRGBA::set(self : ImageNRGBA, x : Int, y : Int, c : @color.AnyColor) -> Unit {
-  if !({ x, y } : Point).in_(self.rect) { return }
+pub fn ImageNRGBA::set(
+  self : ImageNRGBA,
+  x : Int,
+  y : Int,
+  c : @color.AnyColor,
+) -> Unit {
+  if !({ x, y } : Point).in_(self.rect) {
+    return
+  }
   let c1 = @color.AnyModel::NRGBAModel.convert(c)
   guard c1 is @color.AnyColor::NRGBA(nc) else { return }
   let i = self.pix_offset(x, y)
@@ -70,7 +82,12 @@ pub fn ImageNRGBA::set(self : ImageNRGBA, x : Int, y : Int, c : @color.AnyColor)
 pub fn ImageNRGBA::sub_image(self : ImageNRGBA, r : Rectangle) -> ImageNRGBA {
   let r = r.intersect(self.rect)
   if r.empty() {
-    return { pix: FixedArray::make(0, b'\x00'), pix_offset: 0, stride: self.stride, rect: r }
+    return {
+      pix: FixedArray::make(0, b'\x00'),
+      pix_offset: 0,
+      stride: self.stride,
+      rect: r,
+    }
   }
   let i = self.pix_offset(r.min.x, r.min.y)
   { pix: self.pix, pix_offset: i, stride: self.stride, rect: r }
@@ -97,7 +114,8 @@ pub(all) struct ImageNRGBA64 {
 
 ///|
 pub fn ImageNRGBA64::pix_offset(self : ImageNRGBA64, x : Int, y : Int) -> Int {
-  self.pix_offset + (y - self.rect.min.y) * self.stride +
+  self.pix_offset +
+  (y - self.rect.min.y) * self.stride +
   (x - self.rect.min.x) * 8
 }
 
@@ -105,7 +123,7 @@ pub fn ImageNRGBA64::pix_offset(self : ImageNRGBA64, x : Int, y : Int) -> Int {
 pub fn ImageNRGBA64::nrgba64_at(
   self : ImageNRGBA64,
   x : Int,
-  y : Int
+  y : Int,
 ) -> @color.NRGBA64 {
   if !({ x, y } : Point).in_(self.rect) {
     return { r: 0U, g: 0U, b: 0U, a: 0U }
@@ -124,7 +142,7 @@ pub fn ImageNRGBA64::set_nrgba64(
   self : ImageNRGBA64,
   x : Int,
   y : Int,
-  c : @color.NRGBA64
+  c : @color.NRGBA64,
 ) -> Unit {
   if !({ x, y } : Point).in_(self.rect) {
     return
@@ -141,18 +159,33 @@ pub fn ImageNRGBA64::set_nrgba64(
 }
 
 ///|
-pub fn ImageNRGBA64::set(self : ImageNRGBA64, x : Int, y : Int, c : @color.AnyColor) -> Unit {
-  if !({ x, y } : Point).in_(self.rect) { return }
+pub fn ImageNRGBA64::set(
+  self : ImageNRGBA64,
+  x : Int,
+  y : Int,
+  c : @color.AnyColor,
+) -> Unit {
+  if !({ x, y } : Point).in_(self.rect) {
+    return
+  }
   let c1 = @color.AnyModel::NRGBA64Model.convert(c)
   guard c1 is @color.AnyColor::NRGBA64(nc) else { return }
   self.set_nrgba64(x, y, nc)
 }
 
 ///|
-pub fn ImageNRGBA64::sub_image(self : ImageNRGBA64, r : Rectangle) -> ImageNRGBA64 {
+pub fn ImageNRGBA64::sub_image(
+  self : ImageNRGBA64,
+  r : Rectangle,
+) -> ImageNRGBA64 {
   let r = r.intersect(self.rect)
   if r.empty() {
-    return { pix: FixedArray::make(0, b'\x00'), pix_offset: 0, stride: self.stride, rect: r }
+    return {
+      pix: FixedArray::make(0, b'\x00'),
+      pix_offset: 0,
+      stride: self.stride,
+      rect: r,
+    }
   }
   let i = self.pix_offset(r.min.x, r.min.y)
   { pix: self.pix, pix_offset: i, stride: self.stride, rect: r }
@@ -183,7 +216,11 @@ pub fn ImageAlpha::pix_offset(self : ImageAlpha, x : Int, y : Int) -> Int {
 }
 
 ///|
-pub fn ImageAlpha::alpha_at(self : ImageAlpha, x : Int, y : Int) -> @color.Alpha {
+pub fn ImageAlpha::alpha_at(
+  self : ImageAlpha,
+  x : Int,
+  y : Int,
+) -> @color.Alpha {
   if !({ x, y } : Point).in_(self.rect) {
     return { a: b'\x00' }
   }
@@ -196,7 +233,7 @@ pub fn ImageAlpha::set_alpha(
   self : ImageAlpha,
   x : Int,
   y : Int,
-  c : @color.Alpha
+  c : @color.Alpha,
 ) -> Unit {
   if !({ x, y } : Point).in_(self.rect) {
     return
@@ -221,8 +258,15 @@ pub fn ImageAlpha::is_opaque(self : ImageAlpha) -> Bool {
 }
 
 ///|
-pub fn ImageAlpha::set(self : ImageAlpha, x : Int, y : Int, c : @color.AnyColor) -> Unit {
-  if !({ x, y } : Point).in_(self.rect) { return }
+pub fn ImageAlpha::set(
+  self : ImageAlpha,
+  x : Int,
+  y : Int,
+  c : @color.AnyColor,
+) -> Unit {
+  if !({ x, y } : Point).in_(self.rect) {
+    return
+  }
   let c1 = @color.AnyModel::AlphaModel.convert(c)
   guard c1 is @color.AnyColor::Alpha(ac) else { return }
   self.pix[self.pix_offset(x, y)] = ac.a
@@ -232,7 +276,12 @@ pub fn ImageAlpha::set(self : ImageAlpha, x : Int, y : Int, c : @color.AnyColor)
 pub fn ImageAlpha::sub_image(self : ImageAlpha, r : Rectangle) -> ImageAlpha {
   let r = r.intersect(self.rect)
   if r.empty() {
-    return { pix: FixedArray::make(0, b'\x00'), pix_offset: 0, stride: self.stride, rect: r }
+    return {
+      pix: FixedArray::make(0, b'\x00'),
+      pix_offset: 0,
+      stride: self.stride,
+      rect: r,
+    }
   }
   let i = self.pix_offset(r.min.x, r.min.y)
   { pix: self.pix, pix_offset: i, stride: self.stride, rect: r }
@@ -259,7 +308,8 @@ pub(all) struct ImageAlpha16 {
 
 ///|
 pub fn ImageAlpha16::pix_offset(self : ImageAlpha16, x : Int, y : Int) -> Int {
-  self.pix_offset + (y - self.rect.min.y) * self.stride +
+  self.pix_offset +
+  (y - self.rect.min.y) * self.stride +
   (x - self.rect.min.x) * 2
 }
 
@@ -267,7 +317,7 @@ pub fn ImageAlpha16::pix_offset(self : ImageAlpha16, x : Int, y : Int) -> Int {
 pub fn ImageAlpha16::alpha16_at(
   self : ImageAlpha16,
   x : Int,
-  y : Int
+  y : Int,
 ) -> @color.Alpha16 {
   if !({ x, y } : Point).in_(self.rect) {
     return { a: 0U }
@@ -281,7 +331,7 @@ pub fn ImageAlpha16::set_alpha16(
   self : ImageAlpha16,
   x : Int,
   y : Int,
-  c : @color.Alpha16
+  c : @color.Alpha16,
 ) -> Unit {
   if !({ x, y } : Point).in_(self.rect) {
     return
@@ -292,18 +342,33 @@ pub fn ImageAlpha16::set_alpha16(
 }
 
 ///|
-pub fn ImageAlpha16::set(self : ImageAlpha16, x : Int, y : Int, c : @color.AnyColor) -> Unit {
-  if !({ x, y } : Point).in_(self.rect) { return }
+pub fn ImageAlpha16::set(
+  self : ImageAlpha16,
+  x : Int,
+  y : Int,
+  c : @color.AnyColor,
+) -> Unit {
+  if !({ x, y } : Point).in_(self.rect) {
+    return
+  }
   let c1 = @color.AnyModel::Alpha16Model.convert(c)
   guard c1 is @color.AnyColor::Alpha16(ac) else { return }
   self.set_alpha16(x, y, ac)
 }
 
 ///|
-pub fn ImageAlpha16::sub_image(self : ImageAlpha16, r : Rectangle) -> ImageAlpha16 {
+pub fn ImageAlpha16::sub_image(
+  self : ImageAlpha16,
+  r : Rectangle,
+) -> ImageAlpha16 {
   let r = r.intersect(self.rect)
   if r.empty() {
-    return { pix: FixedArray::make(0, b'\x00'), pix_offset: 0, stride: self.stride, rect: r }
+    return {
+      pix: FixedArray::make(0, b'\x00'),
+      pix_offset: 0,
+      stride: self.stride,
+      rect: r,
+    }
   }
   let i = self.pix_offset(r.min.x, r.min.y)
   { pix: self.pix, pix_offset: i, stride: self.stride, rect: r }
@@ -347,7 +412,7 @@ pub fn ImageGray::set_gray(
   self : ImageGray,
   x : Int,
   y : Int,
-  c : @color.Gray
+  c : @color.Gray,
 ) -> Unit {
   if !({ x, y } : Point).in_(self.rect) {
     return
@@ -356,8 +421,15 @@ pub fn ImageGray::set_gray(
 }
 
 ///|
-pub fn ImageGray::set(self : ImageGray, x : Int, y : Int, c : @color.AnyColor) -> Unit {
-  if !({ x, y } : Point).in_(self.rect) { return }
+pub fn ImageGray::set(
+  self : ImageGray,
+  x : Int,
+  y : Int,
+  c : @color.AnyColor,
+) -> Unit {
+  if !({ x, y } : Point).in_(self.rect) {
+    return
+  }
   let c1 = @color.AnyModel::GrayModel.convert(c)
   guard c1 is @color.AnyColor::Gray(gc) else { return }
   self.pix[self.pix_offset(x, y)] = gc.y
@@ -367,7 +439,12 @@ pub fn ImageGray::set(self : ImageGray, x : Int, y : Int, c : @color.AnyColor) -
 pub fn ImageGray::sub_image(self : ImageGray, r : Rectangle) -> ImageGray {
   let r = r.intersect(self.rect)
   if r.empty() {
-    return { pix: FixedArray::make(0, b'\x00'), pix_offset: 0, stride: self.stride, rect: r }
+    return {
+      pix: FixedArray::make(0, b'\x00'),
+      pix_offset: 0,
+      stride: self.stride,
+      rect: r,
+    }
   }
   let i = self.pix_offset(r.min.x, r.min.y)
   { pix: self.pix, pix_offset: i, stride: self.stride, rect: r }
@@ -394,7 +471,8 @@ pub(all) struct ImageGray16 {
 
 ///|
 pub fn ImageGray16::pix_offset(self : ImageGray16, x : Int, y : Int) -> Int {
-  self.pix_offset + (y - self.rect.min.y) * self.stride +
+  self.pix_offset +
+  (y - self.rect.min.y) * self.stride +
   (x - self.rect.min.x) * 2
 }
 
@@ -402,7 +480,7 @@ pub fn ImageGray16::pix_offset(self : ImageGray16, x : Int, y : Int) -> Int {
 pub fn ImageGray16::gray16_at(
   self : ImageGray16,
   x : Int,
-  y : Int
+  y : Int,
 ) -> @color.Gray16 {
   if !({ x, y } : Point).in_(self.rect) {
     return { y: 0U }
@@ -416,7 +494,7 @@ pub fn ImageGray16::set_gray16(
   self : ImageGray16,
   x : Int,
   y : Int,
-  c : @color.Gray16
+  c : @color.Gray16,
 ) -> Unit {
   if !({ x, y } : Point).in_(self.rect) {
     return
@@ -427,8 +505,15 @@ pub fn ImageGray16::set_gray16(
 }
 
 ///|
-pub fn ImageGray16::set(self : ImageGray16, x : Int, y : Int, c : @color.AnyColor) -> Unit {
-  if !({ x, y } : Point).in_(self.rect) { return }
+pub fn ImageGray16::set(
+  self : ImageGray16,
+  x : Int,
+  y : Int,
+  c : @color.AnyColor,
+) -> Unit {
+  if !({ x, y } : Point).in_(self.rect) {
+    return
+  }
   let c1 = @color.AnyModel::Gray16Model.convert(c)
   guard c1 is @color.AnyColor::Gray16(gc) else { return }
   self.set_gray16(x, y, gc)
@@ -438,7 +523,12 @@ pub fn ImageGray16::set(self : ImageGray16, x : Int, y : Int, c : @color.AnyColo
 pub fn ImageGray16::sub_image(self : ImageGray16, r : Rectangle) -> ImageGray16 {
   let r = r.intersect(self.rect)
   if r.empty() {
-    return { pix: FixedArray::make(0, b'\x00'), pix_offset: 0, stride: self.stride, rect: r }
+    return {
+      pix: FixedArray::make(0, b'\x00'),
+      pix_offset: 0,
+      stride: self.stride,
+      rect: r,
+    }
   }
   let i = self.pix_offset(r.min.x, r.min.y)
   { pix: self.pix, pix_offset: i, stride: self.stride, rect: r }
@@ -470,9 +560,18 @@ pub fn ImagePaletted::pix_offset(self : ImagePaletted, x : Int, y : Int) -> Int 
 }
 
 ///|
-pub fn ImagePaletted::at(self : ImagePaletted, x : Int, y : Int) -> @color.AnyColor {
+pub fn ImagePaletted::at(
+  self : ImagePaletted,
+  x : Int,
+  y : Int,
+) -> @color.AnyColor {
   if self.palette.colors.is_empty() {
-    return @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\x00' })
+    return @color.AnyColor::RGBA({
+      r: b'\x00',
+      g: b'\x00',
+      b: b'\x00',
+      a: b'\x00',
+    })
   }
   if !({ x, y } : Point).in_(self.rect) {
     return self.palette.colors[0]
@@ -485,7 +584,7 @@ pub fn ImagePaletted::at(self : ImagePaletted, x : Int, y : Int) -> @color.AnyCo
 pub fn ImagePaletted::color_index_at(
   self : ImagePaletted,
   x : Int,
-  y : Int
+  y : Int,
 ) -> Byte {
   if !({ x, y } : Point).in_(self.rect) {
     return b'\x00'
@@ -498,7 +597,7 @@ pub fn ImagePaletted::set_color_index(
   self : ImagePaletted,
   x : Int,
   y : Int,
-  index : Byte
+  index : Byte,
 ) -> Unit {
   if !({ x, y } : Point).in_(self.rect) {
     return
@@ -507,20 +606,42 @@ pub fn ImagePaletted::set_color_index(
 }
 
 ///|
-pub fn ImagePaletted::set(self : ImagePaletted, x : Int, y : Int, c : @color.AnyColor) -> Unit {
-  if !({ x, y } : Point).in_(self.rect) { return }
+pub fn ImagePaletted::set(
+  self : ImagePaletted,
+  x : Int,
+  y : Int,
+  c : @color.AnyColor,
+) -> Unit {
+  if !({ x, y } : Point).in_(self.rect) {
+    return
+  }
   let idx = self.palette.index(c)
   self.pix[self.pix_offset(x, y)] = idx.to_byte()
 }
 
 ///|
-pub fn ImagePaletted::sub_image(self : ImagePaletted, r : Rectangle) -> ImagePaletted {
+pub fn ImagePaletted::sub_image(
+  self : ImagePaletted,
+  r : Rectangle,
+) -> ImagePaletted {
   let r = r.intersect(self.rect)
   if r.empty() {
-    return { pix: FixedArray::make(0, b'\x00'), pix_offset: 0, stride: self.stride, rect: r, palette: self.palette }
+    return {
+      pix: FixedArray::make(0, b'\x00'),
+      pix_offset: 0,
+      stride: self.stride,
+      rect: r,
+      palette: self.palette,
+    }
   }
   let i = self.pix_offset(r.min.x, r.min.y)
-  { pix: self.pix, pix_offset: i, stride: self.stride, rect: r, palette: self.palette }
+  {
+    pix: self.pix,
+    pix_offset: i,
+    stride: self.stride,
+    rect: r,
+    palette: self.palette,
+  }
 }
 
 ///|

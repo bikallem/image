@@ -49,7 +49,7 @@ fn idct_1d(
   s4 : Int,
   s5 : Int,
   s6 : Int,
-  s7 : Int
+  s7 : Int,
 ) -> (Int, Int, Int, Int, Int, Int, Int, Int) {
   // Even part
   let x0 = (s0 << 11) + 128
@@ -110,9 +110,8 @@ pub fn idct(block : FixedArray[Int], dst : FixedArray[Byte]) -> Unit {
     let s6 = block[base + 6]
     let s7 = block[base + 7]
     // If all AC terms are zero, shortcut
-    if s1 == 0 && s2 == 0 && s3 == 0 && s4 == 0 && s5 == 0 && s6 == 0 &&
-      s7 == 0 {
-      let dc = (s0 << 3)
+    if s1 == 0 && s2 == 0 && s3 == 0 && s4 == 0 && s5 == 0 && s6 == 0 && s7 == 0 {
+      let dc = s0 << 3
       tmp[base] = dc
       tmp[base + 1] = dc
       tmp[base + 2] = dc
@@ -145,8 +144,7 @@ pub fn idct(block : FixedArray[Int], dst : FixedArray[Byte]) -> Unit {
     let s5 = tmp[40 + x]
     let s6 = tmp[48 + x]
     let s7 = tmp[56 + x]
-    if s1 == 0 && s2 == 0 && s3 == 0 && s4 == 0 && s5 == 0 && s6 == 0 &&
-      s7 == 0 {
+    if s1 == 0 && s2 == 0 && s3 == 0 && s4 == 0 && s5 == 0 && s6 == 0 && s7 == 0 {
       let dc = idct_clamp(((s0 + 16) >> 5) + 128)
       dst[x] = dc
       dst[8 + x] = dc

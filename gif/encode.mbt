@@ -3,7 +3,7 @@
 /// Default: 256 colors using median-cut quantization.
 pub fn encode_image(
   img : @image.AnyImage,
-  n_colors~ : Int = 256
+  n_colors? : Int = 256,
 ) -> Bytes raise Error {
   let paletted = match img {
     @image.AnyImage::Paletted(p) => p
@@ -104,7 +104,7 @@ pub fn encode_all(gif : GIF) -> Bytes raise Error {
 ///|
 fn color_table_size(n : Int) -> Int {
   let mut size = 1
-  while (1 << size) < n {
+  while 1 << size < n {
     size = size + 1
   }
   if size < 1 {
@@ -120,7 +120,7 @@ fn color_table_size(n : Int) -> Int {
 fn write_color_table(
   buf : @buffer.Buffer,
   palette : Array[@color.AnyColor],
-  size : Int
+  size : Int,
 ) -> Unit {
   for i in 0..<size {
     if i < palette.length() {

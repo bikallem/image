@@ -71,9 +71,9 @@ test "paeth_decode" {
 test "png_reader" {
   // Test all pngsuite basn* formats including sub-8-bit grayscale
   let test_files = [
-    "basn0g01", "basn0g02", "basn0g04", "basn0g08", "basn0g16",
-    "basn2c08", "basn2c16", "basn3p01", "basn3p02", "basn3p04",
-    "basn3p08", "basn4a08", "basn4a16", "basn6a08", "basn6a16",
+    "basn0g01", "basn0g02", "basn0g04", "basn0g08", "basn0g16", "basn2c08", "basn2c16",
+    "basn3p01", "basn3p02", "basn3p04", "basn3p08", "basn4a08", "basn4a16", "basn6a08",
+    "basn6a16",
   ]
   for name in test_files {
     let path = "png/testdata/pngsuite/\{name}.png"
@@ -94,8 +94,7 @@ test "png_reader_error" {
   // Note: some "invalid" files may still decode if the corruption is in
   // non-critical areas (like CRC). Test files that should definitely fail.
   let invalid_files = [
-    "png/testdata/invalid-trunc.png",
-    "png/testdata/invalid-zlib.png",
+    "png/testdata/invalid-trunc.png", "png/testdata/invalid-zlib.png",
   ]
   for path in invalid_files {
     let data = @fs.read_file_to_bytes(path)
@@ -116,8 +115,7 @@ test "png_reader_error" {
   assert_eq(interlaced_img.bounds().dx(), normal_img.bounds().dx())
   assert_eq(interlaced_img.bounds().dy(), normal_img.bounds().dy())
   let maybe_invalid = [
-    "png/testdata/invalid-crc32.png",
-    "png/testdata/invalid-noend.png",
+    "png/testdata/invalid-crc32.png", "png/testdata/invalid-noend.png",
   ]
   for path in maybe_invalid {
     let data = @fs.read_file_to_bytes(path)
@@ -130,9 +128,7 @@ test "png_reader_error" {
 /// Port of Go's TestWriter from writer_test.go.
 /// Encode -> Decode roundtrip for pngsuite images, pixel-perfect.
 test "png_writer" {
-  let test_files = [
-    "basn0g08", "basn2c08", "basn3p08", "basn4a08", "basn6a08",
-  ]
+  let test_files = ["basn0g08", "basn2c08", "basn3p08", "basn4a08", "basn6a08"]
   for name in test_files {
     let path = "png/testdata/pngsuite/\{name}.png"
     let data = @fs.read_file_to_bytes(path)
@@ -173,16 +169,12 @@ test "png_write_rgba" {
   while y < 64 {
     let mut x = 0
     while x < 64 {
-      m.set_rgba(
-        x,
-        y,
-        {
-          r: (x * 4).to_byte(),
-          g: (y * 4).to_byte(),
-          b: b'\x80',
-          a: b'\xff',
-        },
-      )
+      m.set_rgba(x, y, {
+        r: (x * 4).to_byte(),
+        g: (y * 4).to_byte(),
+        b: b'\x80',
+        a: b'\xff',
+      })
       x += 1
     }
     y += 1
@@ -197,7 +189,7 @@ test "png_write_rgba" {
   while y < 64 {
     let mut x = 0
     while x < 64 {
-      let (r1, g1, b1, a1) = (@image.AnyImage::RGBA(m)).at(x, y).rgba()
+      let (r1, g1, b1, a1) = @image.AnyImage::RGBA(m).at(x, y).rgba()
       let (r2, g2, b2, a2) = decoded.at(x, y).rgba()
       assert_eq(r1, r2)
       assert_eq(g1, g2)
@@ -218,16 +210,12 @@ test "png_subimage" {
   while y < 256 {
     let mut x = 0
     while x < 256 {
-      m.set_rgba(
-        x,
-        y,
-        {
-          r: x.to_byte(),
-          g: y.to_byte(),
-          b: b'\x00',
-          a: b'\xff',
-        },
-      )
+      m.set_rgba(x, y, {
+        r: x.to_byte(),
+        g: y.to_byte(),
+        b: b'\x00',
+        a: b'\xff',
+      })
       x += 1
     }
     y += 1
@@ -262,9 +250,12 @@ test "png_gray8_transparent" {
 test "png_writer_paletted" {
   let pal : @color.Palette = {
     colors: Array::makei(256, fn(i) {
-      @color.AnyColor::RGBA(
-        { r: i.to_byte(), g: (255 - i).to_byte(), b: b'\x80', a: b'\xff' },
-      )
+      @color.AnyColor::RGBA({
+        r: i.to_byte(),
+        g: (255 - i).to_byte(),
+        b: b'\x80',
+        a: b'\xff',
+      })
     }),
   }
   let m = @image.new_image_paletted(@image.rect(0, 0, 32, 32), pal)
@@ -280,7 +271,7 @@ test "png_writer_paletted" {
   // Verify pixels match via RGBA comparison
   for y in 0..<32 {
     for x in 0..<32 {
-      let (r1, g1, b1, a1) = (@image.AnyImage::Paletted(m)).at(x, y).rgba()
+      let (r1, g1, b1, a1) = @image.AnyImage::Paletted(m).at(x, y).rgba()
       let (r2, g2, b2, a2) = decoded.at(x, y).rgba()
       assert_eq(r1, r2)
       assert_eq(g1, g2)

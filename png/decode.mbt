@@ -68,20 +68,15 @@ pub fn decode(data : Bytes) -> @image.AnyImage raise Error {
           )
         }
       }
-      t if t == ct_trns => {
-        trns = r.read_bytes(chunk_len.reinterpret_as_int())
-      }
+      t if t == ct_trns => trns = r.read_bytes(chunk_len.reinterpret_as_int())
       t if t == ct_idat => {
         let chunk_data = r.read_bytes(chunk_len.reinterpret_as_int())
         idat_buf.write_bytes(chunk_data)
       }
-      t if t == ct_iend => {
-        seen_iend = true
-      }
-      _ => {
+      t if t == ct_iend => seen_iend = true
+      _ =>
         // Skip unknown chunks
         r.skip(chunk_len.reinterpret_as_int())
-      }
     }
     // Ensure we're at the right position after chunk data
     r.pos = chunk_data_start + chunk_len.reinterpret_as_int()
@@ -96,9 +91,12 @@ pub fn decode(data : Bytes) -> @image.AnyImage raise Error {
     for i in 0..<trns.length() {
       if i < palette.length() {
         guard palette[i] is @color.AnyColor::RGBA(c) else { continue }
-        palette[i] = @color.AnyColor::NRGBA(
-          { r: c.r, g: c.g, b: c.b, a: trns[i] },
-        )
+        palette[i] = @color.AnyColor::NRGBA({
+          r: c.r,
+          g: c.g,
+          b: c.b,
+          a: trns[i],
+        })
       }
     }
   }
@@ -106,9 +104,13 @@ pub fn decode(data : Bytes) -> @image.AnyImage raise Error {
   let compressed = idat_buf.to_bytes()
   let decompressed = @zlib.decompress(compressed) |> or_png_error()
   if interlace == b'\x00' {
-    decode_image(decompressed, width, height, bit_depth, color_type, palette, trns)
+    decode_image(
+      decompressed, width, height, bit_depth, color_type, palette, trns,
+    )
   } else {
-    decode_interlaced(decompressed, width, height, bit_depth, color_type, palette, trns)
+    decode_interlaced(
+      decompressed, width, height, bit_depth, color_type, palette, trns,
+    )
   }
 }
 
@@ -132,7 +134,7 @@ fn decode_interlaced(
   bit_depth : Byte,
   color_type : Byte,
   palette : Array[@color.AnyColor],
-  trns : Bytes
+  trns : Bytes,
 ) -> @image.AnyImage raise PngError {
   // First decode a non-interlaced image into a temporary, then scatter pixels
   // into the final image using Adam7 pass parameters.
@@ -160,7 +162,8 @@ fn decode_interlaced(
   // Create target image based on color type
   let target = match color_type {
     t if t == ct_grayscale => @image.AnyImage::Gray(@image.new_image_gray(rect))
-    t if t == ct_true_color => @image.AnyImage::NRGBA(@image.new_image_nrgba(rect))
+    t if t == ct_true_color =>
+      @image.AnyImage::NRGBA(@image.new_image_nrgba(rect))
     t if t == ct_paletted =>
       @image.AnyImage::Paletted(
         @image.new_image_paletted(rect, @color.Palette::{ colors: palette }),
@@ -169,14 +172,25 @@ fn decode_interlaced(
       @image.AnyImage::NRGBA(@image.new_image_nrgba(rect))
     t if t == ct_true_color_alpha =>
       @image.AnyImage::NRGBA(@image.new_image_nrgba(rect))
-    _ => raise PngError::UnsupportedError("color type " + color_type.to_int().to_string())
+    _ =>
+      raise PngError::UnsupportedError(
+        "color type " + color_type.to_int().to_string(),
+      )
   }
   // Process each Adam7 pass
   let mut offset = 0
   for pass in 0..<7 {
     let (x_off, y_off, x_stride, y_stride) = adam7[pass]
-    let pass_w = if width <= x_off { 0 } else { (width - x_off + x_stride - 1) / x_stride }
-    let pass_h = if height <= y_off { 0 } else { (height - y_off + y_stride - 1) / y_stride }
+    let pass_w = if width <= x_off {
+      0
+    } else {
+      (width - x_off + x_stride - 1) / x_stride
+    }
+    let pass_h = if height <= y_off {
+      0
+    } else {
+      (height - y_off + y_stride - 1) / y_stride
+    }
     if pass_w == 0 || pass_h == 0 {
       continue
     }
@@ -228,8 +242,12 @@ fn decode_interlaced(
               }
               ignore(nc)
               // Use palette index
-              guard pass_img is @image.AnyImage::Paletted(pass_pal) else { continue }
-              img.pix[dst_y * img.stride + dst_x] = pass_pal.color_index_at(px, py)
+              guard pass_img is @image.AnyImage::Paletted(pass_pal) else {
+                continue
+              }
+              img.pix[dst_y * img.stride + dst_x] = pass_pal.color_index_at(
+                px, py,
+              )
             }
             _ => ()
           }
@@ -253,15 +271,17 @@ fn decode_image(
   bit_depth : Byte,
   color_type : Byte,
   palette : Array[@color.AnyColor],
-  trns : Bytes
+  trns : Bytes,
 ) -> @image.AnyImage raise PngError {
   let bpp = bytes_per_pixel(bit_depth, color_type)
   let stride = bytes_per_row(width, bit_depth, color_type)
   // Each row has a filter byte prefix
   if data.length() < height * (stride + 1) {
     raise PngError::FormatError(
-      "not enough IDAT data: expected " + (height * (stride + 1)).to_string() +
-      ", got " + data.length().to_string(),
+      "not enough IDAT data: expected " +
+      (height * (stride + 1)).to_string() +
+      ", got " +
+      data.length().to_string(),
     )
   }
   let rect : @image.Rectangle = {
@@ -272,7 +292,8 @@ fn decode_image(
   let prev_row = FixedArray::make(stride, b'\x00')
   let cur_row = @blit.make_uninit(stride)
   match color_type {
-    t if t == ct_grayscale && (bit_depth == b'\x01' || bit_depth == b'\x02' || bit_depth == b'\x04') => {
+    t if t == ct_grayscale &&
+      (bit_depth == b'\x01' || bit_depth == b'\x02' || bit_depth == b'\x04') => {
       // Sub-8-bit grayscale: unpack to 8-bit by scaling
       let img = @image.new_image_gray(rect)
       let bd = bit_depth.to_int()
@@ -286,7 +307,7 @@ fn decode_image(
         unfilter(filter, cur_row, prev_row, bpp)
         for x in 0..<width {
           let byte_idx = x * bd / 8
-          let bit_off = 8 - bd - (x * bd % 8)
+          let bit_off = 8 - bd - x * bd % 8
           let val = (cur_row[byte_idx].to_int() >> bit_off) & max_val
           // Scale to 0-255 range
           let scaled = val * 255 / max_val
@@ -367,19 +388,22 @@ fn decode_image(
           for x in 0..<width {
             let byte_idx = x / 2
             let shift = if x % 2 == 0 { 4 } else { 0 }
-            img.pix[y * img.stride + x] = ((cur_row[byte_idx].to_int() >> shift) & 0x0f).to_byte()
+            img.pix[y * img.stride + x] = ((cur_row[byte_idx].to_int() >> shift) &
+            0x0f).to_byte()
           }
         } else if bit_depth == b'\x02' {
           for x in 0..<width {
             let byte_idx = x / 4
             let shift = (3 - x % 4) * 2
-            img.pix[y * img.stride + x] = ((cur_row[byte_idx].to_int() >> shift) & 0x03).to_byte()
+            img.pix[y * img.stride + x] = ((cur_row[byte_idx].to_int() >> shift) &
+            0x03).to_byte()
           }
         } else if bit_depth == b'\x01' {
           for x in 0..<width {
             let byte_idx = x / 8
             let shift = 7 - x % 8
-            img.pix[y * img.stride + x] = ((cur_row[byte_idx].to_int() >> shift) & 0x01).to_byte()
+            img.pix[y * img.stride + x] = ((cur_row[byte_idx].to_int() >> shift) &
+            0x01).to_byte()
           }
         }
         @blit.blit_fixed_array(prev_row, 0, cur_row, 0, stride)
@@ -459,7 +483,11 @@ fn bytes_per_row(width : Int, bit_depth : Byte, color_type : Byte) -> Int {
   let bd = bit_depth.to_int()
   match color_type {
     t if t == ct_grayscale =>
-      if bd < 8 { (width * bd + 7) / 8 } else { width * (bd / 8) }
+      if bd < 8 {
+        (width * bd + 7) / 8
+      } else {
+        width * (bd / 8)
+      }
     t if t == ct_true_color => width * bd / 8 * 3
     t if t == ct_paletted => (width * bd + 7) / 8
     t if t == ct_grayscale_alpha => width * bd / 8 * 2
@@ -473,7 +501,7 @@ fn unfilter(
   filter : Byte,
   cur : FixedArray[Byte],
   prev : FixedArray[Byte],
-  bpp : Int
+  bpp : Int,
 ) -> Unit raise PngError {
   let n = cur.length()
   match filter {

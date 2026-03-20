@@ -48,9 +48,7 @@ test "rectangle" {
       let a = r.intersect(s)
       assert_true(rect_all_points_in(a, r))
       assert_true(rect_all_points_in(a, s))
-      let is_zero = a.eq(
-        { min: { x: 0, y: 0 }, max: { x: 0, y: 0 } },
-      )
+      let is_zero = a.eq({ min: { x: 0, y: 0 }, max: { x: 0, y: 0 } })
       let overlaps = r.overlaps(s)
       assert_true(is_zero != overlaps)
       let larger : Array[Rectangle] = [

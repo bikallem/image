@@ -89,7 +89,7 @@ fn GifByteReader::read_uint16_le(self : GifByteReader) -> UInt raise GifError {
 ///|
 fn GifByteReader::read_bytes(
   self : GifByteReader,
-  n : Int
+  n : Int,
 ) -> Bytes raise GifError {
   if self.pos + n > self.data.length() {
     raise UnexpectedEOF

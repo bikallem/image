@@ -5,7 +5,7 @@
 pub fn build_huffman_table(
   table : HuffmanTable,
   bits_count : FixedArray[Int],
-  symbols : FixedArray[Int]
+  symbols : FixedArray[Int],
 ) -> Unit raise JpegError {
   // Copy num_codes
   for i in 0..<16 {
@@ -45,10 +45,7 @@ pub fn build_huffman_table(
 ///|
 /// Read n bits from the JPEG byte stream (with 0xFF byte-stuffing removal).
 /// Fills bits.buf and bits.n.
-fn ensure_bits(
-  d : Decoder,
-  n : Int
-) -> Unit raise JpegError {
+fn ensure_bits(d : Decoder, n : Int) -> Unit raise JpegError {
   while d.bits.n < n {
     let b = d.r.read_byte()
     if b == b'\xFF' {
@@ -59,7 +56,7 @@ fn ensure_bits(
         // We treat this as end of entropy-coded data
         d.r.pos -= 2
         // Fill remaining bits with zeros to avoid infinite loop
-        d.bits.buf = (d.bits.buf << (n - d.bits.n))
+        d.bits.buf = d.bits.buf << (n - d.bits.n)
         d.bits.n = n
         return
       }
@@ -119,7 +116,7 @@ fn receive_and_extend(d : Decoder, n : Int) -> Int raise JpegError {
   }
   let v = read_bits(d, n)
   // If top bit is 0, value is negative: subtract (2^n - 1)
-  if v < (1 << (n - 1)) {
+  if v < 1 << (n - 1) {
     v - (1 << n) + 1
   } else {
     v

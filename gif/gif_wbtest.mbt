@@ -26,7 +26,9 @@ test "gif_bounds" {
   let gif = decode_all(data)
   for frame in gif.image {
     // Each frame should have valid bounds
-    assert_true(frame.rect.dx() > 0 || frame.rect.dy() > 0 || frame.rect.dx() == 0)
+    assert_true(
+      frame.rect.dx() > 0 || frame.rect.dy() > 0 || frame.rect.dx() == 0,
+    )
   }
 }
 
@@ -36,14 +38,12 @@ test "gif_bounds" {
 test "gif_writer" {
   let pal : @color.Palette = {
     colors: Array::makei(256, fn(i) {
-      @color.AnyColor::RGBA(
-        {
-          r: i.to_byte(),
-          g: (255 - i).to_byte(),
-          b: b'\x80',
-          a: b'\xff',
-        },
-      )
+      @color.AnyColor::RGBA({
+        r: i.to_byte(),
+        g: (255 - i).to_byte(),
+        b: b'\x80',
+        a: b'\xff',
+      })
     }),
   }
   let m = @image.new_image_paletted(@image.rect(0, 0, 32, 32), pal)
@@ -77,18 +77,8 @@ test "gif_unexpected_eof" {
 test "gif_loop_count" {
   let pal : @color.Palette = {
     colors: [
-      @color.AnyColor::RGBA({
-        r: b'\x00',
-        g: b'\x00',
-        b: b'\x00',
-        a: b'\xff',
-      }),
-      @color.AnyColor::RGBA({
-        r: b'\xff',
-        g: b'\xff',
-        b: b'\xff',
-        a: b'\xff',
-      }),
+      @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' }),
+      @color.AnyColor::RGBA({ r: b'\xff', g: b'\xff', b: b'\xff', a: b'\xff' }),
     ],
   }
   let frame = @image.new_image_paletted(@image.rect(0, 0, 1, 1), pal)
@@ -99,11 +89,7 @@ test "gif_loop_count" {
     loop_count: 0,
     disposal: [b'\x00', b'\x00'],
     background_index: b'\x00',
-    config: {
-      color_model: @color.AnyModel::RGBAModel,
-      width: 1,
-      height: 1,
-    },
+    config: { color_model: @color.AnyModel::RGBAModel, width: 1, height: 1 },
   }
   let encoded = encode_all(gif)
   let decoded_gif = decode_all(encoded)
@@ -120,11 +106,7 @@ test "gif_encode_zero" {
     loop_count: 0,
     disposal: [],
     background_index: b'\x00',
-    config: {
-      color_model: @color.AnyModel::RGBAModel,
-      width: 1,
-      height: 1,
-    },
+    config: { color_model: @color.AnyModel::RGBAModel, width: 1, height: 1 },
   }
   // Just verify it doesn't crash; the result may be an error or empty GIF
   ignore(try? encode_all(gif))
@@ -137,14 +119,12 @@ test "gif_palettes" {
   for size in sizes {
     let pal : @color.Palette = {
       colors: Array::makei(size, fn(i) {
-        @color.AnyColor::RGBA(
-          {
-            r: (i * (256 / size)).to_byte(),
-            g: b'\x00',
-            b: b'\x00',
-            a: b'\xff',
-          },
-        )
+        @color.AnyColor::RGBA({
+          r: (i * (256 / size)).to_byte(),
+          g: b'\x00',
+          b: b'\x00',
+          a: b'\xff',
+        })
       }),
     }
     let m = @image.new_image_paletted(@image.rect(0, 0, 4, 4), pal)
@@ -166,16 +146,12 @@ test "gif_encode_rgba" {
   let m = @image.new_image_rgba(@image.rect(0, 0, 16, 16))
   for y in 0..<16 {
     for x in 0..<16 {
-      m.set_rgba(
-        x,
-        y,
-        {
-          r: (x * 16).to_byte(),
-          g: (y * 16).to_byte(),
-          b: b'\x80',
-          a: b'\xff',
-        },
-      )
+      m.set_rgba(x, y, {
+        r: (x * 16).to_byte(),
+        g: (y * 16).to_byte(),
+        b: b'\x80',
+        a: b'\xff',
+      })
     }
   }
   let encoded = encode_image(@image.AnyImage::RGBA(m))
@@ -189,14 +165,12 @@ test "gif_encode_rgba" {
 test "gif_pixel_parity" {
   let pal : @color.Palette = {
     colors: Array::makei(4, fn(i) {
-      @color.AnyColor::RGBA(
-        {
-          r: (i * 85).to_byte(),
-          g: (i * 85).to_byte(),
-          b: (i * 85).to_byte(),
-          a: b'\xff',
-        },
-      )
+      @color.AnyColor::RGBA({
+        r: (i * 85).to_byte(),
+        g: (i * 85).to_byte(),
+        b: (i * 85).to_byte(),
+        a: b'\xff',
+      })
     }),
   }
   let m = @image.new_image_paletted(@image.rect(0, 0, 8, 8), pal)
@@ -212,12 +186,8 @@ test "gif_pixel_parity" {
   // Compare color indices
   for y in 0..<8 {
     for x in 0..<8 {
-      let (r1, g1, b1, a1) = (@image.AnyImage::Paletted(m))
-        .at(x, y)
-        .rgba()
-      let (r2, g2, b2, a2) = (@image.AnyImage::Paletted(frame))
-        .at(x, y)
-        .rgba()
+      let (r1, g1, b1, a1) = @image.AnyImage::Paletted(m).at(x, y).rgba()
+      let (r2, g2, b2, a2) = @image.AnyImage::Paletted(frame).at(x, y).rgba()
       assert_eq(r1, r2)
       assert_eq(g1, g2)
       assert_eq(b1, b2)

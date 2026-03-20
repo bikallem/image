@@ -11,7 +11,7 @@ pub(all) enum CompressionLevel {
 /// Encodes an image as PNG.
 pub fn encode(
   img : @image.AnyImage,
-  compression~ : CompressionLevel = DefaultCompression
+  compression? : CompressionLevel = DefaultCompression,
 ) -> Bytes {
   let buf = @buffer.new()
   // Write PNG signature
@@ -190,7 +190,7 @@ fn write_u32_be(buf : @buffer.Buffer, v : UInt) -> Unit {
 fn write_chunk(
   buf : @buffer.Buffer,
   chunk_type : UInt,
-  data : FixedArray[Byte]
+  data : FixedArray[Byte],
 ) -> Unit {
   // Length (4 bytes BE)
   write_u32_be(buf, data.length().reinterpret_as_uint())

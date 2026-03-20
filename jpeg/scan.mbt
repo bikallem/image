@@ -187,7 +187,7 @@ pub fn process_sos(d : Decoder) -> @image.AnyImage raise JpegError {
 fn decode_block(
   d : Decoder,
   ci : Int,
-  block : FixedArray[Int]
+  block : FixedArray[Int],
 ) -> Unit raise JpegError {
   // Zero out block
   for k in 0..<64 {
@@ -267,8 +267,12 @@ fn process_sos_progressive(d : Decoder) -> Unit raise JpegError {
   let mut max_h = 1
   let mut max_v = 1
   for i in 0..<d.num_components {
-    if d.comp[i].h > max_h { max_h = d.comp[i].h }
-    if d.comp[i].v > max_v { max_v = d.comp[i].v }
+    if d.comp[i].h > max_h {
+      max_h = d.comp[i].h
+    }
+    if d.comp[i].v > max_v {
+      max_v = d.comp[i].v
+    }
   }
   let mcu_cols = (d.width + max_h * 8 - 1) / (max_h * 8)
   let mcu_rows = (d.height + max_v * 8 - 1) / (max_v * 8)
@@ -294,9 +298,13 @@ fn process_sos_progressive(d : Decoder) -> Unit raise JpegError {
   for my in 0..<mcu_rows {
     for mx in 0..<mcu_cols {
       // Restart handling
-      if d.restart_interval > 0 && mcu_count > 0 && mcu_count % d.restart_interval == 0 {
+      if d.restart_interval > 0 &&
+        mcu_count > 0 &&
+        mcu_count % d.restart_interval == 0 {
         flush_bits(d)
-        for i in 0..<d.num_components { d.comp[i].dc_pred = 0 }
+        for i in 0..<d.num_components {
+          d.comp[i].dc_pred = 0
+        }
         consume_restart_marker(d)
         d.eob_run = 0
       }
@@ -329,7 +337,9 @@ fn process_sos_progressive(d : Decoder) -> Unit raise JpegError {
             if ss == 0 {
               // DC refinement
               let bit = read_bit(d)
-              if bit { b[0] = b[0] | (1 << al) }
+              if bit {
+                b[0] = b[0] | (1 << al)
+              }
             } else {
               // AC refinement — complex, skip for now
               refine_ac(d, b, ss, se, al, ci)
@@ -356,7 +366,9 @@ fn process_sos_progressive(d : Decoder) -> Unit raise JpegError {
                 let val1 = rs & 0x0F
                 if val1 != 0 {
                   zig += val0
-                  if zig > se { break }
+                  if zig > se {
+                    break
+                  }
                   let ac = receive_and_extend(d, val1)
                   b[unzig[zig]] = ac << al
                 } else {
@@ -388,7 +400,7 @@ fn refine_ac(
   ss : Int,
   se : Int,
   al : Int,
-  ci : Int
+  ci : Int,
 ) -> Unit raise JpegError {
   // Simplified AC refinement: read and apply bits
   let delta = 1 << al
@@ -412,7 +424,9 @@ fn refine_ac(
       } else if val1 == 1 {
         z = delta
         let bit = read_bit(d)
-        if !bit { z = -z }
+        if !bit {
+          z = -z
+        }
       } else {
         raise JpegError::FormatError("unexpected Huffman code in refinement")
       }
@@ -421,12 +435,18 @@ fn refine_ac(
       while zig <= se {
         let u = unzig[zig]
         if b[u] == 0 {
-          if nz == 0 { break }
+          if nz == 0 {
+            break
+          }
           nz -= 1
         } else {
           let bit = read_bit(d)
           if bit {
-            if b[u] >= 0 { b[u] += delta } else { b[u] -= delta }
+            if b[u] >= 0 {
+              b[u] += delta
+            } else {
+              b[u] -= delta
+            }
           }
         }
         zig += 1
@@ -445,7 +465,11 @@ fn refine_ac(
       if b[u] != 0 {
         let bit = read_bit(d)
         if bit {
-          if b[u] >= 0 { b[u] += delta } else { b[u] -= delta }
+          if b[u] >= 0 {
+            b[u] += delta
+          } else {
+            b[u] -= delta
+          }
         }
       }
       zig += 1
@@ -468,8 +492,12 @@ fn reconstruct_progressive(d : Decoder) -> @image.AnyImage {
   let mut max_h = 1
   let mut max_v = 1
   for i in 0..<d.num_components {
-    if d.comp[i].h > max_h { max_h = d.comp[i].h }
-    if d.comp[i].v > max_v { max_v = d.comp[i].v }
+    if d.comp[i].h > max_h {
+      max_h = d.comp[i].h
+    }
+    if d.comp[i].v > max_v {
+      max_v = d.comp[i].v
+    }
   }
   let mcu_cols = (d.width + max_h * 8 - 1) / (max_h * 8)
   let mcu_rows = (d.height + max_v * 8 - 1) / (max_v * 8)
@@ -491,7 +519,9 @@ fn reconstruct_progressive(d : Decoder) -> @image.AnyImage {
   let idct_out = @blit.make_uninit(64)
   // For each component, dequantize and IDCT all blocks
   for ci in 0..<d.num_components {
-    if d.prog_coeffs[ci].length() == 0 { continue }
+    if d.prog_coeffs[ci].length() == 0 {
+      continue
+    }
     let stride = mcu_cols * d.comp[ci].h
     let qt_idx = d.comp[ci].qt
     for block_idx, b in d.prog_coeffs[ci] {

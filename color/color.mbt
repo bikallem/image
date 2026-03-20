@@ -212,7 +212,9 @@ pub fn Palette::index(self : Palette, c : AnyColor) -> Int {
   let mut best_sum : UInt = 0xffffffffU
   for i, v in self.colors {
     let (vr, vg, vb, va) = v.rgba()
-    let sum = sq_diff(cr, vr) + sq_diff(cg, vg) + sq_diff(cb, vb) +
+    let sum = sq_diff(cr, vr) +
+      sq_diff(cg, vg) +
+      sq_diff(cb, vb) +
       sq_diff(ca, va)
     if sum < best_sum {
       if sum == 0U {

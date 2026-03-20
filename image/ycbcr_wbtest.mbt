@@ -25,7 +25,12 @@ test "ycbcr_image" {
     rect(10, 10, 17, 17),
   ]
   let ratios : Array[YCbCrSubsampleRatio] = [
-    Ratio444, Ratio422, Ratio420, Ratio440, Ratio411, Ratio410,
+    Ratio444,
+    Ratio422,
+    Ratio420,
+    Ratio440,
+    Ratio411,
+    Ratio410,
   ]
   let deltas : Array[Point] = [
     { x: 0, y: 0 },

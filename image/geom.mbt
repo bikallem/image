@@ -27,8 +27,7 @@ pub fn Point::div(self : Point, k : Int) -> Point {
 
 ///|
 pub fn Point::in_(self : Point, r : Rectangle) -> Bool {
-  r.min.x <= self.x && self.x < r.max.x && r.min.y <= self.y &&
-  self.y < r.max.y
+  r.min.x <= self.x && self.x < r.max.x && r.min.y <= self.y && self.y < r.max.y
 }
 
 ///|
@@ -180,8 +179,12 @@ pub fn Rectangle::eq(self : Rectangle, s : Rectangle) -> Bool {
 
 ///|
 pub fn Rectangle::overlaps(self : Rectangle, s : Rectangle) -> Bool {
-  !self.empty() && !s.empty() && self.min.x < s.max.x && s.min.x < self.max.x &&
-  self.min.y < s.max.y && s.min.y < self.max.y
+  !self.empty() &&
+  !s.empty() &&
+  self.min.x < s.max.x &&
+  s.min.x < self.max.x &&
+  self.min.y < s.max.y &&
+  s.min.y < self.max.y
 }
 
 ///|
@@ -189,7 +192,9 @@ pub fn Rectangle::in_(self : Rectangle, s : Rectangle) -> Bool {
   if self.empty() {
     return true
   }
-  s.min.x <= self.min.x && self.max.x <= s.max.x && s.min.y <= self.min.y &&
+  s.min.x <= self.min.x &&
+  self.max.x <= s.max.x &&
+  s.min.y <= self.min.y &&
   self.max.y <= s.max.y
 }
 
@@ -255,12 +260,13 @@ fn add2_non_neg(x : Int, y : Int) -> Int {
 pub fn pixel_buffer_length(
   bytes_per_pixel : Int,
   r : Rectangle,
-  image_type_name : String
+  image_type_name : String,
 ) -> Int {
   let total_length = mul3_non_neg(bytes_per_pixel, r.dx(), r.dy())
   if total_length < 0 {
     abort(
-      "image: New" + image_type_name +
+      "image: New" +
+      image_type_name +
       " Rectangle has huge or negative dimensions",
     )
   }

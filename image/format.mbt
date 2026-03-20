@@ -14,7 +14,7 @@ pub fn register_format(
   name : String,
   magic : String,
   decode : (Bytes) -> AnyImage raise Error,
-  decode_config : (Bytes) -> Config raise Error
+  decode_config : (Bytes) -> Config raise Error,
 ) -> Unit {
   formats.push({ name, magic, decode, decode_config })
 }

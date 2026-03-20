@@ -56,7 +56,12 @@ pub impl Color for YCbCr with rgba(self) -> (UInt, UInt, UInt, UInt) {
   let r = clamp_uint16(yy1 + 91881 * cr1)
   let g = clamp_uint16(yy1 - 22554 * cb1 - 46802 * cr1)
   let b = clamp_uint16(yy1 + 116130 * cb1)
-  (r.reinterpret_as_uint(), g.reinterpret_as_uint(), b.reinterpret_as_uint(), 0xffffU)
+  (
+    r.reinterpret_as_uint(),
+    g.reinterpret_as_uint(),
+    b.reinterpret_as_uint(),
+    0xffffU,
+  )
 }
 
 ///|
@@ -106,7 +111,7 @@ pub fn cmyk_to_rgb(
   c : Byte,
   m : Byte,
   y : Byte,
-  k : Byte
+  k : Byte,
 ) -> (Byte, Byte, Byte) {
   let w = 0xffffU - k.to_uint() * 0x101U
   let r = (0xffffU - c.to_uint() * 0x101U) * w / 0xffffU

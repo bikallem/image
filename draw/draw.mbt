@@ -14,7 +14,7 @@ pub fn draw(
   r : @image.Rectangle,
   src : @image.AnyImage,
   sp : @image.Point,
-  op : Op
+  op : Op,
 ) -> Unit {
   draw_mask(dst, r, src, sp, None, { x: 0, y: 0 }, op)
 }
@@ -26,14 +26,13 @@ fn clip(
   src : @image.AnyImage,
   sp : @image.Point,
   mask : @image.AnyImage?,
-  mp : @image.Point
+  mp : @image.Point,
 ) -> (@image.Rectangle, @image.Point, @image.Point) {
   let orig = r.min
   let mut r2 = r.intersect(dst.bounds())
   r2 = r2.intersect(src.bounds().add(orig.sub(sp)))
   match mask {
-    Some(mask_img) =>
-      r2 = r2.intersect(mask_img.bounds().add(orig.sub(mp)))
+    Some(mask_img) => r2 = r2.intersect(mask_img.bounds().add(orig.sub(mp)))
     None => ()
   }
   let dx = r2.min.x - orig.x
@@ -51,7 +50,7 @@ pub fn draw_mask(
   sp : @image.Point,
   mask : @image.AnyImage?,
   mp : @image.Point,
-  op : Op
+  op : Op,
 ) -> Unit {
   let (r, sp, mp) = clip(dst, r, src, sp, mask, mp)
   if r.empty() {
@@ -95,7 +94,7 @@ pub fn draw_mask(
       return
     }
     // Paletted destination fast paths
-    (@image.AnyImage::Paletted(dst0), None) => {
+    (@image.AnyImage::Paletted(dst0), None) =>
       match src {
         @image.AnyImage::Uniform(u) => {
           // Uniform fill: find palette index once, fill with that byte
@@ -118,7 +117,6 @@ pub fn draw_mask(
           return
         }
       }
-    }
     _ => ()
   }
   draw_generic(dst, r, src, sp, mask, mp, op)
@@ -131,7 +129,7 @@ fn draw_fill_src(
   sr : UInt,
   sg : UInt,
   sb : UInt,
-  sa : UInt
+  sa : UInt,
 ) -> Unit {
   let r_byte = (sr >> 8).to_byte()
   let g_byte = (sg >> 8).to_byte()
@@ -139,7 +137,8 @@ fn draw_fill_src(
   let a_byte = (sa >> 8).to_byte()
   let dx = r.dx()
   let n = dx * 4
-  let mut row_off = dst.pix_offset + (r.min.y - dst.rect.min.y) * dst.stride +
+  let mut row_off = dst.pix_offset +
+    (r.min.y - dst.rect.min.y) * dst.stride +
     (r.min.x - dst.rect.min.x) * 4
   if r_byte == g_byte && g_byte == b_byte && b_byte == a_byte {
     // All channels same value — single memset per row
@@ -173,11 +172,12 @@ fn draw_fill_over(
   sr : UInt,
   sg : UInt,
   sb : UInt,
-  sa : UInt
+  sa : UInt,
 ) -> Unit {
   let a = max_color - sa
   let dx = r.dx()
-  let mut row_off = dst.pix_offset + (r.min.y - dst.rect.min.y) * dst.stride +
+  let mut row_off = dst.pix_offset +
+    (r.min.y - dst.rect.min.y) * dst.stride +
     (r.min.x - dst.rect.min.x) * 4
   for _y = r.min.y; _y < r.max.y; _y = _y + 1 {
     let mut i = row_off
@@ -201,13 +201,15 @@ fn draw_copy_src(
   dst : @image.ImageRGBA,
   r : @image.Rectangle,
   src : @image.ImageRGBA,
-  sp : @image.Point
+  sp : @image.Point,
 ) -> Unit {
   let dx = r.dx()
   let n = dx * 4
-  let mut d_row = dst.pix_offset + (r.min.y - dst.rect.min.y) * dst.stride +
+  let mut d_row = dst.pix_offset +
+    (r.min.y - dst.rect.min.y) * dst.stride +
     (r.min.x - dst.rect.min.x) * 4
-  let mut s_row = src.pix_offset + (sp.y - src.rect.min.y) * src.stride +
+  let mut s_row = src.pix_offset +
+    (sp.y - src.rect.min.y) * src.stride +
     (sp.x - src.rect.min.x) * 4
   for _y = r.min.y; _y < r.max.y; _y = _y + 1 {
     @blit.blit_fixed_array(dst.pix, d_row, src.pix, s_row, n)
@@ -221,12 +223,14 @@ fn draw_copy_over(
   dst : @image.ImageRGBA,
   r : @image.Rectangle,
   src : @image.ImageRGBA,
-  sp : @image.Point
+  sp : @image.Point,
 ) -> Unit {
   let dx = r.dx()
-  let mut d_row = dst.pix_offset + (r.min.y - dst.rect.min.y) * dst.stride +
+  let mut d_row = dst.pix_offset +
+    (r.min.y - dst.rect.min.y) * dst.stride +
     (r.min.x - dst.rect.min.x) * 4
-  let mut s_row = src.pix_offset + (sp.y - src.rect.min.y) * src.stride +
+  let mut s_row = src.pix_offset +
+    (sp.y - src.rect.min.y) * src.stride +
     (sp.x - src.rect.min.x) * 4
   for _y = r.min.y; _y < r.max.y; _y = _y + 1 {
     let mut di = d_row
@@ -267,12 +271,14 @@ fn draw_nrgba(
   r : @image.Rectangle,
   src : @image.ImageNRGBA,
   sp : @image.Point,
-  op : Op
+  op : Op,
 ) -> Unit {
   let dx = r.dx()
-  let mut d_row = dst.pix_offset + (r.min.y - dst.rect.min.y) * dst.stride +
+  let mut d_row = dst.pix_offset +
+    (r.min.y - dst.rect.min.y) * dst.stride +
     (r.min.x - dst.rect.min.x) * 4
-  let mut s_row = src.pix_offset + (sp.y - src.rect.min.y) * src.stride +
+  let mut s_row = src.pix_offset +
+    (sp.y - src.rect.min.y) * src.stride +
     (sp.x - src.rect.min.x) * 4
   for _y = r.min.y; _y < r.max.y; _y = _y + 1 {
     let mut di = d_row
@@ -323,12 +329,14 @@ fn draw_gray(
   dst : @image.ImageRGBA,
   r : @image.Rectangle,
   src : @image.ImageGray,
-  sp : @image.Point
+  sp : @image.Point,
 ) -> Unit {
   let dx = r.dx()
-  let mut d_row = dst.pix_offset + (r.min.y - dst.rect.min.y) * dst.stride +
+  let mut d_row = dst.pix_offset +
+    (r.min.y - dst.rect.min.y) * dst.stride +
     (r.min.x - dst.rect.min.x) * 4
-  let mut s_row = src.pix_offset + (sp.y - src.rect.min.y) * src.stride +
+  let mut s_row = src.pix_offset +
+    (sp.y - src.rect.min.y) * src.stride +
     (sp.x - src.rect.min.x)
   for _y = r.min.y; _y < r.max.y; _y = _y + 1 {
     let mut di = d_row
@@ -354,7 +362,7 @@ fn draw_rgba(
   src : @image.AnyImage,
   sp : @image.Point,
   mask : @image.AnyImage?,
-  op : Op
+  op : Op,
 ) -> Unit {
   for y = r.min.y; y < r.max.y; y = y + 1 {
     let sy = sp.y + y - r.min.y
@@ -403,10 +411,11 @@ fn draw_paletted(
   dst : @image.ImagePaletted,
   r : @image.Rectangle,
   src : @image.AnyImage,
-  sp : @image.Point
+  sp : @image.Point,
 ) -> Unit {
   let dx = r.dx()
-  let mut d_row = dst.pix_offset + (r.min.y - dst.rect.min.y) * dst.stride +
+  let mut d_row = dst.pix_offset +
+    (r.min.y - dst.rect.min.y) * dst.stride +
     (r.min.x - dst.rect.min.x)
   for _y = r.min.y; _y < r.max.y; _y = _y + 1 {
     let sy = sp.y + _y - r.min.y
@@ -427,7 +436,7 @@ fn draw_generic(
   sp : @image.Point,
   mask : @image.AnyImage?,
   mp : @image.Point,
-  op : Op
+  op : Op,
 ) -> Unit {
   for y = r.min.y; y < r.max.y; y = y + 1 {
     let sy = sp.y + y - r.min.y
@@ -462,16 +471,12 @@ fn draw_generic(
       }
       match dst {
         @image.AnyImage::RGBA(img) =>
-          img.set_rgba(
-            x,
-            y,
-            {
-              r: (sr >> 8).to_byte(),
-              g: (sg >> 8).to_byte(),
-              b: (sb >> 8).to_byte(),
-              a: (sa >> 8).to_byte(),
-            },
-          )
+          img.set_rgba(x, y, {
+            r: (sr >> 8).to_byte(),
+            g: (sg >> 8).to_byte(),
+            b: (sb >> 8).to_byte(),
+            a: (sa >> 8).to_byte(),
+          })
         @image.AnyImage::Gray(img) => {
           let yy = (19595U * sr + 38470U * sg + 7471U * sb + (1U << 15)) >> 24
           img.set_gray(x, y, { y: yy.to_byte() })

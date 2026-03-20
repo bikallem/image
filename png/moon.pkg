@@ -1,0 +1,15 @@
+import {
+  "bikallem/image/image",
+  "bikallem/image/color",
+  "bikallem/image/internal/binary",
+  "bikallem/compress/zlib",
+  "bikallem/compress/flate",
+  "bikallem/compress/checksum",
+  "moonbitlang/core/buffer",
+  "bikallem/blit",
+}
+
+import {
+  "moonbitlang/x/fs",
+  "moonbitlang/core/bench",
+} for "wbtest"

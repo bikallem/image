@@ -2,7 +2,7 @@
 /// Quantize reduces an image to at most n_colors using median-cut.
 fn quantize_image(
   img : @image.AnyImage,
-  n_colors : Int
+  n_colors : Int,
 ) -> @image.ImagePaletted {
   let bounds = img.bounds()
   let w = bounds.dx()
@@ -37,7 +37,7 @@ fn quantize_image(
 ///|
 fn median_cut(
   pixels : Array[(Byte, Byte, Byte)],
-  n_colors : Int
+  n_colors : Int,
 ) -> Array[@color.AnyColor] {
   if pixels.is_empty() {
     return []
@@ -60,8 +60,12 @@ fn median_cut(
             1 => p.1.to_int()
             _ => p.2.to_int()
           }
-          if v < lo { lo = v }
-          if v > hi { hi = v }
+          if v < lo {
+            lo = v
+          }
+          if v > hi {
+            hi = v
+          }
         }
         let range = hi - lo
         if range > best_range {
@@ -113,14 +117,12 @@ fn median_cut(
     }
     let nn = box_.length()
     colors.push(
-      @color.AnyColor::RGBA(
-        {
-          r: (sr / nn).to_byte(),
-          g: (sg / nn).to_byte(),
-          b: (sb / nn).to_byte(),
-          a: b'\xff',
-        },
-      ),
+      @color.AnyColor::RGBA({
+        r: (sr / nn).to_byte(),
+        g: (sg / nn).to_byte(),
+        b: (sb / nn).to_byte(),
+        a: b'\xff',
+      }),
     )
   }
   colors

@@ -34,9 +34,7 @@ pub fn AnyModel::convert(self : AnyModel, c : AnyColor) -> AnyColor {
       match p.convert(c) {
         Some(v) => v
         None =>
-          AnyColor::RGBA(
-            { r: b'\x00', g: b'\x00', b: b'\x00', a: b'\x00' },
-          )
+          AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\x00' })
       }
   }
 }
@@ -47,14 +45,12 @@ fn rgba_model(c : AnyColor) -> AnyColor {
     return c
   }
   let (r, g, b, a) = c.rgba()
-  AnyColor::RGBA(
-    {
-      r: (r >> 8).to_byte(),
-      g: (g >> 8).to_byte(),
-      b: (b >> 8).to_byte(),
-      a: (a >> 8).to_byte(),
-    },
-  )
+  AnyColor::RGBA({
+    r: (r >> 8).to_byte(),
+    g: (g >> 8).to_byte(),
+    b: (b >> 8).to_byte(),
+    a: (a >> 8).to_byte(),
+  })
 }
 
 ///|
@@ -73,31 +69,25 @@ fn nrgba_model(c : AnyColor) -> AnyColor {
   }
   let (r, g, b, a) = c.rgba()
   if a == 0xffffU {
-    return AnyColor::NRGBA(
-      {
-        r: (r >> 8).to_byte(),
-        g: (g >> 8).to_byte(),
-        b: (b >> 8).to_byte(),
-        a: b'\xff',
-      },
-    )
+    return AnyColor::NRGBA({
+      r: (r >> 8).to_byte(),
+      g: (g >> 8).to_byte(),
+      b: (b >> 8).to_byte(),
+      a: b'\xff',
+    })
   }
   if a == 0U {
-    return AnyColor::NRGBA(
-      { r: b'\x00', g: b'\x00', b: b'\x00', a: b'\x00' },
-    )
+    return AnyColor::NRGBA({ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\x00' })
   }
   let r = r * 0xffffU / a
   let g = g * 0xffffU / a
   let b = b * 0xffffU / a
-  AnyColor::NRGBA(
-    {
-      r: (r >> 8).to_byte(),
-      g: (g >> 8).to_byte(),
-      b: (b >> 8).to_byte(),
-      a: (a >> 8).to_byte(),
-    },
-  )
+  AnyColor::NRGBA({
+    r: (r >> 8).to_byte(),
+    g: (g >> 8).to_byte(),
+    b: (b >> 8).to_byte(),
+    a: (a >> 8).to_byte(),
+  })
 }
 
 ///|
@@ -133,7 +123,7 @@ fn alpha16_model(c : AnyColor) -> AnyColor {
     return c
   }
   let (_, _, _, a) = c.rgba()
-  AnyColor::Alpha16({ a: a })
+  AnyColor::Alpha16({ a, })
 }
 
 ///|
@@ -153,7 +143,7 @@ fn gray16_model(c : AnyColor) -> AnyColor {
   }
   let (r, g, b, _) = c.rgba()
   let y = (19595U * r + 38470U * g + 7471U * b + (1U << 15)) >> 16
-  AnyColor::Gray16({ y: y })
+  AnyColor::Gray16({ y, })
 }
 
 ///|

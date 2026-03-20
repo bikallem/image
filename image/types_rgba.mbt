@@ -9,7 +9,8 @@ pub(all) struct ImageRGBA {
 
 ///|
 pub fn ImageRGBA::pix_offset(self : ImageRGBA, x : Int, y : Int) -> Int {
-  self.pix_offset + (y - self.rect.min.y) * self.stride +
+  self.pix_offset +
+  (y - self.rect.min.y) * self.stride +
   (x - self.rect.min.x) * 4
 }
 
@@ -27,7 +28,7 @@ pub fn ImageRGBA::set(
   self : ImageRGBA,
   x : Int,
   y : Int,
-  c : @color.AnyColor
+  c : @color.AnyColor,
 ) -> Unit {
   if !({ x, y } : Point).in_(self.rect) {
     return
@@ -46,7 +47,7 @@ pub fn ImageRGBA::set_rgba(
   self : ImageRGBA,
   x : Int,
   y : Int,
-  c : @color.RGBA
+  c : @color.RGBA,
 ) -> Unit {
   if !({ x, y } : Point).in_(self.rect) {
     return
@@ -59,10 +60,7 @@ pub fn ImageRGBA::set_rgba(
 }
 
 ///|
-pub fn ImageRGBA::sub_image(
-  self : ImageRGBA,
-  r : Rectangle
-) -> ImageRGBA {
+pub fn ImageRGBA::sub_image(self : ImageRGBA, r : Rectangle) -> ImageRGBA {
   let r = r.intersect(self.rect)
   if r.empty() {
     return {
@@ -73,12 +71,7 @@ pub fn ImageRGBA::sub_image(
     }
   }
   let i = self.pix_offset(r.min.x, r.min.y)
-  {
-    pix: self.pix,
-    pix_offset: i,
-    stride: self.stride,
-    rect: r,
-  }
+  { pix: self.pix, pix_offset: i, stride: self.stride, rect: r }
 }
 
 ///|
@@ -119,7 +112,8 @@ pub(all) struct ImageRGBA64 {
 
 ///|
 pub fn ImageRGBA64::pix_offset(self : ImageRGBA64, x : Int, y : Int) -> Int {
-  self.pix_offset + (y - self.rect.min.y) * self.stride +
+  self.pix_offset +
+  (y - self.rect.min.y) * self.stride +
   (x - self.rect.min.x) * 8
 }
 
@@ -127,7 +121,7 @@ pub fn ImageRGBA64::pix_offset(self : ImageRGBA64, x : Int, y : Int) -> Int {
 pub fn ImageRGBA64::rgba64_at(
   self : ImageRGBA64,
   x : Int,
-  y : Int
+  y : Int,
 ) -> @color.RGBA64 {
   if !({ x, y } : Point).in_(self.rect) {
     return { r: 0U, g: 0U, b: 0U, a: 0U }
@@ -146,7 +140,7 @@ pub fn ImageRGBA64::set(
   self : ImageRGBA64,
   x : Int,
   y : Int,
-  c : @color.AnyColor
+  c : @color.AnyColor,
 ) -> Unit {
   if !({ x, y } : Point).in_(self.rect) {
     return
@@ -169,7 +163,7 @@ pub fn ImageRGBA64::set_rgba64(
   self : ImageRGBA64,
   x : Int,
   y : Int,
-  c : @color.RGBA64
+  c : @color.RGBA64,
 ) -> Unit {
   if !({ x, y } : Point).in_(self.rect) {
     return
@@ -186,10 +180,7 @@ pub fn ImageRGBA64::set_rgba64(
 }
 
 ///|
-pub fn ImageRGBA64::sub_image(
-  self : ImageRGBA64,
-  r : Rectangle
-) -> ImageRGBA64 {
+pub fn ImageRGBA64::sub_image(self : ImageRGBA64, r : Rectangle) -> ImageRGBA64 {
   let r = r.intersect(self.rect)
   if r.empty() {
     return {

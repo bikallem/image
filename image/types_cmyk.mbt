@@ -8,26 +8,18 @@ pub(all) struct ImageCMYK {
 
 ///|
 pub fn ImageCMYK::pix_offset(self : ImageCMYK, x : Int, y : Int) -> Int {
-  self.pix_offset + (y - self.rect.min.y) * self.stride +
+  self.pix_offset +
+  (y - self.rect.min.y) * self.stride +
   (x - self.rect.min.x) * 4
 }
 
 ///|
-pub fn ImageCMYK::cmyk_at(
-  self : ImageCMYK,
-  x : Int,
-  y : Int
-) -> @color.CMYK {
+pub fn ImageCMYK::cmyk_at(self : ImageCMYK, x : Int, y : Int) -> @color.CMYK {
   if !({ x, y } : Point).in_(self.rect) {
     return { c: b'\x00', m: b'\x00', y: b'\x00', k: b'\x00' }
   }
   let i = self.pix_offset(x, y)
-  {
-    c: self.pix[i],
-    m: self.pix[i + 1],
-    y: self.pix[i + 2],
-    k: self.pix[i + 3],
-  }
+  { c: self.pix[i], m: self.pix[i + 1], y: self.pix[i + 2], k: self.pix[i + 3] }
 }
 
 ///|
@@ -35,7 +27,7 @@ pub fn ImageCMYK::set_cmyk(
   self : ImageCMYK,
   x : Int,
   y : Int,
-  c : @color.CMYK
+  c : @color.CMYK,
 ) -> Unit {
   if !({ x, y } : Point).in_(self.rect) {
     return
@@ -52,7 +44,7 @@ pub fn ImageCMYK::set(
   self : ImageCMYK,
   x : Int,
   y : Int,
-  c : @color.AnyColor
+  c : @color.AnyColor,
 ) -> Unit {
   if !({ x, y } : Point).in_(self.rect) {
     return
@@ -67,10 +59,7 @@ pub fn ImageCMYK::set(
 }
 
 ///|
-pub fn ImageCMYK::sub_image(
-  self : ImageCMYK,
-  r : Rectangle
-) -> ImageCMYK {
+pub fn ImageCMYK::sub_image(self : ImageCMYK, r : Rectangle) -> ImageCMYK {
   let r = r.intersect(self.rect)
   if r.empty() {
     return {

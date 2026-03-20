@@ -28,21 +28,18 @@ pub fn ImageYCbCr::y_offset(self : ImageYCbCr, x : Int, y : Int) -> Int {
 pub fn ImageYCbCr::c_offset(self : ImageYCbCr, x : Int, y : Int) -> Int {
   match self.subsample_ratio {
     Ratio422 =>
-      (y - self.rect.min.y) * self.c_stride +
-      (x / 2 - self.rect.min.x / 2)
+      (y - self.rect.min.y) * self.c_stride + (x / 2 - self.rect.min.x / 2)
     Ratio420 =>
       (y / 2 - self.rect.min.y / 2) * self.c_stride +
       (x / 2 - self.rect.min.x / 2)
     Ratio440 =>
       (y / 2 - self.rect.min.y / 2) * self.c_stride + (x - self.rect.min.x)
     Ratio411 =>
-      (y - self.rect.min.y) * self.c_stride +
-      (x / 4 - self.rect.min.x / 4)
+      (y - self.rect.min.y) * self.c_stride + (x / 4 - self.rect.min.x / 4)
     Ratio410 =>
       (y / 2 - self.rect.min.y / 2) * self.c_stride +
       (x / 4 - self.rect.min.x / 4)
-    _ =>
-      (y - self.rect.min.y) * self.c_stride + (x - self.rect.min.x)
+    _ => (y - self.rect.min.y) * self.c_stride + (x - self.rect.min.x)
   }
 }
 
@@ -50,7 +47,7 @@ pub fn ImageYCbCr::c_offset(self : ImageYCbCr, x : Int, y : Int) -> Int {
 pub fn ImageYCbCr::ycbcr_at(
   self : ImageYCbCr,
   x : Int,
-  y : Int
+  y : Int,
 ) -> @color.YCbCr {
   if !({ x, y } : Point).in_(self.rect) {
     return { y: b'\x00', cb: b'\x00', cr: b'\x00' }
@@ -66,10 +63,7 @@ pub fn ImageYCbCr::is_opaque(_self : ImageYCbCr) -> Bool {
 }
 
 ///|
-pub fn ImageYCbCr::sub_image(
-  self : ImageYCbCr,
-  r : Rectangle
-) -> ImageYCbCr {
+pub fn ImageYCbCr::sub_image(self : ImageYCbCr, r : Rectangle) -> ImageYCbCr {
   let r = r.intersect(self.rect)
   if r.empty() {
     return {
@@ -98,16 +92,18 @@ pub fn ImageYCbCr::sub_image(
 ///|
 fn ycbcr_size(
   r : Rectangle,
-  subsample_ratio : YCbCrSubsampleRatio
+  subsample_ratio : YCbCrSubsampleRatio,
 ) -> (Int, Int, Int, Int) {
   let w = r.dx()
   let h = r.dy()
   let (cw, ch) = match subsample_ratio {
     Ratio422 => ((r.max.x + 1) / 2 - r.min.x / 2, h)
-    Ratio420 => ((r.max.x + 1) / 2 - r.min.x / 2, (r.max.y + 1) / 2 - r.min.y / 2)
+    Ratio420 =>
+      ((r.max.x + 1) / 2 - r.min.x / 2, (r.max.y + 1) / 2 - r.min.y / 2)
     Ratio440 => (w, (r.max.y + 1) / 2 - r.min.y / 2)
     Ratio411 => ((r.max.x + 3) / 4 - r.min.x / 4, h)
-    Ratio410 => ((r.max.x + 3) / 4 - r.min.x / 4, (r.max.y + 1) / 2 - r.min.y / 2)
+    Ratio410 =>
+      ((r.max.x + 3) / 4 - r.min.x / 4, (r.max.y + 1) / 2 - r.min.y / 2)
     _ => (w, h)
   }
   (w, h, cw, ch)
@@ -116,7 +112,7 @@ fn ycbcr_size(
 ///|
 pub fn new_image_ycbcr(
   r : Rectangle,
-  subsample_ratio : YCbCrSubsampleRatio
+  subsample_ratio : YCbCrSubsampleRatio,
 ) -> ImageYCbCr {
   let (w, h, cw, ch) = ycbcr_size(r, subsample_ratio)
   let total = add2_non_neg(mul3_non_neg(1, w, h), mul3_non_neg(2, cw, ch))
@@ -137,7 +133,7 @@ pub fn new_image_ycbcr(
 ///|
 pub fn new_image_ycbcr_separate(
   r : Rectangle,
-  subsample_ratio : YCbCrSubsampleRatio
+  subsample_ratio : YCbCrSubsampleRatio,
 ) -> ImageYCbCr {
   let (w, h, cw, ch) = ycbcr_size(r, subsample_ratio)
   {
@@ -162,7 +158,7 @@ pub(all) struct ImageNYCbCrA {
 pub fn ImageNYCbCrA::nycbcra_at(
   self : ImageNYCbCrA,
   x : Int,
-  y : Int
+  y : Int,
 ) -> @color.NYCbCrA {
   if !({ x, y } : Point).in_(self.ycbcr.rect) {
     return { ycbcr: { y: b'\x00', cb: b'\x00', cr: b'\x00' }, a: b'\x00' }
@@ -171,7 +167,11 @@ pub fn ImageNYCbCrA::nycbcra_at(
   let ci = self.ycbcr.c_offset(x, y)
   let ai = self.a_offset(x, y)
   {
-    ycbcr: { y: self.ycbcr.y_[yi], cb: self.ycbcr.cb[ci], cr: self.ycbcr.cr[ci] },
+    ycbcr: {
+      y: self.ycbcr.y_[yi],
+      cb: self.ycbcr.cb[ci],
+      cr: self.ycbcr.cr[ci],
+    },
     a: self.a[ai],
   }
 }
@@ -184,7 +184,7 @@ pub fn ImageNYCbCrA::a_offset(self : ImageNYCbCrA, x : Int, y : Int) -> Int {
 ///|
 pub fn ImageNYCbCrA::sub_image(
   self : ImageNYCbCrA,
-  r : Rectangle
+  r : Rectangle,
 ) -> ImageNYCbCrA {
   let r = r.intersect(self.ycbcr.rect)
   if r.empty() {
@@ -236,7 +236,7 @@ pub fn ImageNYCbCrA::is_opaque(self : ImageNYCbCrA) -> Bool {
 ///|
 pub fn new_image_nycbcra(
   r : Rectangle,
-  subsample_ratio : YCbCrSubsampleRatio
+  subsample_ratio : YCbCrSubsampleRatio,
 ) -> ImageNYCbCrA {
   let (w, h, cw, ch) = ycbcr_size(r, subsample_ratio)
   ignore(add2_non_neg(mul3_non_neg(2, w, h), mul3_non_neg(2, cw, ch)))

@@ -13,7 +13,7 @@ pub fn draw_ycbcr(
   dst : @image.ImageRGBA,
   r : @image.Rectangle,
   src : @image.ImageYCbCr,
-  sp : @image.Point
+  sp : @image.Point,
 ) -> Unit {
   let x0 = r.min.x
   let x1 = r.max.x

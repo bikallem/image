@@ -2,7 +2,7 @@
 fn cmp_color(
   cm : @color.AnyModel,
   c0 : @color.AnyColor,
-  c1 : @color.AnyColor
+  c1 : @color.AnyColor,
 ) -> Bool {
   let (r0, g0, b0, a0) = cm.convert(c0).rgba()
   let (r1, g1, b1, a1) = cm.convert(c1).rgba()
@@ -10,14 +10,10 @@ fn cmp_color(
 }
 
 ///|
-let transparent_color : @color.AnyColor = @color.AnyColor::Alpha(
-  { a: b'\x00' },
-)
+let transparent_color : @color.AnyColor = @color.AnyColor::Alpha({ a: b'\x00' })
 
 ///|
-let opaque_color : @color.AnyColor = @color.AnyColor::Alpha(
-  { a: b'\xff' },
-)
+let opaque_color : @color.AnyColor = @color.AnyColor::Alpha({ a: b'\xff' })
 
 ///|
 /// Port of Go's TestImage from image_test.go.
@@ -141,15 +137,12 @@ test "image_types_gray16" {
 
 ///|
 test "image_types_paletted" {
-  let m = new_image_paletted(
-    rect(0, 0, 10, 10),
-    {
-      colors: [
-        @color.AnyColor::Alpha({ a: b'\x00' }),
-        @color.AnyColor::Alpha({ a: b'\xff' }),
-      ],
-    },
-  )
+  let m = new_image_paletted(rect(0, 0, 10, 10), {
+    colors: [
+      @color.AnyColor::Alpha({ a: b'\x00' }),
+      @color.AnyColor::Alpha({ a: b'\xff' }),
+    ],
+  })
   assert_true(rect(0, 0, 10, 10).eq(m.rect))
   m.set_color_index(6, 3, b'\x01')
   let ci = m.color_index_at(6, 3)
@@ -161,9 +154,12 @@ test "image_types_paletted" {
 /// RGBA64, NRGBA64, Alpha16, Gray16 preserve 16-bit values.
 test "16bit_color" {
   // Test color models preserve 16-bit precision
-  let test_c = @color.AnyColor::RGBA64(
-    { r: 0x1234, g: 0x1234, b: 0x1234, a: 0x1234 },
-  )
+  let test_c = @color.AnyColor::RGBA64({
+    r: 0x1234,
+    g: 0x1234,
+    b: 0x1234,
+    a: 0x1234,
+  })
   let models : Array[@color.AnyModel] = [
     @color.AnyModel::RGBA64Model,
     @color.AnyModel::NRGBA64Model,

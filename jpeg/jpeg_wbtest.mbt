@@ -35,7 +35,9 @@ test "dct" {
   // There should be at least some non-zero coefficients
   let mut nonzero = 0
   for i in 0..<64 {
-    if rblock[i] != 0 { nonzero += 1 }
+    if rblock[i] != 0 {
+      nonzero += 1
+    }
   }
   assert_true(nonzero > 0)
 }
@@ -63,16 +65,12 @@ test "jpeg_writer" {
   let m = @image.new_image_rgba(r)
   for y in 0..<64 {
     for x in 0..<64 {
-      m.set_rgba(
-        x,
-        y,
-        {
-          r: (x * 4).to_byte(),
-          g: (y * 4).to_byte(),
-          b: b'\x80',
-          a: b'\xff',
-        },
-      )
+      m.set_rgba(x, y, {
+        r: (x * 4).to_byte(),
+        g: (y * 4).to_byte(),
+        b: b'\x80',
+        a: b'\xff',
+      })
     }
   }
   let encoded = encode(@image.AnyImage::RGBA(m))
@@ -89,7 +87,7 @@ test "jpeg_writer" {
   let mut num_pixels = 0
   for y in 0..<64 {
     for x in 0..<64 {
-      let (r1, _, _, _) = (@image.AnyImage::RGBA(m)).at(x, y).rgba()
+      let (r1, _, _, _) = @image.AnyImage::RGBA(m).at(x, y).rgba()
       let (r2, _, _, _) = decoded.at(x, y).rgba()
       let d = if r1 >= r2 {
         (r1 - r2).reinterpret_as_int()
@@ -134,9 +132,7 @@ test "jpeg_decode_testdata" {
 ///|
 /// Test progressive JPEG decode.
 test "jpeg_progressive" {
-  let data = @fs.read_file_to_bytes(
-    "testdata/video-001.progressive.jpeg",
-  )
+  let data = @fs.read_file_to_bytes("testdata/video-001.progressive.jpeg")
   let img = decode(data)
   let b = img.bounds()
   assert_true(b.dx() > 0)
@@ -152,9 +148,7 @@ test "jpeg_progressive" {
 /// Test decoding various JPEG subsampling modes.
 test "jpeg_subsampling" {
   let files = [
-    "testdata/video-001.q50.420.jpeg",
-    "testdata/video-001.q50.422.jpeg",
-    "testdata/video-001.q50.444.jpeg",
+    "testdata/video-001.q50.420.jpeg", "testdata/video-001.q50.422.jpeg", "testdata/video-001.q50.444.jpeg",
   ]
   for path in files {
     let data = @fs.read_file_to_bytes(path)

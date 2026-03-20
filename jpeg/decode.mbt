@@ -59,7 +59,7 @@ fn read_marker(d : Decoder) -> UInt raise JpegError {
   while b == b'\xFF' {
     b = d.r.read_byte()
   }
-  (0xFF00U | b.to_uint())
+  0xFF00U | b.to_uint()
 }
 
 ///|

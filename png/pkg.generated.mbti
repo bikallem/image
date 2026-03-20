@@ -10,7 +10,7 @@ pub fn decode(Bytes) -> @image.AnyImage raise
 
 pub fn decode_config(Bytes) -> @image.Config raise
 
-pub fn encode(@image.AnyImage, compression? : CompressionLevel) -> Bytes raise
+pub fn encode(@image.AnyImage, compression? : CompressionLevel) -> Bytes
 
 pub fn paeth(Int, Int, Int) -> Int
 
