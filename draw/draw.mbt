@@ -94,6 +94,31 @@ pub fn draw_mask(
       draw_rgba(dst0, r, src, sp, mask, op)
       return
     }
+    // Paletted destination fast paths
+    (@image.AnyImage::Paletted(dst0), None) => {
+      match src {
+        @image.AnyImage::Uniform(u) => {
+          // Uniform fill: find palette index once, fill with that byte
+          let idx = dst0.palette.index(u.c).to_byte()
+          let dx = r.dx()
+          let mut row_off = dst0.pix_offset +
+            (r.min.y - dst0.rect.min.y) * dst0.stride +
+            (r.min.x - dst0.rect.min.x)
+          for _y = r.min.y; _y < r.max.y; _y = _y + 1 {
+            for i = 0; i < dx; i = i + 1 {
+              dst0.pix[row_off + i] = idx
+            }
+            row_off += dst0.stride
+          }
+          return
+        }
+        _ => {
+          // For non-uniform: look up palette index per pixel
+          draw_paletted(dst0, r, src, sp)
+          return
+        }
+      }
+    }
     _ => ()
   }
   draw_generic(dst, r, src, sp, mask, mp, op)
@@ -357,6 +382,27 @@ fn draw_rgba(
         dst.pix[di + 3] = (sa >> 8).to_byte()
       }
     }
+  }
+}
+
+///|
+fn draw_paletted(
+  dst : @image.ImagePaletted,
+  r : @image.Rectangle,
+  src : @image.AnyImage,
+  sp : @image.Point
+) -> Unit {
+  let dx = r.dx()
+  let mut d_row = dst.pix_offset + (r.min.y - dst.rect.min.y) * dst.stride +
+    (r.min.x - dst.rect.min.x)
+  for _y = r.min.y; _y < r.max.y; _y = _y + 1 {
+    let sy = sp.y + _y - r.min.y
+    for _x = 0; _x < dx; _x = _x + 1 {
+      let sx = sp.x + _x
+      let c = src.at(sx, sy)
+      dst.pix[d_row + _x] = dst.palette.index(c).to_byte()
+    }
+    d_row += dst.stride
   }
 }
 
