@@ -220,7 +220,7 @@ fn decode_interlaced(
           match target {
             @image.AnyImage::Gray(img) => {
               guard c is @color.AnyColor::Gray(gc) else { continue }
-              img.pix[dst_y * img.stride + dst_x] = gc.y
+              img.pix.unsafe_set(dst_y * img.stride + dst_x, gc.y)
             }
             @image.AnyImage::NRGBA(img) => {
               let (r, g, b, a) = c.rgba()
@@ -234,7 +234,7 @@ fn decode_interlaced(
               let ci = pass_img.at(px, py)
               guard ci is @color.AnyColor::NRGBA(nc) else {
                 // For paletted, get the color index directly from the pass image
-                img.pix[dst_y * img.stride + dst_x] = b'\x00'
+                img.pix.unsafe_set(dst_y * img.stride + dst_x, b'\x00')
                 continue
               }
               ignore(nc)
@@ -242,9 +242,7 @@ fn decode_interlaced(
               guard pass_img is @image.AnyImage::Paletted(pass_pal) else {
                 continue
               }
-              img.pix[dst_y * img.stride + dst_x] = pass_pal.color_index_at(
-                px, py,
-              )
+              img.pix.unsafe_set(dst_y * img.stride + dst_x, pass_pal.color_index_at(px, py))
             }
             _ => ()
           }
@@ -302,10 +300,10 @@ fn decode_image(
         for x in 0..<width {
           let byte_idx = x * bd / 8
           let bit_off = 8 - bd - x * bd % 8
-          let val = (cur_row[byte_idx].to_int() >> bit_off) & max_val
+          let val = (cur_row.unsafe_get(byte_idx).to_int() >> bit_off) & max_val
           // Scale to 0-255 range
           let scaled = val * 255 / max_val
-          img.pix[y * img.stride + x] = scaled.to_byte()
+          img.pix.unsafe_set(y * img.stride + x, scaled.to_byte())
         }
         @blit.blit_fixed_array(prev_row, 0, cur_row, 0, stride)
       }
@@ -321,7 +319,7 @@ fn decode_image(
         }
         unfilter(filter, cur_row, prev_row, bpp)
         for x in 0..<width {
-          img.pix[y * img.stride + x] = cur_row[x]
+          img.pix.unsafe_set(y * img.stride + x, cur_row.unsafe_get(x))
         }
         @blit.blit_fixed_array(prev_row, 0, cur_row, 0, stride)
       }
@@ -337,8 +335,8 @@ fn decode_image(
         }
         unfilter(filter, cur_row, prev_row, bpp)
         for x in 0..<width {
-          img.pix[y * img.stride + x * 2] = cur_row[x * 2]
-          img.pix[y * img.stride + x * 2 + 1] = cur_row[x * 2 + 1]
+          img.pix.unsafe_set(y * img.stride + x * 2, cur_row.unsafe_get(x * 2))
+          img.pix.unsafe_set(y * img.stride + x * 2 + 1, cur_row.unsafe_get(x * 2 + 1))
         }
         @blit.blit_fixed_array(prev_row, 0, cur_row, 0, stride)
       }
@@ -355,10 +353,10 @@ fn decode_image(
         unfilter(filter, cur_row, prev_row, bpp)
         for x in 0..<width {
           let di = y * img.stride + x * 4
-          img.pix[di] = cur_row[x * 3]
-          img.pix[di + 1] = cur_row[x * 3 + 1]
-          img.pix[di + 2] = cur_row[x * 3 + 2]
-          img.pix[di + 3] = b'\xff'
+          img.pix.unsafe_set(di, cur_row.unsafe_get(x * 3))
+          img.pix.unsafe_set(di + 1, cur_row.unsafe_get(x * 3 + 1))
+          img.pix.unsafe_set(di + 2, cur_row.unsafe_get(x * 3 + 2))
+          img.pix.unsafe_set(di + 3, b'\xff')
         }
         @blit.blit_fixed_array(prev_row, 0, cur_row, 0, stride)
       }
@@ -376,27 +374,27 @@ fn decode_image(
         unfilter(filter, cur_row, prev_row, bpp)
         if bit_depth == b'\x08' {
           for x in 0..<width {
-            img.pix[y * img.stride + x] = cur_row[x]
+            img.pix.unsafe_set(y * img.stride + x, cur_row.unsafe_get(x))
           }
         } else if bit_depth == b'\x04' {
           for x in 0..<width {
             let byte_idx = x / 2
             let shift = if x % 2 == 0 { 4 } else { 0 }
-            img.pix[y * img.stride + x] = ((cur_row[byte_idx].to_int() >> shift) &
+            img.pix[y * img.stride + x] = ((cur_row.unsafe_get(byte_idx).to_int() >> shift) &
             0x0f).to_byte()
           }
         } else if bit_depth == b'\x02' {
           for x in 0..<width {
             let byte_idx = x / 4
             let shift = (3 - x % 4) * 2
-            img.pix[y * img.stride + x] = ((cur_row[byte_idx].to_int() >> shift) &
+            img.pix[y * img.stride + x] = ((cur_row.unsafe_get(byte_idx).to_int() >> shift) &
             0x03).to_byte()
           }
         } else if bit_depth == b'\x01' {
           for x in 0..<width {
             let byte_idx = x / 8
             let shift = 7 - x % 8
-            img.pix[y * img.stride + x] = ((cur_row[byte_idx].to_int() >> shift) &
+            img.pix[y * img.stride + x] = ((cur_row.unsafe_get(byte_idx).to_int() >> shift) &
             0x01).to_byte()
           }
         }
@@ -419,12 +417,12 @@ fn decode_image(
         unfilter(filter, cur_row, prev_row, bpp)
         for x in 0..<width {
           let di = y * img.stride + x * 4
-          let gray = cur_row[x * 2]
-          let alpha = cur_row[x * 2 + 1]
-          img.pix[di] = gray
-          img.pix[di + 1] = gray
-          img.pix[di + 2] = gray
-          img.pix[di + 3] = alpha
+          let gray = cur_row.unsafe_get(x * 2)
+          let alpha = cur_row.unsafe_get(x * 2 + 1)
+          img.pix.unsafe_set(di, gray)
+          img.pix.unsafe_set(di + 1, gray)
+          img.pix.unsafe_set(di + 2, gray)
+          img.pix.unsafe_set(di + 3, alpha)
         }
         @blit.blit_fixed_array(prev_row, 0, cur_row, 0, stride)
       }
@@ -441,10 +439,10 @@ fn decode_image(
         unfilter(filter, cur_row, prev_row, bpp)
         for x in 0..<width {
           let di = y * img.stride + x * 4
-          img.pix[di] = cur_row[x * 4]
-          img.pix[di + 1] = cur_row[x * 4 + 1]
-          img.pix[di + 2] = cur_row[x * 4 + 2]
-          img.pix[di + 3] = cur_row[x * 4 + 3]
+          img.pix.unsafe_set(di, cur_row.unsafe_get(x * 4))
+          img.pix.unsafe_set(di + 1, cur_row.unsafe_get(x * 4 + 1))
+          img.pix.unsafe_set(di + 2, cur_row.unsafe_get(x * 4 + 2))
+          img.pix.unsafe_set(di + 3, cur_row.unsafe_get(x * 4 + 3))
         }
         @blit.blit_fixed_array(prev_row, 0, cur_row, 0, stride)
       }
