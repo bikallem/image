@@ -76,8 +76,9 @@ pub fn process_sos(d : Decoder) -> @image.AnyImage raise JpegError {
     comp_height[i] = ch
     comp_data[i] = FixedArray::make(cw * ch, b'\x00')
   }
-  // Block and idct buffers
+  // Block and idct buffers — allocated once, reused per block
   let block = FixedArray::make(64, 0)
+  let nat = FixedArray::make(64, 0)
   let idct_out = FixedArray::make(64, b'\x00')
   let mut mcu_count = 0
   // Decode MCUs
@@ -111,7 +112,9 @@ pub fn process_sos(d : Decoder) -> @image.AnyImage raise JpegError {
               block[k] = block[k] * d.quant[qt_idx].data[unzig[k]]
             }
             // Reorder from zig-zag to natural order for IDCT
-            let nat = FixedArray::make(64, 0)
+            for k in 0..<64 {
+              nat[k] = 0
+            }
             for k in 0..<64 {
               nat[unzig[k]] = block[k]
             }
@@ -484,6 +487,7 @@ fn reconstruct_progressive(d : Decoder) -> @image.AnyImage raise JpegError {
     comp_height[i] = ch
     comp_data[i] = FixedArray::make(cw * ch, b'\x00')
   }
+  let nat = FixedArray::make(64, 0)
   let idct_out = FixedArray::make(64, b'\x00')
   // For each component, dequantize and IDCT all blocks
   for ci in 0..<d.num_components {
@@ -494,7 +498,9 @@ fn reconstruct_progressive(d : Decoder) -> @image.AnyImage raise JpegError {
       let bx = block_idx % stride
       let by = block_idx / stride
       // Dequantize
-      let nat = FixedArray::make(64, 0)
+      for k in 0..<64 {
+        nat[k] = 0
+      }
       for k in 0..<64 {
         nat[unzig[k]] = b[k] * d.quant[qt_idx].data[k]
       }

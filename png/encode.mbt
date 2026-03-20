@@ -127,14 +127,33 @@ pub fn encode(
     BestCompression => @flate.BestCompression
   }
   let compressed = or_png_error(@zlib.compress(raw_buf.to_bytes(), level=flate_level))
-  let idat_data = FixedArray::make(compressed.length(), b'\x00')
+  // Write IDAT chunk directly to avoid copying compressed data
+  write_u32_be(buf, compressed.length().reinterpret_as_uint())
+  write_u32_be(buf, ct_idat)
   for i in 0..<compressed.length() {
-    idat_data[i] = compressed[i]
+    buf.write_byte(compressed[i])
   }
-  write_chunk(buf, ct_idat, idat_data)
+  // CRC over "IDAT" + compressed data
+  let idat_crc_data = FixedArray::make(4 + compressed.length(), b'\x00')
+  idat_crc_data[0] = (ct_idat >> 24).to_byte()
+  idat_crc_data[1] = (ct_idat >> 16).to_byte()
+  idat_crc_data[2] = (ct_idat >> 8).to_byte()
+  idat_crc_data[3] = ct_idat.to_byte()
+  for i in 0..<compressed.length() {
+    idat_crc_data[4 + i] = compressed[i]
+  }
+  write_u32_be(buf, @checksum.crc32(Bytes::from_fixedarray(idat_crc_data)[:]))
   // Write IEND
   write_chunk(buf, ct_iend, FixedArray::make(0, b'\x00'))
   buf.to_bytes()
+}
+
+///|
+fn write_u32_be(buf : @buffer.Buffer, v : UInt) -> Unit {
+  buf.write_byte((v >> 24).to_byte())
+  buf.write_byte((v >> 16).to_byte())
+  buf.write_byte((v >> 8).to_byte())
+  buf.write_byte(v.to_byte())
 }
 
 ///|
@@ -143,35 +162,22 @@ fn write_chunk(
   chunk_type : UInt,
   data : FixedArray[Byte]
 ) -> Unit {
-  // Length
-  let len_bytes = FixedArray::make(4, b'\x00')
-  @binary.write_uint32_be(len_bytes, 0, data.length().reinterpret_as_uint())
-  for i in 0..<4 {
-    buf.write_byte(len_bytes[i])
-  }
-  // Type
-  let type_bytes = FixedArray::make(4, b'\x00')
-  @binary.write_uint32_be(type_bytes, 0, chunk_type)
-  for i in 0..<4 {
-    buf.write_byte(type_bytes[i])
-  }
+  // Length (4 bytes BE)
+  write_u32_be(buf, data.length().reinterpret_as_uint())
+  // Type (4 bytes BE)
+  write_u32_be(buf, chunk_type)
   // Data
   for i in 0..<data.length() {
     buf.write_byte(data[i])
   }
-  // CRC (over type + data)
-  let crc_buf = @buffer.new(size_hint=4 + data.length())
-  for i in 0..<4 {
-    crc_buf.write_byte(type_bytes[i])
-  }
-  for i in 0..<data.length() {
-    crc_buf.write_byte(data[i])
-  }
-  let crc_bytes = crc_buf.to_bytes()
+  // CRC over type + data — use a single FixedArray, no Buffer
+  let crc_data = FixedArray::make(4 + data.length(), b'\x00')
+  crc_data[0] = (chunk_type >> 24).to_byte()
+  crc_data[1] = (chunk_type >> 16).to_byte()
+  crc_data[2] = (chunk_type >> 8).to_byte()
+  crc_data[3] = chunk_type.to_byte()
+  FixedArray::unsafe_blit(crc_data, 4, data, 0, data.length())
+  let crc_bytes = Bytes::from_fixedarray(crc_data)
   let crc = @checksum.crc32(crc_bytes[:])
-  let crc_out = FixedArray::make(4, b'\x00')
-  @binary.write_uint32_be(crc_out, 0, crc)
-  for i in 0..<4 {
-    buf.write_byte(crc_out[i])
-  }
+  write_u32_be(buf, crc)
 }
