@@ -24,4 +24,24 @@ test (b : @bench.T) {
     }
   }
   b.bench(name="encode_paletted", fn() { b.keep(try? encode(m)) })
+  // Encode RGBA via auto-quantization
+  let rgba = @image.new_image_rgba(@image.rect(0, 0, 64, 64))
+  for y in 0..<64 {
+    for x in 0..<64 {
+      rgba.set_rgba(
+        x,
+        y,
+        {
+          r: (x * 4).to_byte(),
+          g: (y * 4).to_byte(),
+          b: b'\x80',
+          a: b'\xff',
+        },
+      )
+    }
+  }
+  b.bench(
+    name="encode_rgba",
+    fn() { b.keep(try? encode_image(@image.AnyImage::RGBA(rgba))) },
+  )
 }

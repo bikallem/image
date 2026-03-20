@@ -472,6 +472,14 @@ func BenchmarkPNGEncodePaletted(b *testing.B) {
 	}
 }
 
+func BenchmarkPNGDecodeInterlaced(b *testing.B) {
+	data := loadFile(b, "../png/testdata/benchRGB-interlace.png")
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		png.Decode(newReader(data))
+	}
+}
+
 func BenchmarkPNGEncodeRGBA(b *testing.B) {
 	r := image.Rect(0, 0, 640, 480)
 	m := image.NewRGBA(r)
@@ -529,6 +537,14 @@ func BenchmarkJPEGDecode(b *testing.B) {
 	}
 }
 
+func BenchmarkJPEGDecodeProgressive(b *testing.B) {
+	data := loadFile(b, "../testdata/video-001.progressive.jpeg")
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		jpeg.Decode(newReader(data))
+	}
+}
+
 func BenchmarkJPEGEncodeRGBA(b *testing.B) {
 	r := image.Rect(0, 0, 640, 480)
 	m := image.NewRGBA(r)
@@ -577,6 +593,19 @@ func BenchmarkGIFEncode(b *testing.B) {
 	for y := 0; y < 256; y++ {
 		for x := 0; x < 256; x++ {
 			m.SetColorIndex(x, y, uint8((x*17+y*13)%256))
+		}
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		gif.Encode(devNull{}, m, nil)
+	}
+}
+
+func BenchmarkGIFEncodeRGBA(b *testing.B) {
+	m := image.NewRGBA(image.Rect(0, 0, 64, 64))
+	for y := 0; y < 64; y++ {
+		for x := 0; x < 64; x++ {
+			m.SetRGBA(x, y, color.RGBA{uint8(x * 4), uint8(y * 4), 0x80, 0xff})
 		}
 	}
 	b.ResetTimer()

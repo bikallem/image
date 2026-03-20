@@ -41,6 +41,13 @@ test (b : @bench.T) {
   )
   let rgb_data = @fs.read_file_to_bytes("png/testdata/benchRGB.png")
   b.bench(name="decode_rgb", fn() { b.keep(try? decode(rgb_data)) })
+  let interlaced_data = @fs.read_file_to_bytes(
+    "png/testdata/benchRGB-interlace.png",
+  )
+  b.bench(
+    name="decode_interlaced",
+    fn() { b.keep(try? decode(interlaced_data)) },
+  )
   // Encode benchmarks - create synthetic images
   let r = @image.rect(0, 0, 640, 480)
   let gray_img = @image.new_image_gray(r)

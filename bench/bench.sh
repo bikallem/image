@@ -58,6 +58,7 @@ declare -A MB_TO_GO=(
   [png/decode_nrgba_opaque]=PNGDecodeNRGBAOpaque
   [png/decode_paletted]=PNGDecodePaletted
   [png/decode_rgb]=PNGDecodeRGB
+  [png/decode_interlaced]=PNGDecodeInterlaced
   [png/encode_gray]=PNGEncodeGray
   [png/encode_nrgba]=PNGEncodeNRGBA
   [png/encode_paletted]=PNGEncodePaletted
@@ -65,10 +66,12 @@ declare -A MB_TO_GO=(
   # JPEG
   # fdct/idct have no direct Go equivalent (Go doesn't export DCT functions)
   [jpeg/decode_baseline]=JPEGDecode
+  [jpeg/decode_progressive]=JPEGDecodeProgressive
   [jpeg/encode_rgba]=JPEGEncodeRGBA
   # GIF
   [gif/decode]=GIFDecode
   [gif/encode_paletted]=GIFEncode
+  [gif/encode_rgba]=GIFEncodeRGBA
 )
 
 # Category display order
