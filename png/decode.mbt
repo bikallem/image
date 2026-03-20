@@ -93,12 +93,15 @@ pub fn decode(data : Bytes) -> @image.AnyImage raise Error {
         guard palette.unsafe_get(i) is @color.AnyColor::RGBA(c) else {
           continue
         }
-        palette.unsafe_set(i, @color.AnyColor::NRGBA({
-          r: c.r,
-          g: c.g,
-          b: c.b,
-          a: trns.unsafe_get(i),
-        }))
+        palette.unsafe_set(
+          i,
+          @color.AnyColor::NRGBA({
+            r: c.r,
+            g: c.g,
+            b: c.b,
+            a: trns.unsafe_get(i),
+          }),
+        )
       }
     }
   }
@@ -398,28 +401,28 @@ fn decode_image(
           for x in 0..<width {
             let byte_idx = x / 2
             let shift = if x % 2 == 0 { 4 } else { 0 }
-            img.pix.unsafe_set(y * img.stride + x, ((
-              cur_row.unsafe_get(byte_idx).to_int() >> shift
-            ) &
-            0x0f).to_byte())
+            img.pix.unsafe_set(
+              y * img.stride + x,
+              ((cur_row.unsafe_get(byte_idx).to_int() >> shift) & 0x0f).to_byte(),
+            )
           }
         } else if bit_depth == b'\x02' {
           for x in 0..<width {
             let byte_idx = x / 4
             let shift = (3 - x % 4) * 2
-            img.pix.unsafe_set(y * img.stride + x, ((
-              cur_row.unsafe_get(byte_idx).to_int() >> shift
-            ) &
-            0x03).to_byte())
+            img.pix.unsafe_set(
+              y * img.stride + x,
+              ((cur_row.unsafe_get(byte_idx).to_int() >> shift) & 0x03).to_byte(),
+            )
           }
         } else if bit_depth == b'\x01' {
           for x in 0..<width {
             let byte_idx = x / 8
             let shift = 7 - x % 8
-            img.pix.unsafe_set(y * img.stride + x, ((
-              cur_row.unsafe_get(byte_idx).to_int() >> shift
-            ) &
-            0x01).to_byte())
+            img.pix.unsafe_set(
+              y * img.stride + x,
+              ((cur_row.unsafe_get(byte_idx).to_int() >> shift) & 0x01).to_byte(),
+            )
           }
         }
         @blit.blit_fixed_array(prev_row, 0, cur_row, 0, stride)
@@ -524,23 +527,35 @@ fn unfilter(
     f if f == ft_none => ()
     f if f == ft_sub =>
       for i = bpp; i < n; i = i + 1 {
-        cur.unsafe_set(i, (cur.unsafe_get(i).to_int() + cur.unsafe_get(i - bpp).to_int()).to_byte())
+        cur.unsafe_set(
+          i,
+          (cur.unsafe_get(i).to_int() + cur.unsafe_get(i - bpp).to_int()).to_byte(),
+        )
       }
     f if f == ft_up =>
       for i = 0; i < n; i = i + 1 {
-        cur.unsafe_set(i, (cur.unsafe_get(i).to_int() + prev.unsafe_get(i).to_int()).to_byte())
+        cur.unsafe_set(
+          i,
+          (cur.unsafe_get(i).to_int() + prev.unsafe_get(i).to_int()).to_byte(),
+        )
       }
     f if f == ft_average =>
       for i = 0; i < n; i = i + 1 {
         let a = if i >= bpp { cur[i - bpp].to_int() } else { 0 }
-        cur.unsafe_set(i, (cur.unsafe_get(i).to_int() + (a + prev.unsafe_get(i).to_int()) / 2).to_byte())
+        cur.unsafe_set(
+          i,
+          (cur.unsafe_get(i).to_int() + (a + prev.unsafe_get(i).to_int()) / 2).to_byte(),
+        )
       }
     f if f == ft_paeth =>
       for i = 0; i < n; i = i + 1 {
         let a = if i >= bpp { cur[i - bpp].to_int() } else { 0 }
         let b = prev.unsafe_get(i).to_int()
         let c = if i >= bpp { prev[i - bpp].to_int() } else { 0 }
-        cur.unsafe_set(i, (cur.unsafe_get(i).to_int() + paeth(a, b, c)).to_byte())
+        cur.unsafe_set(
+          i,
+          (cur.unsafe_get(i).to_int() + paeth(a, b, c)).to_byte(),
+        )
       }
     _ => raise PngError::FormatError("unknown filter type")
   }

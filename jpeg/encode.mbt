@@ -264,7 +264,10 @@ fn encode_block(
   // AC coefficients in zig-zag order
   let mut run = 0
   for zig = 1; zig < 64; zig = zig + 1 {
-    let ac = jpeg_div(block.unsafe_get(unzig.unsafe_get(zig)), 8 * quant.unsafe_get(zig))
+    let ac = jpeg_div(
+      block.unsafe_get(unzig.unsafe_get(zig)),
+      8 * quant.unsafe_get(zig),
+    )
     if ac == 0 {
       run += 1
     } else {

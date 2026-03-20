@@ -111,7 +111,8 @@ pub fn process_sos(d : Decoder) -> @image.AnyImage raise JpegError {
             for k in 0..<64 {
               block.unsafe_set(
                 k,
-                block.unsafe_get(k) * d.quant.unsafe_get(qt_idx).data.unsafe_get(unzig.unsafe_get(k)),
+                block.unsafe_get(k) *
+                d.quant.unsafe_get(qt_idx).data.unsafe_get(unzig.unsafe_get(k)),
               )
             }
             // Reorder from zig-zag to natural order for IDCT
@@ -289,7 +290,10 @@ fn process_sos_progressive(d : Decoder) -> Unit raise JpegError {
   // Allocate prog_coeffs if needed
   for i in 0..<ns {
     let ci = scan_comp.unsafe_get(i)
-    let n_blocks = mcu_cols * mcu_rows * d.comp.unsafe_get(ci).h * d.comp.unsafe_get(ci).v
+    let n_blocks = mcu_cols *
+      mcu_rows *
+      d.comp.unsafe_get(ci).h *
+      d.comp.unsafe_get(ci).v
     if d.prog_coeffs.unsafe_get(ci).length() == 0 {
       let blocks : Array[FixedArray[Int]] = Array::new(capacity=n_blocks)
       for _ in 0..<n_blocks {
@@ -542,7 +546,10 @@ fn reconstruct_progressive(d : Decoder) -> @image.AnyImage {
         nat.unsafe_set(k, 0)
       }
       for k in 0..<64 {
-        nat.unsafe_set(unzig.unsafe_get(k), b.unsafe_get(k) * d.quant.unsafe_get(qt_idx).data.unsafe_get(k))
+        nat.unsafe_set(
+          unzig.unsafe_get(k),
+          b.unsafe_get(k) * d.quant.unsafe_get(qt_idx).data.unsafe_get(k),
+        )
       }
       // Note: b[k] is stored at zig-zag position k, quant is also zig-zag
       // nat[unzig.unsafe_get(k)] places into natural order for IDCT
