@@ -1,6 +1,18 @@
 ///|
+/// PNG compression level.
+pub(all) enum CompressionLevel {
+  DefaultCompression
+  NoCompression
+  BestSpeed
+  BestCompression
+} derive(Eq, Show)
+
+///|
 /// Encodes an image as PNG.
-pub fn encode(img : @image.AnyImage) -> Bytes raise Error {
+pub fn encode(
+  img : @image.AnyImage,
+  compression~ : CompressionLevel = DefaultCompression
+) -> Bytes raise Error {
   let buf = @buffer.new()
   // Write PNG signature
   for i in 0..<8 {
@@ -108,7 +120,13 @@ pub fn encode(img : @image.AnyImage) -> Bytes raise Error {
     }
   }
   // Compress and write IDAT
-  let compressed = @zlib.compress(raw_buf.to_bytes()) |> or_png_error()
+  let flate_level : @flate.CompressionLevel = match compression {
+    DefaultCompression => @flate.DefaultCompression
+    NoCompression => @flate.NoCompression
+    BestSpeed => @flate.BestSpeed
+    BestCompression => @flate.BestCompression
+  }
+  let compressed = or_png_error(@zlib.compress(raw_buf.to_bytes(), level=flate_level))
   let idat_data = FixedArray::make(compressed.length(), b'\x00')
   for i in 0..<compressed.length() {
     idat_data[i] = compressed[i]

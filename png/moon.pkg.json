@@ -4,6 +4,7 @@
     "bikallem/image/color",
     "bikallem/image/internal/binary",
     "bikallem/compress/zlib",
+    "bikallem/compress/flate",
     "bikallem/compress/checksum",
     "moonbitlang/core/buffer"
   ],
