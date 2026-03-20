@@ -56,17 +56,22 @@ parse_mb_us() {
 parse_go_us() {
   local ns
   ns=$(echo "$1" | awk '{for(i=1;i<=NF;i++) if($(i+1)=="ns/op") print $i}')
-  [ -n "$ns" ] && echo "scale=2; $ns / 1000" | bc
+  [ -n "$ns" ] && echo "scale=6; $ns / 1000" | bc
 }
 
 # Format µs for display
 fmt() {
   local us="$1"
-  [ -z "$us" ] || [ "$us" = "0" ] && { echo "-"; return; }
-  if [ "$(echo "$us < 1" | bc)" = "1" ]; then
-    printf "%.0f ns" "$(echo "$us * 1000" | bc)"
+  [ -z "$us" ] && { echo "-"; return; }
+  # bc may output ".001" without leading zero; normalize
+  us=$(echo "$us" | sed 's/^\./0./')
+  [ "$us" = "0" ] || [ "$us" = "0.000000" ] && { echo "-"; return; }
+  if [ "$(echo "$us < 0.001" | bc)" = "1" ]; then
+    printf "%.2f ns" "$(echo "scale=4; $us * 1000" | bc | sed 's/^\./0./')"
+  elif [ "$(echo "$us < 1" | bc)" = "1" ]; then
+    printf "%.0f ns" "$(echo "$us * 1000" | bc | sed 's/^\./0./')"
   elif [ "$(echo "$us >= 1000" | bc)" = "1" ]; then
-    printf "%.2f ms" "$(echo "scale=4; $us / 1000" | bc)"
+    printf "%.2f ms" "$(echo "scale=4; $us / 1000" | bc | sed 's/^\./0./')"
   else
     printf "%.2f µs" "$us"
   fi
