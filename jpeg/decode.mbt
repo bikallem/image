@@ -74,15 +74,15 @@ fn decode_jpeg(d : Decoder) -> @image.AnyImage raise JpegError {
   let mut img : @image.AnyImage = @image.AnyImage::Gray(
     @image.new_image_gray({ min: { x: 0, y: 0 }, max: { x: 0, y: 0 } }),
   )
-  while !done {
+  while !done && d.r.remaining() > 0 {
     let marker = read_marker(d)
     if marker == marker_eoi {
       done = true
     } else if marker == marker_sof0 || marker == marker_sof0 + 1U {
-      // SOF0 or SOF1 (baseline)
       process_sof(d)
     } else if marker == marker_sof2 {
-      raise JpegError::UnsupportedError("progressive JPEG not supported")
+      d.progressive = true
+      process_sof(d)
     } else if marker == marker_dht {
       process_dht(d)
     } else if marker == marker_dqt {
@@ -90,25 +90,28 @@ fn decode_jpeg(d : Decoder) -> @image.AnyImage raise JpegError {
     } else if marker == marker_dri {
       process_dri(d)
     } else if marker == marker_sos {
-      img = process_sos(d)
-      done = true
+      if d.progressive {
+        process_sos_progressive(d)
+      } else {
+        img = process_sos(d)
+        done = true
+      }
     } else if marker >= marker_app0 && marker <= marker_app15 {
-      // Skip APP markers
       let length = d.r.read_uint16_be()
       d.r.skip(length.reinterpret_as_int() - 2)
     } else if marker == marker_com {
-      // Skip comment
       let length = d.r.read_uint16_be()
       d.r.skip(length.reinterpret_as_int() - 2)
     } else {
-      // Skip unknown markers with a length field
-      // Some markers have no length (standalone), but most do
       let length = d.r.read_uint16_be()
       let skip_len = length.reinterpret_as_int() - 2
       if skip_len >= 0 {
         d.r.skip(skip_len)
       }
     }
+  }
+  if d.progressive {
+    img = reconstruct_progressive(d)
   }
   img
 }

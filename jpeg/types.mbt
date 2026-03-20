@@ -165,20 +165,19 @@ pub fn HuffmanTable::new() -> HuffmanTable {
 /// Decoder state for JPEG decoding.
 pub(all) struct Decoder {
   r : ByteReader
-  // Quantization tables (up to 4)
   quant : FixedArray[QuantTable]
-  // Huffman tables: [tc][th] where tc=0 DC, tc=1 AC; th=0..3
   huff : FixedArray[FixedArray[HuffmanTable]]
-  // Component info
   mut num_components : Int
   comp : FixedArray[Component]
-  // Image dimensions
   mut width : Int
   mut height : Int
-  // Restart interval (in MCUs)
   mut restart_interval : Int
-  // Bit reader state
   bits : BitReader
+  // Progressive JPEG state
+  mut progressive : Bool
+  mut eob_run : Int
+  // progCoeffs[compIndex] = array of 64-int blocks, one per 8x8 block
+  prog_coeffs : FixedArray[Array[FixedArray[Int]]]
 }
 
 ///|
@@ -230,6 +229,7 @@ pub fn Decoder::new(data : Bytes) -> Decoder {
   for i in 0..<3 {
     comp[i] = Component::new()
   }
+  let prog_coeffs : FixedArray[Array[FixedArray[Int]]] = FixedArray::make(4, [])
   {
     r: ByteReader::new(data),
     quant,
@@ -240,5 +240,8 @@ pub fn Decoder::new(data : Bytes) -> Decoder {
     height: 0,
     restart_interval: 0,
     bits: BitReader::new(),
+    progressive: false,
+    eob_run: 0,
+    prog_coeffs,
   }
 }

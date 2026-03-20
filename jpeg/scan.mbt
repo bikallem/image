@@ -224,6 +224,336 @@ fn decode_block(
 }
 
 ///|
+/// Process a SOS segment for progressive JPEG.
+/// Stores coefficients into d.prog_coeffs instead of IDCT-ing.
+fn process_sos_progressive(d : Decoder) -> Unit raise JpegError {
+  let length = d.r.read_uint16_be()
+  let _seg_len = length.reinterpret_as_int() - 2
+  let ns = d.r.read_byte().to_int()
+  // Read scan component selectors
+  let scan_comp = FixedArray::make(ns, 0) // component index for each scan component
+  for i in 0..<ns {
+    let cs = d.r.read_byte().to_int()
+    let td_ta = d.r.read_byte().to_int()
+    let td = (td_ta >> 4) & 0x0F
+    let ta = td_ta & 0x0F
+    let mut ci = -1
+    for j in 0..<d.num_components {
+      if d.comp[j].id == cs {
+        ci = j
+        d.comp[j].dc_huff_idx = td
+        d.comp[j].ac_huff_idx = ta
+      }
+    }
+    if ci < 0 {
+      ci = i
+      d.comp[i].dc_huff_idx = td
+      d.comp[i].ac_huff_idx = ta
+    }
+    scan_comp[i] = ci
+  }
+  let ss = d.r.read_byte().to_int() // spectral selection start
+  let se = d.r.read_byte().to_int() // spectral selection end
+  let ah_al = d.r.read_byte().to_int()
+  let ah = (ah_al >> 4) & 0x0F // successive approximation high
+  let al = ah_al & 0x0F // successive approximation low
+  // Reset bit buffer
+  flush_bits(d)
+  d.eob_run = 0
+  // Compute MCU grid
+  let mut max_h = 1
+  let mut max_v = 1
+  for i in 0..<d.num_components {
+    if d.comp[i].h > max_h { max_h = d.comp[i].h }
+    if d.comp[i].v > max_v { max_v = d.comp[i].v }
+  }
+  let mcu_cols = (d.width + max_h * 8 - 1) / (max_h * 8)
+  let mcu_rows = (d.height + max_v * 8 - 1) / (max_v * 8)
+  // Allocate prog_coeffs if needed
+  for i in 0..<ns {
+    let ci = scan_comp[i]
+    let n_blocks = mcu_cols * mcu_rows * d.comp[ci].h * d.comp[ci].v
+    if d.prog_coeffs[ci].length() == 0 {
+      let blocks : Array[FixedArray[Int]] = Array::new(capacity=n_blocks)
+      for _ in 0..<n_blocks {
+        blocks.push(FixedArray::make(64, 0))
+      }
+      d.prog_coeffs[ci] = blocks
+    }
+  }
+  // Reset DC predictors
+  for i in 0..<d.num_components {
+    d.comp[i].dc_pred = 0
+  }
+  // Decode scan
+  let mut mcu_count = 0
+  let mut block_count = 0
+  for my in 0..<mcu_rows {
+    for mx in 0..<mcu_cols {
+      // Restart handling
+      if d.restart_interval > 0 && mcu_count > 0 && mcu_count % d.restart_interval == 0 {
+        flush_bits(d)
+        for i in 0..<d.num_components { d.comp[i].dc_pred = 0 }
+        consume_restart_marker(d)
+        d.eob_run = 0
+      }
+      mcu_count += 1
+      for si in 0..<ns {
+        let ci = scan_comp[si]
+        let hi = d.comp[ci].h
+        let vi = d.comp[ci].v
+        let n_blocks = hi * vi
+        for j = 0; j < n_blocks; j = j + 1 {
+          let (bx, by) = if ns != 1 {
+            (hi * mx + j % hi, vi * my + j / hi)
+          } else {
+            let q = mcu_cols * hi
+            let bx = block_count % q
+            let by = block_count / q
+            block_count += 1
+            if bx * 8 >= d.width || by * 8 >= d.height {
+              continue
+            }
+            (bx, by)
+          }
+          let block_idx = by * mcu_cols * hi + bx
+          if block_idx >= d.prog_coeffs[ci].length() {
+            continue
+          }
+          let b = d.prog_coeffs[ci][block_idx]
+          if ah != 0 {
+            // Successive approximation refinement — simplified: just read bits
+            if ss == 0 {
+              // DC refinement
+              let bit = read_bit(d)
+              if bit { b[0] = b[0] | (1 << al) }
+            } else {
+              // AC refinement — complex, skip for now
+              refine_ac(d, b, ss, se, al, ci)
+            }
+          } else {
+            // First pass for these coefficients
+            let mut zig = ss
+            if zig == 0 {
+              // DC coefficient
+              let dc_table = d.huff[0][d.comp[ci].dc_huff_idx]
+              let dc_size = decode_huffman(d, dc_table)
+              let dc_diff = receive_and_extend(d, dc_size)
+              d.comp[ci].dc_pred += dc_diff
+              b[0] = d.comp[ci].dc_pred << al
+              zig = 1
+            }
+            if zig <= se && d.eob_run > 0 {
+              d.eob_run -= 1
+            } else {
+              let ac_table = d.huff[1][d.comp[ci].ac_huff_idx]
+              while zig <= se {
+                let rs = decode_huffman(d, ac_table)
+                let val0 = (rs >> 4) & 0x0F
+                let val1 = rs & 0x0F
+                if val1 != 0 {
+                  zig += val0
+                  if zig > se { break }
+                  let ac = receive_and_extend(d, val1)
+                  b[unzig[zig]] = ac << al
+                } else {
+                  if val0 != 0x0F {
+                    d.eob_run = 1 << val0
+                    if val0 != 0 {
+                      let extra = read_bits(d, val0)
+                      d.eob_run = d.eob_run | extra
+                    }
+                    d.eob_run -= 1
+                    break
+                  }
+                  zig += 0x0F
+                }
+                zig += 1
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+///|
+fn refine_ac(
+  d : Decoder,
+  b : FixedArray[Int],
+  ss : Int,
+  se : Int,
+  al : Int,
+  ci : Int
+) -> Unit raise JpegError {
+  // Simplified AC refinement: read and apply bits
+  let delta = 1 << al
+  let ac_table = d.huff[1][d.comp[ci].ac_huff_idx]
+  let mut zig = ss
+  if d.eob_run == 0 {
+    while zig <= se {
+      let rs = decode_huffman(d, ac_table)
+      let val0 = (rs >> 4) & 0x0F
+      let val1 = rs & 0x0F
+      let mut z = 0
+      if val1 == 0 {
+        if val0 != 0x0F {
+          d.eob_run = 1 << val0
+          if val0 != 0 {
+            let extra = read_bits(d, val0)
+            d.eob_run = d.eob_run | extra
+          }
+          break
+        }
+      } else if val1 == 1 {
+        z = delta
+        let bit = read_bit(d)
+        if !bit { z = -z }
+      } else {
+        raise JpegError::FormatError("unexpected Huffman code in refinement")
+      }
+      // Skip val0 zero coefficients, refining non-zero ones
+      let mut nz = val0
+      while zig <= se {
+        let u = unzig[zig]
+        if b[u] == 0 {
+          if nz == 0 { break }
+          nz -= 1
+        } else {
+          let bit = read_bit(d)
+          if bit {
+            if b[u] >= 0 { b[u] += delta } else { b[u] -= delta }
+          }
+        }
+        zig += 1
+      }
+      if zig <= se && z != 0 {
+        b[unzig[zig]] = z
+      }
+      zig += 1
+    }
+  }
+  if d.eob_run > 0 {
+    d.eob_run -= 1
+    // Refine existing non-zero coefficients
+    while zig <= se {
+      let u = unzig[zig]
+      if b[u] != 0 {
+        let bit = read_bit(d)
+        if bit {
+          if b[u] >= 0 { b[u] += delta } else { b[u] -= delta }
+        }
+      }
+      zig += 1
+    }
+  }
+}
+
+///|
+fn read_bit(d : Decoder) -> Bool raise JpegError {
+  if d.bits.n == 0 {
+    ensure_bits(d, 1)
+  }
+  d.bits.n -= 1
+  ((d.bits.buf >> d.bits.n) & 1) != 0
+}
+
+///|
+/// Reconstruct the full image from progressive coefficients.
+fn reconstruct_progressive(d : Decoder) -> @image.AnyImage raise JpegError {
+  let mut max_h = 1
+  let mut max_v = 1
+  for i in 0..<d.num_components {
+    if d.comp[i].h > max_h { max_h = d.comp[i].h }
+    if d.comp[i].v > max_v { max_v = d.comp[i].v }
+  }
+  let mcu_cols = (d.width + max_h * 8 - 1) / (max_h * 8)
+  let mcu_rows = (d.height + max_v * 8 - 1) / (max_v * 8)
+  // Allocate component planes
+  let comp_data : FixedArray[FixedArray[Byte]] = FixedArray::make(
+    d.num_components,
+    FixedArray::make(0, b'\x00'),
+  )
+  let comp_width = FixedArray::make(d.num_components, 0)
+  let comp_height = FixedArray::make(d.num_components, 0)
+  for i in 0..<d.num_components {
+    let cw = mcu_cols * d.comp[i].h * 8
+    let ch = mcu_rows * d.comp[i].v * 8
+    comp_width[i] = cw
+    comp_height[i] = ch
+    comp_data[i] = FixedArray::make(cw * ch, b'\x00')
+  }
+  let idct_out = FixedArray::make(64, b'\x00')
+  // For each component, dequantize and IDCT all blocks
+  for ci in 0..<d.num_components {
+    if d.prog_coeffs[ci].length() == 0 { continue }
+    let stride = mcu_cols * d.comp[ci].h
+    let qt_idx = d.comp[ci].qt
+    for block_idx, b in d.prog_coeffs[ci] {
+      let bx = block_idx % stride
+      let by = block_idx / stride
+      // Dequantize
+      let nat = FixedArray::make(64, 0)
+      for k in 0..<64 {
+        nat[unzig[k]] = b[k] * d.quant[qt_idx].data[k]
+      }
+      // Note: b[k] is stored at zig-zag position k, quant is also zig-zag
+      // nat[unzig[k]] places into natural order for IDCT
+      idct(nat, idct_out)
+      // Write to comp_data
+      let cw = comp_width[ci]
+      for py in 0..<8 {
+        for px in 0..<8 {
+          let cx = bx * 8 + px
+          let cy = by * 8 + py
+          if cx < cw && cy < comp_height[ci] {
+            comp_data[ci][cy * cw + cx] = idct_out[py * 8 + px]
+          }
+        }
+      }
+    }
+  }
+  // Build output image (same as sequential)
+  let rect : @image.Rectangle = {
+    min: { x: 0, y: 0 },
+    max: { x: d.width, y: d.height },
+  }
+  if d.num_components == 1 {
+    let img = @image.new_image_gray(rect)
+    for y in 0..<d.height {
+      for x in 0..<d.width {
+        img.pix[y * img.stride + x] = comp_data[0][y * comp_width[0] + x]
+      }
+    }
+    @image.AnyImage::Gray(img)
+  } else {
+    let img = @image.new_image_rgba(rect)
+    let y_w = comp_width[0]
+    let cb_w = comp_width[1]
+    let cr_w = comp_width[2]
+    let full_h = comp_height[0]
+    let cb_h = comp_height[1]
+    for y in 0..<d.height {
+      for x in 0..<d.width {
+        let yv = comp_data[0][y * y_w + x]
+        let cx = if cb_w < y_w { x * cb_w / y_w } else { x }
+        let cy = if cb_h < full_h { y * cb_h / full_h } else { y }
+        let cbv = comp_data[1][cy * cb_w + cx]
+        let crv = comp_data[2][cy * cr_w + cx]
+        let (r, g, b) = @color.ycbcr_to_rgb(yv, cbv, crv)
+        let di = y * img.stride + x * 4
+        img.pix[di] = r
+        img.pix[di + 1] = g
+        img.pix[di + 2] = b
+        img.pix[di + 3] = b'\xff'
+      }
+    }
+    @image.AnyImage::RGBA(img)
+  }
+}
+
+///|
 /// After a restart marker is expected, consume the RST marker bytes.
 fn consume_restart_marker(d : Decoder) -> Unit raise JpegError {
   // Try to read a restart marker (0xFF 0xD0..0xD7)

@@ -132,6 +132,23 @@ test "jpeg_decode_testdata" {
 }
 
 ///|
+/// Test progressive JPEG decode.
+test "jpeg_progressive" {
+  let data = @fs.read_file_to_bytes(
+    "testdata/video-001.progressive.jpeg",
+  )
+  let img = decode(data)
+  let b = img.bounds()
+  assert_true(b.dx() > 0)
+  assert_true(b.dy() > 0)
+  // Compare with baseline
+  let baseline_data = @fs.read_file_to_bytes("testdata/video-001.jpeg")
+  let baseline = decode(baseline_data)
+  assert_eq(b.dx(), baseline.bounds().dx())
+  assert_eq(b.dy(), baseline.bounds().dy())
+}
+
+///|
 /// Test decoding various JPEG subsampling modes.
 test "jpeg_subsampling" {
   let files = [
