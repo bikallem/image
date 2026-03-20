@@ -124,7 +124,7 @@ ratio() {
 # --- Collect MoonBit results ---
 declare -A MB_RESULTS
 echo "Running MoonBit benchmarks..." >&2
-mb_output=$(cd "$PROJECT_DIR" && moon bench --target native 2>&1)
+mb_output=$(cd "$PROJECT_DIR" && moon bench --release --target native 2>&1)
 
 current_pkg=""
 while IFS= read -r line; do
