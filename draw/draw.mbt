@@ -138,9 +138,17 @@ fn draw_fill_src(
   let b_byte = (sb >> 8).to_byte()
   let a_byte = (sa >> 8).to_byte()
   let dx = r.dx()
+  let n = dx * 4
   let mut row_off = dst.pix_offset + (r.min.y - dst.rect.min.y) * dst.stride +
     (r.min.x - dst.rect.min.x) * 4
-  for _y = r.min.y; _y < r.max.y; _y = _y + 1 {
+  if r_byte == g_byte && g_byte == b_byte && b_byte == a_byte {
+    // All channels same value — single memset per row
+    for _y = r.min.y; _y < r.max.y; _y = _y + 1 {
+      @blit.fill_bytes(dst.pix, row_off, r_byte, n)
+      row_off += dst.stride
+    }
+  } else {
+    // Fill first row pixel by pixel, then blit to remaining rows
     let mut i = row_off
     for _x = 0; _x < dx; _x = _x + 1 {
       dst.pix[i] = r_byte
@@ -149,7 +157,12 @@ fn draw_fill_src(
       dst.pix[i + 3] = a_byte
       i += 4
     }
+    let first_row = row_off
     row_off += dst.stride
+    for _y = r.min.y + 1; _y < r.max.y; _y = _y + 1 {
+      @blit.blit_fixed_array(dst.pix, row_off, dst.pix, first_row, n)
+      row_off += dst.stride
+    }
   }
 }
 
@@ -197,7 +210,7 @@ fn draw_copy_src(
   let mut s_row = src.pix_offset + (sp.y - src.rect.min.y) * src.stride +
     (sp.x - src.rect.min.x) * 4
   for _y = r.min.y; _y < r.max.y; _y = _y + 1 {
-    FixedArray::unsafe_blit(dst.pix, d_row, src.pix, s_row, n)
+    @blit.blit_fixed_array(dst.pix, d_row, src.pix, s_row, n)
     d_row += dst.stride
     s_row += src.stride
   }

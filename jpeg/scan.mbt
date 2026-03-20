@@ -77,9 +77,9 @@ pub fn process_sos(d : Decoder) -> @image.AnyImage raise JpegError {
     comp_data[i] = FixedArray::make(cw * ch, b'\x00')
   }
   // Block and idct buffers — allocated once, reused per block
-  let block = FixedArray::make(64, 0)
-  let nat = FixedArray::make(64, 0)
-  let idct_out = FixedArray::make(64, b'\x00')
+  let block = @blit.make_uninit_int(64)
+  let nat = @blit.make_uninit_int(64)
+  let idct_out = @blit.make_uninit(64)
   let mut mcu_count = 0
   // Decode MCUs
   for mcu_y in 0..<mcu_rows {
@@ -487,8 +487,8 @@ fn reconstruct_progressive(d : Decoder) -> @image.AnyImage raise JpegError {
     comp_height[i] = ch
     comp_data[i] = FixedArray::make(cw * ch, b'\x00')
   }
-  let nat = FixedArray::make(64, 0)
-  let idct_out = FixedArray::make(64, b'\x00')
+  let nat = @blit.make_uninit_int(64)
+  let idct_out = @blit.make_uninit(64)
   // For each component, dequantize and IDCT all blocks
   for ci in 0..<d.num_components {
     if d.prog_coeffs[ci].length() == 0 { continue }

@@ -268,9 +268,9 @@ fn decode_image(
     min: { x: 0, y: 0 },
     max: { x: width, y: height },
   }
-  // Unfilter rows
+  // Unfilter rows — prev_row must be zero, cur_row will be fully written
   let prev_row = FixedArray::make(stride, b'\x00')
-  let cur_row = FixedArray::make(stride, b'\x00')
+  let cur_row = @blit.make_uninit(stride)
   match color_type {
     t if t == ct_grayscale && (bit_depth == b'\x01' || bit_depth == b'\x02' || bit_depth == b'\x04') => {
       // Sub-8-bit grayscale: unpack to 8-bit by scaling
@@ -292,7 +292,7 @@ fn decode_image(
           let scaled = val * 255 / max_val
           img.pix[y * img.stride + x] = scaled.to_byte()
         }
-        FixedArray::unsafe_blit(prev_row, 0, cur_row, 0, stride)
+        @blit.blit_fixed_array(prev_row, 0, cur_row, 0, stride)
       }
       @image.AnyImage::Gray(img)
     }
@@ -308,7 +308,7 @@ fn decode_image(
         for x in 0..<width {
           img.pix[y * img.stride + x] = cur_row[x]
         }
-        FixedArray::unsafe_blit(prev_row, 0, cur_row, 0, stride)
+        @blit.blit_fixed_array(prev_row, 0, cur_row, 0, stride)
       }
       @image.AnyImage::Gray(img)
     }
@@ -325,7 +325,7 @@ fn decode_image(
           img.pix[y * img.stride + x * 2] = cur_row[x * 2]
           img.pix[y * img.stride + x * 2 + 1] = cur_row[x * 2 + 1]
         }
-        FixedArray::unsafe_blit(prev_row, 0, cur_row, 0, stride)
+        @blit.blit_fixed_array(prev_row, 0, cur_row, 0, stride)
       }
       @image.AnyImage::Gray16(img)
     }
@@ -345,7 +345,7 @@ fn decode_image(
           img.pix[di + 2] = cur_row[x * 3 + 2]
           img.pix[di + 3] = b'\xff'
         }
-        FixedArray::unsafe_blit(prev_row, 0, cur_row, 0, stride)
+        @blit.blit_fixed_array(prev_row, 0, cur_row, 0, stride)
       }
       @image.AnyImage::NRGBA(img)
     }
@@ -382,7 +382,7 @@ fn decode_image(
             img.pix[y * img.stride + x] = ((cur_row[byte_idx].to_int() >> shift) & 0x01).to_byte()
           }
         }
-        FixedArray::unsafe_blit(prev_row, 0, cur_row, 0, stride)
+        @blit.blit_fixed_array(prev_row, 0, cur_row, 0, stride)
       }
       @image.AnyImage::Paletted(img)
     }
@@ -408,7 +408,7 @@ fn decode_image(
           img.pix[di + 2] = gray
           img.pix[di + 3] = alpha
         }
-        FixedArray::unsafe_blit(prev_row, 0, cur_row, 0, stride)
+        @blit.blit_fixed_array(prev_row, 0, cur_row, 0, stride)
       }
       @image.AnyImage::NRGBA(img)
     }
@@ -428,7 +428,7 @@ fn decode_image(
           img.pix[di + 2] = cur_row[x * 4 + 2]
           img.pix[di + 3] = cur_row[x * 4 + 3]
         }
-        FixedArray::unsafe_blit(prev_row, 0, cur_row, 0, stride)
+        @blit.blit_fixed_array(prev_row, 0, cur_row, 0, stride)
       }
       @image.AnyImage::NRGBA(img)
     }

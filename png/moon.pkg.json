@@ -6,7 +6,8 @@
     "bikallem/compress/zlib",
     "bikallem/compress/flate",
     "bikallem/compress/checksum",
-    "moonbitlang/core/buffer"
+    "moonbitlang/core/buffer",
+    "bikallem/blit"
   ],
   "wbtest-import": [
     "moonbitlang/x/fs",

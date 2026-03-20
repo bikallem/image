@@ -200,14 +200,13 @@ fn write_chunk(
   for i in 0..<data.length() {
     buf.write_byte(data[i])
   }
-  // CRC over type + data — use a single FixedArray, no Buffer
-  let crc_data = FixedArray::make(4 + data.length(), b'\x00')
+  // CRC over type + data
+  let crc_data = @blit.make_uninit(4 + data.length())
   crc_data[0] = (chunk_type >> 24).to_byte()
   crc_data[1] = (chunk_type >> 16).to_byte()
   crc_data[2] = (chunk_type >> 8).to_byte()
   crc_data[3] = chunk_type.to_byte()
-  FixedArray::unsafe_blit(crc_data, 4, data, 0, data.length())
-  let crc_bytes = Bytes::from_fixedarray(crc_data)
-  let crc = @checksum.crc32(crc_bytes[:])
+  @blit.blit_fixed_array(crc_data, 4, data, 0, data.length())
+  let crc = @checksum.crc32(Bytes::from_fixedarray(crc_data)[:])
   write_u32_be(buf, crc)
 }

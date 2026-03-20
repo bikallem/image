@@ -2,7 +2,8 @@
   "import": [
     "bikallem/image/image",
     "bikallem/image/color",
-    "bikallem/image/internal/imageutil"
+    "bikallem/image/internal/imageutil",
+    "bikallem/blit"
   ],
   "wbtest-import": [
     "moonbitlang/core/bench"

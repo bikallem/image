@@ -3,7 +3,8 @@
     "bikallem/image/image",
     "bikallem/image/color",
     "bikallem/image/internal/binary",
-    "moonbitlang/core/buffer"
+    "moonbitlang/core/buffer",
+    "bikallem/blit"
   ],
   "wbtest-import": [
     "moonbitlang/x/fs",
