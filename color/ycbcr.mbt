@@ -67,16 +67,24 @@ pub impl Color for YCbCr with rgba(self) -> (UInt, UInt, UInt, UInt) {
 
 ///|
 /// NYCbCrA represents a non-alpha-premultiplied Y'CbCr-with-alpha color.
+#valtype
 pub(all) struct NYCbCrA {
-  ycbcr : YCbCr
+  y : Byte
+  cb : Byte
+  cr : Byte
   a : Byte
 } derive(Eq, Show)
 
 ///|
+pub fn NYCbCrA::ycbcr(self : NYCbCrA) -> YCbCr {
+  { y: self.y, cb: self.cb, cr: self.cr }
+}
+
+///|
 pub impl Color for NYCbCrA with rgba(self) -> (UInt, UInt, UInt, UInt) {
-  let yy1 = self.ycbcr.y.to_int() * 0x10101
-  let cb1 = self.ycbcr.cb.to_int() - 128
-  let cr1 = self.ycbcr.cr.to_int() - 128
+  let yy1 = self.y.to_int() * 0x10101
+  let cb1 = self.cb.to_int() - 128
+  let cr1 = self.cr.to_int() - 128
   let r = clamp_uint16(yy1 + 91881 * cr1).reinterpret_as_uint()
   let g = clamp_uint16(yy1 - 22554 * cb1 - 46802 * cr1).reinterpret_as_uint()
   let b = clamp_uint16(yy1 + 116130 * cb1).reinterpret_as_uint()

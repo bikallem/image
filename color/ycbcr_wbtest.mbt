@@ -90,7 +90,7 @@ test "ycbcr_gray" {
 test "nycbcra_alpha" {
   for i in 0..<256 {
     let c0 : AnyColor = AnyColor::NYCbCrA({
-      ycbcr: { y: b'\xff', cb: b'\x80', cr: b'\x80' },
+      y: b'\xff', cb: b'\x80', cr: b'\x80',
       a: i.to_byte(),
     })
     let c1 : AnyColor = AnyColor::Alpha({ a: i.to_byte() })
@@ -104,7 +104,7 @@ test "nycbcra_alpha" {
 test "nycbcra_ycbcr" {
   for i in 0..<256 {
     let c0 : AnyColor = AnyColor::NYCbCrA({
-      ycbcr: { y: i.to_byte(), cb: b'\x40', cr: b'\xc0' },
+      y: i.to_byte(), cb: b'\x40', cr: b'\xc0',
       a: b'\xff',
     })
     let c1 : AnyColor = AnyColor::YCbCr({

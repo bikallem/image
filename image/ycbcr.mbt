@@ -161,17 +161,15 @@ pub fn ImageNYCbCrA::nycbcra_at(
   y : Int,
 ) -> @color.NYCbCrA {
   if !({ x, y } : Point).in_(self.ycbcr.rect) {
-    return { ycbcr: { y: b'\x00', cb: b'\x00', cr: b'\x00' }, a: b'\x00' }
+    return { y: b'\x00', cb: b'\x00', cr: b'\x00', a: b'\x00' }
   }
   let yi = self.ycbcr.y_offset(x, y)
   let ci = self.ycbcr.c_offset(x, y)
   let ai = self.a_offset(x, y)
   {
-    ycbcr: {
-      y: self.ycbcr.y_.unsafe_get(yi),
-      cb: self.ycbcr.cb.unsafe_get(ci),
-      cr: self.ycbcr.cr.unsafe_get(ci),
-    },
+    y: self.ycbcr.y_.unsafe_get(yi),
+    cb: self.ycbcr.cb.unsafe_get(ci),
+    cr: self.ycbcr.cr.unsafe_get(ci),
     a: self.a.unsafe_get(ai),
   }
 }
