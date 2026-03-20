@@ -5,7 +5,7 @@ pub fn decode(data : Bytes) -> @image.AnyImage raise Error {
   // Verify PNG header
   for i in 0..<8 {
     let b = r.read_byte()
-    if b != png_header[i] {
+    if b != png_header.unsafe_get(i) {
       raise PngError::FormatError("not a PNG file")
     }
   }
@@ -90,12 +90,12 @@ pub fn decode(data : Bytes) -> @image.AnyImage raise Error {
   if trns.length() > 0 && color_type == ct_paletted {
     for i in 0..<trns.length() {
       if i < palette.length() {
-        guard palette[i] is @color.AnyColor::RGBA(c) else { continue }
+        guard palette.unsafe_get(i) is @color.AnyColor::RGBA(c) else { continue }
         palette[i] = @color.AnyColor::NRGBA({
           r: c.r,
           g: c.g,
           b: c.b,
-          a: trns[i],
+          a: trns.unsafe_get(i),
         })
       }
     }
@@ -200,7 +200,7 @@ fn decode_interlaced(
     }
     // Decode the pass sub-image
     let pass_img = decode_image(
-      Bytes::makei(pass_data_len, fn(i) { data[offset + i] }),
+      Bytes::makei(pass_data_len, fn(i) { data.unsafe_get(offset + i) }),
       pass_w,
       pass_h,
       bit_depth,
@@ -530,7 +530,7 @@ pub fn decode_config(data : Bytes) -> @image.Config raise Error {
   let r = ByteReader::new(data)
   for i in 0..<8 {
     let b = r.read_byte()
-    if b != png_header[i] {
+    if b != png_header.unsafe_get(i) {
       raise PngError::FormatError("not a PNG file")
     }
   }

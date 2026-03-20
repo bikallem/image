@@ -101,14 +101,14 @@ pub fn idct(block : FixedArray[Int], dst : FixedArray[Byte]) -> Unit {
   // Row pass
   for y in 0..<8 {
     let base = y * 8
-    let s0 = block[base]
-    let s1 = block[base + 1]
-    let s2 = block[base + 2]
-    let s3 = block[base + 3]
-    let s4 = block[base + 4]
-    let s5 = block[base + 5]
-    let s6 = block[base + 6]
-    let s7 = block[base + 7]
+    let s0 = block.unsafe_get(base)
+    let s1 = block.unsafe_get(base + 1)
+    let s2 = block.unsafe_get(base + 2)
+    let s3 = block.unsafe_get(base + 3)
+    let s4 = block.unsafe_get(base + 4)
+    let s5 = block.unsafe_get(base + 5)
+    let s6 = block.unsafe_get(base + 6)
+    let s7 = block.unsafe_get(base + 7)
     // If all AC terms are zero, shortcut
     if s1 == 0 && s2 == 0 && s3 == 0 && s4 == 0 && s5 == 0 && s6 == 0 && s7 == 0 {
       let dc = s0 << 3
@@ -136,36 +136,36 @@ pub fn idct(block : FixedArray[Int], dst : FixedArray[Byte]) -> Unit {
   }
   // Column pass
   for x in 0..<8 {
-    let s0 = tmp[x]
-    let s1 = tmp[8 + x]
-    let s2 = tmp[16 + x]
-    let s3 = tmp[24 + x]
-    let s4 = tmp[32 + x]
-    let s5 = tmp[40 + x]
-    let s6 = tmp[48 + x]
-    let s7 = tmp[56 + x]
+    let s0 = tmp.unsafe_get(x)
+    let s1 = tmp.unsafe_get(8 + x)
+    let s2 = tmp.unsafe_get(16 + x)
+    let s3 = tmp.unsafe_get(24 + x)
+    let s4 = tmp.unsafe_get(32 + x)
+    let s5 = tmp.unsafe_get(40 + x)
+    let s6 = tmp.unsafe_get(48 + x)
+    let s7 = tmp.unsafe_get(56 + x)
     if s1 == 0 && s2 == 0 && s3 == 0 && s4 == 0 && s5 == 0 && s6 == 0 && s7 == 0 {
       let dc = idct_clamp(((s0 + 16) >> 5) + 128)
-      dst[x] = dc
-      dst[8 + x] = dc
-      dst[16 + x] = dc
-      dst[24 + x] = dc
-      dst[32 + x] = dc
-      dst[40 + x] = dc
-      dst[48 + x] = dc
-      dst[56 + x] = dc
+      dst.unsafe_set(x, dc)
+      dst.unsafe_set(8 + x, dc)
+      dst.unsafe_set(16 + x, dc)
+      dst.unsafe_set(24 + x, dc)
+      dst.unsafe_set(32 + x, dc)
+      dst.unsafe_set(40 + x, dc)
+      dst.unsafe_set(48 + x, dc)
+      dst.unsafe_set(56 + x, dc)
     } else {
       let (r0, r1, r2v, r3, r4, r5, r6, r7) = idct_1d(
         s0, s1, s2, s3, s4, s5, s6, s7,
       )
-      dst[x] = idct_clamp(((r0 + 16) >> 5) + 128)
-      dst[8 + x] = idct_clamp(((r1 + 16) >> 5) + 128)
-      dst[16 + x] = idct_clamp(((r2v + 16) >> 5) + 128)
-      dst[24 + x] = idct_clamp(((r3 + 16) >> 5) + 128)
-      dst[32 + x] = idct_clamp(((r4 + 16) >> 5) + 128)
-      dst[40 + x] = idct_clamp(((r5 + 16) >> 5) + 128)
-      dst[48 + x] = idct_clamp(((r6 + 16) >> 5) + 128)
-      dst[56 + x] = idct_clamp(((r7 + 16) >> 5) + 128)
+      dst.unsafe_set(x, idct_clamp(((r0 + 16) >> 5) + 128))
+      dst.unsafe_set(8 + x, idct_clamp(((r1 + 16) >> 5) + 128))
+      dst.unsafe_set(16 + x, idct_clamp(((r2v + 16) >> 5) + 128))
+      dst.unsafe_set(24 + x, idct_clamp(((r3 + 16) >> 5) + 128))
+      dst.unsafe_set(32 + x, idct_clamp(((r4 + 16) >> 5) + 128))
+      dst.unsafe_set(40 + x, idct_clamp(((r5 + 16) >> 5) + 128))
+      dst.unsafe_set(48 + x, idct_clamp(((r6 + 16) >> 5) + 128))
+      dst.unsafe_set(56 + x, idct_clamp(((r7 + 16) >> 5) + 128))
     }
   }
 }
@@ -178,14 +178,14 @@ pub fn fdct(pixels : FixedArray[Byte], block : FixedArray[Int]) -> Unit {
   // Row pass
   for y in 0..<8 {
     let base = y * 8
-    let p0 = pixels[base].to_int() - 128
-    let p1 = pixels[base + 1].to_int() - 128
-    let p2 = pixels[base + 2].to_int() - 128
-    let p3 = pixels[base + 3].to_int() - 128
-    let p4 = pixels[base + 4].to_int() - 128
-    let p5 = pixels[base + 5].to_int() - 128
-    let p6 = pixels[base + 6].to_int() - 128
-    let p7 = pixels[base + 7].to_int() - 128
+    let p0 = pixels.unsafe_get(base).to_int() - 128
+    let p1 = pixels.unsafe_get(base + 1).to_int() - 128
+    let p2 = pixels.unsafe_get(base + 2).to_int() - 128
+    let p3 = pixels.unsafe_get(base + 3).to_int() - 128
+    let p4 = pixels.unsafe_get(base + 4).to_int() - 128
+    let p5 = pixels.unsafe_get(base + 5).to_int() - 128
+    let p6 = pixels.unsafe_get(base + 6).to_int() - 128
+    let p7 = pixels.unsafe_get(base + 7).to_int() - 128
     let t0 = p0 + p7
     let t1 = p1 + p6
     let t2 = p2 + p5
@@ -236,14 +236,14 @@ pub fn fdct(pixels : FixedArray[Byte], block : FixedArray[Int]) -> Unit {
   }
   // Column pass
   for x in 0..<8 {
-    let p0 = tmp[x]
-    let p1 = tmp[8 + x]
-    let p2 = tmp[16 + x]
-    let p3 = tmp[24 + x]
-    let p4 = tmp[32 + x]
-    let p5 = tmp[40 + x]
-    let p6 = tmp[48 + x]
-    let p7 = tmp[56 + x]
+    let p0 = tmp.unsafe_get(x)
+    let p1 = tmp.unsafe_get(8 + x)
+    let p2 = tmp.unsafe_get(16 + x)
+    let p3 = tmp.unsafe_get(24 + x)
+    let p4 = tmp.unsafe_get(32 + x)
+    let p5 = tmp.unsafe_get(40 + x)
+    let p6 = tmp.unsafe_get(48 + x)
+    let p7 = tmp.unsafe_get(56 + x)
     let e0 = p0 + p7
     let e1 = p1 + p6
     let e2 = p2 + p5

@@ -17,7 +17,7 @@ pub fn floyd_steinberg_draw(
   for y = r.min_y; y < r.max_y; y = y + 1 {
     // Clear next row
     for i in 0..<(w * 4) {
-      quant_err_next[i] = 0
+      quant_err_next.unsafe_set(i, 0)
     }
     let sy = sp.y + y - r.min_y
     for x = r.min_x; x < r.max_x; x = x + 1 {
@@ -25,10 +25,10 @@ pub fn floyd_steinberg_draw(
       let (sr, sg, sb, sa) = src.at(sx, sy).rgba()
       let ei = (x - r.min_x) * 4
       // Add quantization error from previous pixels.
-      let er = sr.reinterpret_as_int() + quant_err_cur[ei]
-      let eg = sg.reinterpret_as_int() + quant_err_cur[ei + 1]
-      let eb = sb.reinterpret_as_int() + quant_err_cur[ei + 2]
-      let ea = sa.reinterpret_as_int() + quant_err_cur[ei + 3]
+      let er = sr.reinterpret_as_int() + quant_err_cur.unsafe_get(ei)
+      let eg = sg.reinterpret_as_int() + quant_err_cur.unsafe_get(ei + 1)
+      let eb = sb.reinterpret_as_int() + quant_err_cur.unsafe_get(ei + 2)
+      let ea = sa.reinterpret_as_int() + quant_err_cur.unsafe_get(ei + 3)
       // Clamp to [0, 0xffff].
       let er = if er < 0 {
         0U
@@ -62,7 +62,7 @@ pub fn floyd_steinberg_draw(
       let idx = dst.palette.index(wanted)
       dst.set_color_index(x, y, idx.to_byte())
       // Compute the error.
-      let (pr, pg, pb, pa) = dst.palette.colors[idx].rgba()
+      let (pr, pg, pb, pa) = dst.palette.colors.unsafe_get(idx).rgba()
       let diff_r = er.reinterpret_as_int() - pr.reinterpret_as_int()
       let diff_g = eg.reinterpret_as_int() - pg.reinterpret_as_int()
       let diff_b = eb.reinterpret_as_int() - pb.reinterpret_as_int()
@@ -91,10 +91,10 @@ pub fn floyd_steinberg_draw(
         quant_err_next[(xi - 1) * 4 + 3] = quant_err_next[(xi - 1) * 4 + 3] +
           diff_a * 3 / 16
       }
-      quant_err_next[xi * 4] = quant_err_next[xi * 4] + diff_r * 5 / 16
-      quant_err_next[xi * 4 + 1] = quant_err_next[xi * 4 + 1] + diff_g * 5 / 16
-      quant_err_next[xi * 4 + 2] = quant_err_next[xi * 4 + 2] + diff_b * 5 / 16
-      quant_err_next[xi * 4 + 3] = quant_err_next[xi * 4 + 3] + diff_a * 5 / 16
+      quant_err_next.unsafe_set(xi * 4, quant_err_next[xi * 4] + diff_r * 5 / 16)
+      quant_err_next.unsafe_set(xi * 4 + 1, quant_err_next[xi * 4 + 1] + diff_g * 5 / 16)
+      quant_err_next.unsafe_set(xi * 4 + 2, quant_err_next[xi * 4 + 2] + diff_b * 5 / 16)
+      quant_err_next.unsafe_set(xi * 4 + 3, quant_err_next[xi * 4 + 3] + diff_a * 5 / 16)
       if xi + 1 < w {
         quant_err_next[(xi + 1) * 4] = quant_err_next[(xi + 1) * 4] +
           diff_r / 16

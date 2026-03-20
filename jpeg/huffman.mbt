@@ -14,11 +14,11 @@ pub fn build_huffman_table(
   // Copy symbols
   let mut sym_idx = 0
   for i in 0..<16 {
-    for _ in 0..<bits_count[i] {
+    for _ in 0..<bits_count.unsafe_get(i) {
       if sym_idx >= 256 {
         raise JpegError::FormatError("too many Huffman symbols")
       }
-      table.symbols[sym_idx] = symbols[sym_idx]
+      table.symbols.unsafe_set(sym_idx, symbols[sym_idx])
       sym_idx += 1
     }
   }
@@ -26,16 +26,16 @@ pub fn build_huffman_table(
   let mut code = 0
   let mut si = 0
   for i in 0..<16 {
-    let n = bits_count[i]
+    let n = bits_count.unsafe_get(i)
     if n == 0 {
-      table.min_code[i] = 0
-      table.max_code[i] = -1
-      table.val_ptr[i] = 0
+      table.min_code.unsafe_set(i, 0)
+      table.max_code.unsafe_set(i, -1)
+      table.val_ptr.unsafe_set(i, 0)
     } else {
-      table.min_code[i] = code
-      table.val_ptr[i] = si
+      table.min_code.unsafe_set(i, code)
+      table.val_ptr.unsafe_set(i, si)
       code = code + n
-      table.max_code[i] = code - 1
+      table.max_code.unsafe_set(i, code - 1)
       si = si + n
     }
     code = code << 1
@@ -99,9 +99,9 @@ pub fn decode_huffman(d : Decoder, table : HuffmanTable) -> Int raise JpegError 
   for i in 0..<16 {
     let bit = read_bits(d, 1)
     code = (code << 1) | bit
-    if code <= table.max_code[i] && table.max_code[i] >= 0 {
-      let idx = table.val_ptr[i] + code - table.min_code[i]
-      return table.symbols[idx]
+    if code <= table.max_code.unsafe_get(i) && table.max_code[i] >= 0 {
+      let idx = table.val_ptr.unsafe_get(i) + code - table.min_code[i]
+      return table.symbols.unsafe_get(idx)
     }
   }
   raise JpegError::FormatError("invalid Huffman code")

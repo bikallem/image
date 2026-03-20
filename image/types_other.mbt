@@ -574,10 +574,10 @@ pub fn ImagePaletted::at(
     })
   }
   if !({ x, y } : Point).in_(self.rect) {
-    return self.palette.colors[0]
+    return self.palette.colors.unsafe_get(0)
   }
-  let idx = self.pix[self.pix_offset(x, y)].to_int()
-  self.palette.colors[idx]
+  let idx = self.pix.unsafe_get(self.pix_offset(x, y)).to_int()
+  self.palette.colors.unsafe_get(idx)
 }
 
 ///|

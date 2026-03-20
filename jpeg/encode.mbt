@@ -318,10 +318,10 @@ fn write_dht(
   enc_write_u16(e, seg_len)
   enc_write_raw(e, (((tc << 4) | th) & 0xFF).to_byte())
   for i in 0..<16 {
-    enc_write_raw(e, counts[i].to_byte())
+    enc_write_raw(e, counts.unsafe_get(i).to_byte())
   }
   for i in 0..<num_symbols {
-    enc_write_raw(e, symbols[i].to_byte())
+    enc_write_raw(e, symbols.unsafe_get(i).to_byte())
   }
 }
 
@@ -333,7 +333,7 @@ fn write_dqt(e : Encoder, tq : Int, quant : FixedArray[Byte]) -> Unit {
   enc_write_u16(e, 67U)
   enc_write_raw(e, tq.to_byte())
   for k in 0..<64 {
-    enc_write_raw(e, quant[k])
+    enc_write_raw(e, quant.unsafe_get(k))
   }
 }
 

@@ -16,7 +16,7 @@ pub fn encode(
   let buf = @buffer.new()
   // Write PNG signature
   for i in 0..<8 {
-    buf.write_byte(png_header[i])
+    buf.write_byte(png_header.unsafe_get(i))
   }
   let bounds = img.bounds()
   let width = bounds.dx()
@@ -198,7 +198,7 @@ fn write_chunk(
   write_u32_be(buf, chunk_type)
   // Data
   for i in 0..<data.length() {
-    buf.write_byte(data[i])
+    buf.write_byte(data.unsafe_get(i))
   }
   // CRC over type + data
   let crc_data = @blit.make_uninit(4 + data.length())

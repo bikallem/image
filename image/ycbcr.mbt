@@ -54,7 +54,7 @@ pub fn ImageYCbCr::ycbcr_at(
   }
   let yi = self.y_offset(x, y)
   let ci = self.c_offset(x, y)
-  { y: self.y_[yi], cb: self.cb[ci], cr: self.cr[ci] }
+  { y: self.y_.unsafe_get(yi), cb: self.cb[ci], cr: self.cr[ci] }
 }
 
 ///|
@@ -168,11 +168,11 @@ pub fn ImageNYCbCrA::nycbcra_at(
   let ai = self.a_offset(x, y)
   {
     ycbcr: {
-      y: self.ycbcr.y_[yi],
-      cb: self.ycbcr.cb[ci],
-      cr: self.ycbcr.cr[ci],
+      y: self.ycbcr.y_.unsafe_get(yi),
+      cb: self.ycbcr.cb.unsafe_get(ci),
+      cr: self.ycbcr.cr.unsafe_get(ci),
     },
-    a: self.a[ai],
+    a: self.a.unsafe_get(ai),
   }
 }
 
@@ -225,7 +225,7 @@ pub fn ImageNYCbCrA::is_opaque(self : ImageNYCbCrA) -> Bool {
   for y = self.ycbcr.rect.min_y; y < self.ycbcr.rect.max_y; y = y + 1 {
     let row_start = (y - self.ycbcr.rect.min_y) * self.a_stride
     for x = 0; x < self.ycbcr.rect.dx(); x = x + 1 {
-      if self.a[row_start + x] != b'\xff' {
+      if self.a.unsafe_get(row_start + x) != b'\xff' {
         return false
       }
     }

@@ -177,7 +177,7 @@ fn process_dht(d : Decoder) -> Unit raise JpegError {
     let mut total_symbols = 0
     for i in 0..<16 {
       let n = d.r.read_byte().to_int()
-      bits_count[i] = n
+      bits_count.unsafe_set(i, n)
       total_symbols += n
     }
     remaining -= 16
@@ -186,10 +186,10 @@ fn process_dht(d : Decoder) -> Unit raise JpegError {
     }
     let symbols = FixedArray::make(total_symbols, 0)
     for i in 0..<total_symbols {
-      symbols[i] = d.r.read_byte().to_int()
+      symbols.unsafe_set(i, d.r.read_byte().to_int())
     }
     remaining -= total_symbols
-    build_huffman_table(d.huff[tc][th], bits_count, symbols)
+    build_huffman_table(d.huff.unsafe_get(tc)[th], bits_count, symbols)
   }
 }
 

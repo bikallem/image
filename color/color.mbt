@@ -209,7 +209,7 @@ pub fn Palette::convert(self : Palette, c : AnyColor) -> AnyColor? {
   if self.colors.is_empty() {
     return None
   }
-  Some(self.colors[self.index(c)])
+  Some(self.colors.unsafe_get(self.index(c)))
 }
 
 ///|
