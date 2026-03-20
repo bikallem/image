@@ -10,7 +10,7 @@ pub fn decode(Bytes) -> @image.AnyImage raise
 
 pub fn decode_config(Bytes) -> @image.Config raise
 
-pub fn encode(@image.AnyImage) -> Bytes raise
+pub fn encode(@image.AnyImage, compression? : CompressionLevel) -> Bytes raise
 
 pub fn paeth(Int, Int, Int) -> Int
 
@@ -33,6 +33,15 @@ pub fn ByteReader::read_bytes(Self, Int) -> Bytes raise PngError
 pub fn ByteReader::read_uint32_be(Self) -> UInt raise PngError
 pub fn ByteReader::remaining(Self) -> Int
 pub fn ByteReader::skip(Self, Int) -> Unit raise PngError
+
+pub(all) enum CompressionLevel {
+  DefaultCompression
+  NoCompression
+  BestSpeed
+  BestCompression
+}
+pub impl Eq for CompressionLevel
+pub impl Show for CompressionLevel
 
 // Type aliases
 

@@ -89,7 +89,9 @@ pub(all) struct ImageAlpha {
 pub fn ImageAlpha::alpha_at(Self, Int, Int) -> @color.Alpha
 pub fn ImageAlpha::is_opaque(Self) -> Bool
 pub fn ImageAlpha::pix_offset(Self, Int, Int) -> Int
+pub fn ImageAlpha::set(Self, Int, Int, @color.AnyColor) -> Unit
 pub fn ImageAlpha::set_alpha(Self, Int, Int, @color.Alpha) -> Unit
+pub fn ImageAlpha::sub_image(Self, Rectangle) -> Self
 
 pub(all) struct ImageAlpha16 {
   pix : FixedArray[Byte]
@@ -99,7 +101,9 @@ pub(all) struct ImageAlpha16 {
 }
 pub fn ImageAlpha16::alpha16_at(Self, Int, Int) -> @color.Alpha16
 pub fn ImageAlpha16::pix_offset(Self, Int, Int) -> Int
+pub fn ImageAlpha16::set(Self, Int, Int, @color.AnyColor) -> Unit
 pub fn ImageAlpha16::set_alpha16(Self, Int, Int, @color.Alpha16) -> Unit
+pub fn ImageAlpha16::sub_image(Self, Rectangle) -> Self
 
 pub(all) struct ImageGray {
   pix : FixedArray[Byte]
@@ -109,7 +113,9 @@ pub(all) struct ImageGray {
 }
 pub fn ImageGray::gray_at(Self, Int, Int) -> @color.Gray
 pub fn ImageGray::pix_offset(Self, Int, Int) -> Int
+pub fn ImageGray::set(Self, Int, Int, @color.AnyColor) -> Unit
 pub fn ImageGray::set_gray(Self, Int, Int, @color.Gray) -> Unit
+pub fn ImageGray::sub_image(Self, Rectangle) -> Self
 
 pub(all) struct ImageGray16 {
   pix : FixedArray[Byte]
@@ -119,7 +125,9 @@ pub(all) struct ImageGray16 {
 }
 pub fn ImageGray16::gray16_at(Self, Int, Int) -> @color.Gray16
 pub fn ImageGray16::pix_offset(Self, Int, Int) -> Int
+pub fn ImageGray16::set(Self, Int, Int, @color.AnyColor) -> Unit
 pub fn ImageGray16::set_gray16(Self, Int, Int, @color.Gray16) -> Unit
+pub fn ImageGray16::sub_image(Self, Rectangle) -> Self
 
 pub(all) struct ImageNRGBA {
   pix : FixedArray[Byte]
@@ -130,7 +138,9 @@ pub(all) struct ImageNRGBA {
 pub fn ImageNRGBA::is_opaque(Self) -> Bool
 pub fn ImageNRGBA::nrgba_at(Self, Int, Int) -> @color.NRGBA
 pub fn ImageNRGBA::pix_offset(Self, Int, Int) -> Int
+pub fn ImageNRGBA::set(Self, Int, Int, @color.AnyColor) -> Unit
 pub fn ImageNRGBA::set_nrgba(Self, Int, Int, @color.NRGBA) -> Unit
+pub fn ImageNRGBA::sub_image(Self, Rectangle) -> Self
 
 pub(all) struct ImageNRGBA64 {
   pix : FixedArray[Byte]
@@ -140,7 +150,9 @@ pub(all) struct ImageNRGBA64 {
 }
 pub fn ImageNRGBA64::nrgba64_at(Self, Int, Int) -> @color.NRGBA64
 pub fn ImageNRGBA64::pix_offset(Self, Int, Int) -> Int
+pub fn ImageNRGBA64::set(Self, Int, Int, @color.AnyColor) -> Unit
 pub fn ImageNRGBA64::set_nrgba64(Self, Int, Int, @color.NRGBA64) -> Unit
+pub fn ImageNRGBA64::sub_image(Self, Rectangle) -> Self
 
 pub(all) struct ImageNYCbCrA {
   ycbcr : ImageYCbCr
@@ -161,7 +173,9 @@ pub(all) struct ImagePaletted {
 pub fn ImagePaletted::at(Self, Int, Int) -> @color.AnyColor
 pub fn ImagePaletted::color_index_at(Self, Int, Int) -> Byte
 pub fn ImagePaletted::pix_offset(Self, Int, Int) -> Int
+pub fn ImagePaletted::set(Self, Int, Int, @color.AnyColor) -> Unit
 pub fn ImagePaletted::set_color_index(Self, Int, Int, Byte) -> Unit
+pub fn ImagePaletted::sub_image(Self, Rectangle) -> Self
 
 pub(all) struct ImageRGBA {
   pix : FixedArray[Byte]

@@ -14,7 +14,7 @@ pub fn decode_config(Bytes) -> @image.Config raise
 
 pub fn decode_huffman(Decoder, HuffmanTable) -> Int raise JpegError
 
-pub fn encode(@image.AnyImage) -> Bytes
+pub fn encode(@image.AnyImage, quality? : Int) -> Bytes
 
 pub fn fdct(FixedArray[Byte], FixedArray[Int]) -> Unit
 
