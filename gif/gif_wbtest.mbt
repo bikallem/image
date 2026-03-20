@@ -161,6 +161,30 @@ test "gif_palettes" {
 }
 
 ///|
+/// Test encoding an RGBA image as GIF (auto-quantization).
+test "gif_encode_rgba" {
+  let m = @image.new_image_rgba(@image.rect(0, 0, 16, 16))
+  for y in 0..<16 {
+    for x in 0..<16 {
+      m.set_rgba(
+        x,
+        y,
+        {
+          r: (x * 16).to_byte(),
+          g: (y * 16).to_byte(),
+          b: b'\x80',
+          a: b'\xff',
+        },
+      )
+    }
+  }
+  let encoded = encode_image(@image.AnyImage::RGBA(m))
+  let decoded = decode(encoded)
+  assert_eq(decoded.bounds().dx(), 16)
+  assert_eq(decoded.bounds().dy(), 16)
+}
+
+///|
 /// Test GIF encoding/decoding pixel parity.
 test "gif_pixel_parity" {
   let pal : @color.Palette = {

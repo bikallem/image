@@ -1,4 +1,18 @@
 ///|
+/// Encodes any image as a GIF by auto-quantizing to n_colors.
+/// Default: 256 colors using median-cut quantization.
+pub fn encode_image(
+  img : @image.AnyImage,
+  n_colors~ : Int = 256
+) -> Bytes raise Error {
+  let paletted = match img {
+    @image.AnyImage::Paletted(p) => p
+    _ => quantize_image(img, n_colors)
+  }
+  encode(paletted)
+}
+
+///|
 /// Encodes a single paletted image as a GIF.
 pub fn encode(img : @image.ImagePaletted) -> Bytes raise Error {
   let gif : GIF = {
