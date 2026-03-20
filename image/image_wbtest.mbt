@@ -24,8 +24,8 @@ let opaque_color : @color.AnyColor = @color.AnyColor::Alpha(
 /// Tests RGBA image: create, set pixels, read back, verify, SubImage.
 test "image_types_rgba" {
   let m = new_image_rgba(rect(0, 0, 10, 10))
-  assert_true!(rect(0, 0, 10, 10).eq(m.rect))
-  assert_true!(
+  assert_true(rect(0, 0, 10, 10).eq(m.rect))
+  assert_true(
     cmp_color(
       @color.AnyModel::RGBAModel,
       transparent_color,
@@ -33,7 +33,7 @@ test "image_types_rgba" {
     ),
   )
   m.set_rgba(6, 3, { r: b'\xff', g: b'\xff', b: b'\xff', a: b'\xff' })
-  assert_true!(
+  assert_true(
     cmp_color(
       @color.AnyModel::RGBAModel,
       opaque_color,
@@ -41,17 +41,17 @@ test "image_types_rgba" {
     ),
   )
   let sub = m.sub_image(rect(6, 3, 7, 4))
-  assert_true!(sub.is_opaque())
+  assert_true(sub.is_opaque())
   let m2 = m.sub_image(rect(3, 2, 9, 8))
-  assert_true!(rect(3, 2, 9, 8).eq(m2.rect))
-  assert_true!(
+  assert_true(rect(3, 2, 9, 8).eq(m2.rect))
+  assert_true(
     cmp_color(
       @color.AnyModel::RGBAModel,
       opaque_color,
       @color.AnyColor::RGBA(m2.rgba_at(6, 3)),
     ),
   )
-  assert_true!(
+  assert_true(
     cmp_color(
       @color.AnyModel::RGBAModel,
       transparent_color,
@@ -59,7 +59,7 @@ test "image_types_rgba" {
     ),
   )
   m2.set_rgba(3, 3, { r: b'\xff', g: b'\xff', b: b'\xff', a: b'\xff' })
-  assert_true!(
+  assert_true(
     cmp_color(
       @color.AnyModel::RGBAModel,
       opaque_color,
@@ -76,67 +76,67 @@ test "image_types_rgba" {
 ///|
 test "image_types_rgba64" {
   let m = new_image_rgba64(rect(0, 0, 10, 10))
-  assert_true!(rect(0, 0, 10, 10).eq(m.rect))
+  assert_true(rect(0, 0, 10, 10).eq(m.rect))
   m.set_rgba64(6, 3, { r: 0xffff, g: 0xffff, b: 0xffff, a: 0xffff })
   let c = m.rgba64_at(6, 3)
-  assert_eq!(c.r, 0xffffU)
+  assert_eq(c.r, 0xffffU)
   let sub = m.sub_image(rect(6, 3, 7, 4))
-  assert_true!(sub.is_opaque())
+  assert_true(sub.is_opaque())
 }
 
 ///|
 test "image_types_nrgba" {
   let m = new_image_nrgba(rect(0, 0, 10, 10))
-  assert_true!(rect(0, 0, 10, 10).eq(m.rect))
+  assert_true(rect(0, 0, 10, 10).eq(m.rect))
   m.set_nrgba(6, 3, { r: b'\xff', g: b'\xff', b: b'\xff', a: b'\xff' })
   let c = m.nrgba_at(6, 3)
-  assert_eq!(c.a, b'\xff')
+  assert_eq(c.a, b'\xff')
 }
 
 ///|
 test "image_types_nrgba64" {
   let m = new_image_nrgba64(rect(0, 0, 10, 10))
-  assert_true!(rect(0, 0, 10, 10).eq(m.rect))
+  assert_true(rect(0, 0, 10, 10).eq(m.rect))
   m.set_nrgba64(6, 3, { r: 0xffff, g: 0xffff, b: 0xffff, a: 0xffff })
   let c = m.nrgba64_at(6, 3)
-  assert_eq!(c.r, 0xffffU)
+  assert_eq(c.r, 0xffffU)
 }
 
 ///|
 test "image_types_alpha" {
   let m = new_image_alpha(rect(0, 0, 10, 10))
-  assert_true!(rect(0, 0, 10, 10).eq(m.rect))
+  assert_true(rect(0, 0, 10, 10).eq(m.rect))
   m.set_alpha(6, 3, { a: b'\xff' })
   let c = m.alpha_at(6, 3)
-  assert_eq!(c.a, b'\xff')
-  assert_false!(m.is_opaque())
+  assert_eq(c.a, b'\xff')
+  assert_false(m.is_opaque())
 }
 
 ///|
 test "image_types_alpha16" {
   let m = new_image_alpha16(rect(0, 0, 10, 10))
-  assert_true!(rect(0, 0, 10, 10).eq(m.rect))
+  assert_true(rect(0, 0, 10, 10).eq(m.rect))
   m.set_alpha16(6, 3, { a: 0xffff })
   let c = m.alpha16_at(6, 3)
-  assert_eq!(c.a, 0xffffU)
+  assert_eq(c.a, 0xffffU)
 }
 
 ///|
 test "image_types_gray" {
   let m = new_image_gray(rect(0, 0, 10, 10))
-  assert_true!(rect(0, 0, 10, 10).eq(m.rect))
+  assert_true(rect(0, 0, 10, 10).eq(m.rect))
   m.set_gray(6, 3, { y: b'\xff' })
   let c = m.gray_at(6, 3)
-  assert_eq!(c.y, b'\xff')
+  assert_eq(c.y, b'\xff')
 }
 
 ///|
 test "image_types_gray16" {
   let m = new_image_gray16(rect(0, 0, 10, 10))
-  assert_true!(rect(0, 0, 10, 10).eq(m.rect))
+  assert_true(rect(0, 0, 10, 10).eq(m.rect))
   m.set_gray16(6, 3, { y: 0xffff })
   let c = m.gray16_at(6, 3)
-  assert_eq!(c.y, 0xffffU)
+  assert_eq(c.y, 0xffffU)
 }
 
 ///|
@@ -150,10 +150,10 @@ test "image_types_paletted" {
       ],
     },
   )
-  assert_true!(rect(0, 0, 10, 10).eq(m.rect))
+  assert_true(rect(0, 0, 10, 10).eq(m.rect))
   m.set_color_index(6, 3, b'\x01')
   let ci = m.color_index_at(6, 3)
-  assert_eq!(ci, b'\x01')
+  assert_eq(ci, b'\x01')
 }
 
 ///|
@@ -173,7 +173,7 @@ test "16bit_color" {
   for cm in models {
     let c = cm.convert(test_c)
     let (r, _, _, _) = c.rgba()
-    assert_eq!(r, 0x1234U)
+    assert_eq(r, 0x1234U)
   }
   // Test images preserve 16-bit precision via set+get
   let test_nrgba : @color.NRGBA64 = {
@@ -192,17 +192,17 @@ test "16bit_color" {
   }
   m_rgba64.set_rgba64(1, 2, rgba64_c)
   let (r, _, _, _) = m_rgba64.rgba64_at(1, 2).rgba()
-  assert_eq!(r, 0x1357U)
+  assert_eq(r, 0x1357U)
   let m_nrgba64 = new_image_nrgba64(rect(0, 0, 10, 10))
   m_nrgba64.set_nrgba64(1, 2, test_nrgba)
   let (r2, _, _, _) = m_nrgba64.nrgba64_at(1, 2).rgba()
-  assert_eq!(r2, 0x1357U)
+  assert_eq(r2, 0x1357U)
   let m_alpha16 = new_image_alpha16(rect(0, 0, 10, 10))
   m_alpha16.set_alpha16(1, 2, { a: 0x1357 })
   let (r3, _, _, _) = m_alpha16.alpha16_at(1, 2).rgba()
-  assert_eq!(r3, 0x1357U)
+  assert_eq(r3, 0x1357U)
   let m_gray16 = new_image_gray16(rect(0, 0, 10, 10))
   m_gray16.set_gray16(1, 2, { y: 0x1357 })
   let (r4, _, _, _) = m_gray16.gray16_at(1, 2).rgba()
-  assert_eq!(r4, 0x1357U)
+  assert_eq(r4, 0x1357U)
 }

@@ -38,7 +38,7 @@ test "rectangle" {
     for s in rects {
       let got = r.eq(s)
       let want = rect_all_points_in(r, s) && rect_all_points_in(s, r)
-      assert_eq!(got, want)
+      assert_eq(got, want)
     }
   }
   // The intersection should be the largest rectangle a such that every point
@@ -46,13 +46,13 @@ test "rectangle" {
   for r in rects {
     for s in rects {
       let a = r.intersect(s)
-      assert_true!(rect_all_points_in(a, r))
-      assert_true!(rect_all_points_in(a, s))
+      assert_true(rect_all_points_in(a, r))
+      assert_true(rect_all_points_in(a, s))
       let is_zero = a.eq(
         { min: { x: 0, y: 0 }, max: { x: 0, y: 0 } },
       )
       let overlaps = r.overlaps(s)
-      assert_true!(is_zero != overlaps)
+      assert_true(is_zero != overlaps)
       let larger : Array[Rectangle] = [
         { min: { x: a.min.x - 1, y: a.min.y }, max: a.max },
         { min: { x: a.min.x, y: a.min.y - 1 }, max: a.max },
@@ -64,7 +64,7 @@ test "rectangle" {
           continue
         }
         if rect_all_points_in(b, r) && rect_all_points_in(b, s) {
-          fail!("intersection could be larger")
+          fail("intersection could be larger")
         }
       }
     }
@@ -74,8 +74,8 @@ test "rectangle" {
   for r in rects {
     for s in rects {
       let a = r.union(s)
-      assert_true!(rect_all_points_in(r, a))
-      assert_true!(rect_all_points_in(s, a))
+      assert_true(rect_all_points_in(r, a))
+      assert_true(rect_all_points_in(s, a))
       if a.empty() {
         continue
       }
@@ -87,7 +87,7 @@ test "rectangle" {
       ]
       for b in smaller {
         if rect_all_points_in(r, b) && rect_all_points_in(s, b) {
-          fail!("union could be smaller")
+          fail("union could be smaller")
         }
       }
     }

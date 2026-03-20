@@ -14,7 +14,7 @@ test "sq_diff" {
     for y in cases {
       let got = sq_diff(x, y)
       let want = canonical(x, y)
-      assert_eq!(got, want)
+      assert_eq(got, want)
     }
   }
 }

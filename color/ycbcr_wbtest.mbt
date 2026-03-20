@@ -30,9 +30,9 @@ test "ycbcr_roundtrip" {
         let b0 = b.to_byte()
         let (y, cb, cr) = rgb_to_ycbcr(r0, g0, b0)
         let (r1, g1, b1) = ycbcr_to_rgb(y, cb, cr)
-        assert_true!(byte_delta(r0, r1) <= 2)
-        assert_true!(byte_delta(g0, g1) <= 2)
-        assert_true!(byte_delta(b0, b1) <= 2)
+        assert_true(byte_delta(r0, r1) <= 2)
+        assert_true(byte_delta(g0, g1) <= 2)
+        assert_true(byte_delta(b0, b1) <= 2)
         b += 3
       }
       g += 5
@@ -65,9 +65,9 @@ test "ycbcr_to_rgb_consistency" {
           cb.to_byte(),
           cr.to_byte(),
         )
-        assert_eq!(r1, r2)
-        assert_eq!(g1, g2)
-        assert_eq!(b1, b2)
+        assert_eq(r1, r2)
+        assert_eq(g1, g2)
+        assert_eq(b1, b2)
         cr += 3
       }
       cb += 5
@@ -85,7 +85,7 @@ test "ycbcr_gray" {
       { y: i.to_byte(), cb: b'\x80', cr: b'\x80' },
     )
     let c1 : AnyColor = AnyColor::Gray({ y: i.to_byte() })
-    assert_true!(color_eq(c0, c1))
+    assert_true(color_eq(c0, c1))
   }
 }
 
@@ -101,7 +101,7 @@ test "nycbcra_alpha" {
       },
     )
     let c1 : AnyColor = AnyColor::Alpha({ a: i.to_byte() })
-    assert_true!(color_eq(c0, c1))
+    assert_true(color_eq(c0, c1))
   }
 }
 
@@ -119,7 +119,7 @@ test "nycbcra_ycbcr" {
     let c1 : AnyColor = AnyColor::YCbCr(
       { y: i.to_byte(), cb: b'\x40', cr: b'\xc0' },
     )
-    assert_true!(color_eq(c0, c1))
+    assert_true(color_eq(c0, c1))
   }
 }
 
@@ -138,9 +138,9 @@ test "cmyk_roundtrip" {
         let b0 = b.to_byte()
         let (c, m, y, k) = rgb_to_cmyk(r0, g0, b0)
         let (r1, g1, b1) = cmyk_to_rgb(c, m, y, k)
-        assert_true!(byte_delta(r0, r1) <= 1)
-        assert_true!(byte_delta(g0, g1) <= 1)
-        assert_true!(byte_delta(b0, b1) <= 1)
+        assert_true(byte_delta(r0, r1) <= 1)
+        assert_true(byte_delta(g0, g1) <= 1)
+        assert_true(byte_delta(b0, b1) <= 1)
         b += 3
       }
       g += 5
@@ -177,9 +177,9 @@ test "cmyk_to_rgb_consistency" {
             y.to_byte(),
             k.to_byte(),
           )
-          assert_eq!(r1, r2)
-          assert_eq!(g1, g2)
-          assert_eq!(b1, b2)
+          assert_eq(r1, r2)
+          assert_eq(g1, g2)
+          assert_eq(b1, b2)
           k += 11
         }
         y += 3
@@ -204,7 +204,7 @@ test "cmyk_gray" {
       },
     )
     let c1 : AnyColor = AnyColor::Gray({ y: i.to_byte() })
-    assert_true!(color_eq(c0, c1))
+    assert_true(color_eq(c0, c1))
   }
 }
 
@@ -225,7 +225,7 @@ test "palette" {
   // For a Palette with no repeated colors, the closest to each element is itself
   for i, c in p.colors {
     let j = p.index(c)
-    assert_eq!(i, j)
+    assert_eq(i, j)
   }
   // Finding closest color considers alpha
   let got = p.convert(
@@ -234,5 +234,5 @@ test "palette" {
   let want = AnyColor::RGBA(
     { r: b'\x7f', g: b'\x00', b: b'\x00', a: b'\x7f' },
   )
-  assert_eq!(got, Some(want))
+  assert_eq(got, Some(want))
 }

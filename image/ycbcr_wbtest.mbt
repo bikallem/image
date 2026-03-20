@@ -39,7 +39,7 @@ test "ycbcr_image" {
         let r1 = r.add(delta)
         let m = new_image_ycbcr(r1, ratio)
         // Buffer should be reasonably small
-        assert_true!(m.y_.length() <= 100 * 100)
+        assert_true(m.y_.length() <= 100 * 100)
         // Initialize pixels
         let mut y = r1.min.y
         while y < r1.max.y {
@@ -61,13 +61,13 @@ test "ycbcr_image" {
           while x < r1.max.x {
             let c = m.ycbcr_at(x, y)
             let yi = m.y_offset(x, y)
-            assert_eq!(c.y, m.y_[yi])
+            assert_eq(c.y, m.y_[yi])
             x += 1
           }
           y += 1
         }
         // is_opaque should always be true for YCbCr
-        assert_true!(m.is_opaque())
+        assert_true(m.is_opaque())
       }
     }
   }
@@ -90,12 +90,12 @@ test "ycbcr_no_overlap" {
   }
   // Verify each array still has its value
   for i in 0..<m.y_.length() {
-    assert_eq!(m.y_[i], b'\x0a')
+    assert_eq(m.y_[i], b'\x0a')
   }
   for i in 0..<m.cb.length() {
-    assert_eq!(m.cb[i], b'\x0b')
+    assert_eq(m.cb[i], b'\x0b')
   }
   for i in 0..<m.cr.length() {
-    assert_eq!(m.cr[i], b'\x0c')
+    assert_eq(m.cr[i], b'\x0c')
   }
 }

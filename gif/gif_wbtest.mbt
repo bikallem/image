@@ -5,8 +5,8 @@ test "gif_decode" {
   let data = @fs.read_file_to_bytes("testdata/video-001.gif")
   let img = decode(data)
   let b = img.bounds()
-  assert_true!(b.dx() > 0)
-  assert_true!(b.dy() > 0)
+  assert_true(b.dx() > 0)
+  assert_true(b.dy() > 0)
 }
 
 ///|
@@ -14,9 +14,9 @@ test "gif_decode" {
 test "gif_decode_all" {
   let data = @fs.read_file_to_bytes("testdata/video-001.gif")
   let gif = decode_all(data)
-  assert_true!(gif.image.length() > 0)
-  assert_true!(gif.config.width > 0)
-  assert_true!(gif.config.height > 0)
+  assert_true(gif.image.length() > 0)
+  assert_true(gif.config.width > 0)
+  assert_true(gif.config.height > 0)
 }
 
 ///|
@@ -26,7 +26,7 @@ test "gif_bounds" {
   let gif = decode_all(data)
   for frame in gif.image {
     // Each frame should have valid bounds
-    assert_true!(frame.rect.dx() > 0 || frame.rect.dy() > 0 || frame.rect.dx() == 0)
+    assert_true(frame.rect.dx() > 0 || frame.rect.dy() > 0 || frame.rect.dx() == 0)
   }
 }
 
@@ -55,8 +55,8 @@ test "gif_writer" {
   let encoded = encode(m)
   let decoded = decode(encoded)
   let b = decoded.bounds()
-  assert_eq!(b.dx(), 32)
-  assert_eq!(b.dy(), 32)
+  assert_eq(b.dx(), 32)
+  assert_eq(b.dy(), 32)
 }
 
 ///|
@@ -107,7 +107,7 @@ test "gif_loop_count" {
   }
   let encoded = encode_all(gif)
   let decoded_gif = decode_all(encoded)
-  assert_eq!(decoded_gif.loop_count, 0)
+  assert_eq(decoded_gif.loop_count, 0)
 }
 
 ///|
@@ -155,8 +155,8 @@ test "gif_palettes" {
     }
     let encoded = encode(m)
     let decoded = decode(encoded)
-    assert_eq!(decoded.bounds().dx(), 4)
-    assert_eq!(decoded.bounds().dy(), 4)
+    assert_eq(decoded.bounds().dx(), 4)
+    assert_eq(decoded.bounds().dy(), 4)
   }
 }
 
@@ -183,7 +183,7 @@ test "gif_pixel_parity" {
   }
   let encoded = encode(m)
   let decoded = decode_all(encoded)
-  assert_true!(decoded.image.length() > 0)
+  assert_true(decoded.image.length() > 0)
   let frame = decoded.image[0]
   // Compare color indices
   for y in 0..<8 {
@@ -194,10 +194,10 @@ test "gif_pixel_parity" {
       let (r2, g2, b2, a2) = (@image.AnyImage::Paletted(frame))
         .at(x, y)
         .rgba()
-      assert_eq!(r1, r2)
-      assert_eq!(g1, g2)
-      assert_eq!(b1, b2)
-      assert_eq!(a1, a2)
+      assert_eq(r1, r2)
+      assert_eq(g1, g2)
+      assert_eq(b1, b2)
+      assert_eq(a1, a2)
     }
   }
 }

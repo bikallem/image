@@ -5,10 +5,6 @@
     "bikallem/image/internal/imageutil"
   ],
   "wbtest-import": [
-    "moonbitlang/x/fs",
-    "moonbitlang/core/bench",
-    "bikallem/image/png",
-    "bikallem/image/jpeg",
-    "bikallem/image/gif"
+    "moonbitlang/core/bench"
   ]
 }

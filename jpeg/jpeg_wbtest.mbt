@@ -18,7 +18,7 @@ test "dct" {
     idct(block, dst)
     // All output values should be in valid byte range (0-255) after clamping
     for i in 0..<64 {
-      assert_true!(dst[i].to_int() >= 0 && dst[i].to_int() <= 255)
+      assert_true(dst[i].to_int() >= 0 && dst[i].to_int() <= 255)
     }
   }
   // Test that FDCT of uniform 128 produces DC ≈ 0 (since FDCT subtracts 128)
@@ -27,7 +27,7 @@ test "dct" {
   fdct(uniform, ublock)
   // DC should be near zero (could be exactly 0 or small due to rounding)
   let dc_abs = if ublock[0] >= 0 { ublock[0] } else { -ublock[0] }
-  assert_true!(dc_abs < 100)
+  assert_true(dc_abs < 100)
   // FDCT of non-uniform values should have non-zero DC
   let ramp = FixedArray::makei(64, fn(i) { (i * 4).to_byte() })
   let rblock = FixedArray::make(64, 0)
@@ -37,7 +37,7 @@ test "dct" {
   for i in 0..<64 {
     if rblock[i] != 0 { nonzero += 1 }
   }
-  assert_true!(nonzero > 0)
+  assert_true(nonzero > 0)
 }
 
 ///|
@@ -49,8 +49,8 @@ test "zig_unzig" {
   let seen = FixedArray::make(64, false)
   for i in 0..<64 {
     let z = unzig[i]
-    assert_true!(z >= 0 && z < 64)
-    assert_false!(seen[z])
+    assert_true(z >= 0 && z < 64)
+    assert_false(seen[z])
     seen[z] = true
   }
 }
@@ -77,12 +77,12 @@ test "jpeg_writer" {
   }
   let encoded = encode(@image.AnyImage::RGBA(m))
   // Verify it starts with JPEG SOI marker (0xFF 0xD8)
-  assert_true!(encoded.length() > 2)
-  assert_eq!(encoded[0], b'\xFF')
-  assert_eq!(encoded[1], b'\xD8')
+  assert_true(encoded.length() > 2)
+  assert_eq(encoded[0], b'\xFF')
+  assert_eq(encoded[1], b'\xD8')
   // Verify it ends with JPEG EOI marker (0xFF 0xD9)
-  assert_eq!(encoded[encoded.length() - 2], b'\xFF')
-  assert_eq!(encoded[encoded.length() - 1], b'\xD9')
+  assert_eq(encoded[encoded.length() - 2], b'\xFF')
+  assert_eq(encoded[encoded.length() - 1], b'\xD9')
 }
 
 ///|
@@ -96,9 +96,9 @@ test "jpeg_write_gray" {
   }
   let encoded = encode(@image.AnyImage::Gray(m))
   // Verify it's a valid JPEG structure
-  assert_true!(encoded.length() > 4)
-  assert_eq!(encoded[0], b'\xFF')
-  assert_eq!(encoded[1], b'\xD8')
+  assert_true(encoded.length() > 4)
+  assert_eq(encoded[0], b'\xFF')
+  assert_eq(encoded[1], b'\xD8')
 }
 
 ///|
@@ -107,8 +107,8 @@ test "jpeg_decode_testdata" {
   let data = @fs.read_file_to_bytes("testdata/video-001.jpeg")
   let img = decode(data)
   let b = img.bounds()
-  assert_true!(b.dx() > 0)
-  assert_true!(b.dy() > 0)
+  assert_true(b.dx() > 0)
+  assert_true(b.dy() > 0)
 }
 
 ///|
@@ -123,8 +123,8 @@ test "jpeg_subsampling" {
     let data = @fs.read_file_to_bytes(path)
     let img = decode(data)
     let b = img.bounds()
-    assert_true!(b.dx() > 0)
-    assert_true!(b.dy() > 0)
+    assert_true(b.dx() > 0)
+    assert_true(b.dy() > 0)
   }
 }
 

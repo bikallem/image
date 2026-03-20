@@ -21,7 +21,7 @@ test "paeth" {
       for c in vals {
         let got = paeth(a, b, c)
         let want = slow_paeth(a, b, c)
-        assert_eq!(got, want)
+        assert_eq(got, want)
       }
     }
   }
@@ -62,7 +62,7 @@ test "paeth_decode" {
       break
     }
   }
-  assert_true!(different)
+  assert_true(different)
 }
 
 ///|
@@ -82,8 +82,8 @@ test "png_reader" {
     let img = decode(data)
     let bounds = img.bounds()
     // All pngsuite basn* images should have positive dimensions
-    assert_true!(bounds.dx() > 0)
-    assert_true!(bounds.dy() > 0)
+    assert_true(bounds.dx() > 0)
+    assert_true(bounds.dy() > 0)
   }
 }
 
@@ -101,7 +101,7 @@ test "png_reader_error" {
   for path in invalid_files {
     let data = @fs.read_file_to_bytes(path)
     let result = try? decode(data)
-    assert_true!(result.is_err())
+    assert_true(result is Err(_))
   }
   // CRC and no-end files may or may not error depending on strictness
   let maybe_invalid = [
@@ -132,8 +132,8 @@ test "png_writer" {
     let img2 = decode(encoded)
     let b1 = img.bounds()
     let b2 = img2.bounds()
-    assert_eq!(b1.dx(), b2.dx())
-    assert_eq!(b1.dy(), b2.dy())
+    assert_eq(b1.dx(), b2.dx())
+    assert_eq(b1.dy(), b2.dy())
     // Compare pixels
     let mut y = b1.min.y
     while y < b1.max.y {
@@ -141,10 +141,10 @@ test "png_writer" {
       while x < b1.max.x {
         let (r1, g1, b1c, a1) = img.at(x, y).rgba()
         let (r2, g2, b2c, a2) = img2.at(x, y).rgba()
-        assert_eq!(r1, r2)
-        assert_eq!(g1, g2)
-        assert_eq!(b1c, b2c)
-        assert_eq!(a1, a2)
+        assert_eq(r1, r2)
+        assert_eq(g1, g2)
+        assert_eq(b1c, b2c)
+        assert_eq(a1, a2)
         x += 1
       }
       y += 1
@@ -179,8 +179,8 @@ test "png_write_rgba" {
   let encoded = encode(@image.AnyImage::RGBA(m))
   let decoded = decode(encoded)
   let b = decoded.bounds()
-  assert_eq!(b.dx(), 64)
-  assert_eq!(b.dy(), 64)
+  assert_eq(b.dx(), 64)
+  assert_eq(b.dy(), 64)
   // Verify pixels match
   y = 0
   while y < 64 {
@@ -188,10 +188,10 @@ test "png_write_rgba" {
     while x < 64 {
       let (r1, g1, b1, a1) = (@image.AnyImage::RGBA(m)).at(x, y).rgba()
       let (r2, g2, b2, a2) = decoded.at(x, y).rgba()
-      assert_eq!(r1, r2)
-      assert_eq!(g1, g2)
-      assert_eq!(b1, b2)
-      assert_eq!(a1, a2)
+      assert_eq(r1, r2)
+      assert_eq(g1, g2)
+      assert_eq(b1, b2)
+      assert_eq(a1, a2)
       x += 1
     }
     y += 1
@@ -225,8 +225,8 @@ test "png_subimage" {
   let encoded = encode(@image.AnyImage::RGBA(sub))
   let decoded = decode(encoded)
   let b = decoded.bounds()
-  assert_eq!(b.dx(), 150)
-  assert_eq!(b.dy(), 100)
+  assert_eq(b.dx(), 150)
+  assert_eq(b.dy(), 100)
 }
 
 ///|
@@ -242,8 +242,8 @@ test "png_gray8_transparent" {
   let encoded = encode(@image.AnyImage::Gray(m))
   let decoded = decode(encoded)
   // Verify dimensions
-  assert_eq!(decoded.bounds().dx(), 4)
-  assert_eq!(decoded.bounds().dy(), 4)
+  assert_eq(decoded.bounds().dx(), 4)
+  assert_eq(decoded.bounds().dy(), 4)
 }
 
 ///|
@@ -264,17 +264,17 @@ test "png_writer_paletted" {
   }
   let encoded = encode(@image.AnyImage::Paletted(m))
   let decoded = decode(encoded)
-  assert_eq!(decoded.bounds().dx(), 32)
-  assert_eq!(decoded.bounds().dy(), 32)
+  assert_eq(decoded.bounds().dx(), 32)
+  assert_eq(decoded.bounds().dy(), 32)
   // Verify pixels match via RGBA comparison
   for y in 0..<32 {
     for x in 0..<32 {
       let (r1, g1, b1, a1) = (@image.AnyImage::Paletted(m)).at(x, y).rgba()
       let (r2, g2, b2, a2) = decoded.at(x, y).rgba()
-      assert_eq!(r1, r2)
-      assert_eq!(g1, g2)
-      assert_eq!(b1, b2)
-      assert_eq!(a1, a2)
+      assert_eq(r1, r2)
+      assert_eq(g1, g2)
+      assert_eq(b1, b2)
+      assert_eq(a1, a2)
     }
   }
 }

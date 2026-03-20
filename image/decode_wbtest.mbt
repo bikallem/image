@@ -6,14 +6,14 @@ test "cross_codec" {
   let png_data = @fs.read_file_to_bytes("testdata/video-001.png")
   let golden = @png.decode(png_data)
   let gb = golden.bounds()
-  assert_true!(gb.dx() > 0)
-  assert_true!(gb.dy() > 0)
+  assert_true(gb.dx() > 0)
+  assert_true(gb.dy() > 0)
   // Decode GIF and compare with tolerance
   let gif_data = @fs.read_file_to_bytes("testdata/video-001.gif")
   let gif_img = @gif.decode(gif_data)
   let gib = gif_img.bounds()
-  assert_eq!(gb.dx(), gib.dx())
-  assert_eq!(gb.dy(), gib.dy())
+  assert_eq(gb.dx(), gib.dx())
+  assert_eq(gb.dy(), gib.dy())
   let mut gif_max_delta = 0
   let mut y = gb.min.y
   while y < gb.max.y {
@@ -41,15 +41,15 @@ test "cross_codec" {
     y += 1
   }
   // GIF tolerance: per-channel delta <= 64 (due to palette quantization)
-  assert_true!(gif_max_delta <= 64)
+  assert_true(gif_max_delta <= 64)
   // Decode JPEG and compare with tolerance
   let jpeg_data = @fs.read_file_to_bytes("testdata/video-001.jpeg")
   let jpeg_img = @jpeg.decode(jpeg_data)
   let jb = jpeg_img.bounds()
   // JPEG may have slightly different dimensions due to MCU rounding
   // Just verify JPEG decoded successfully with reasonable dimensions
-  assert_true!(jb.dx() > 0)
-  assert_true!(jb.dy() > 0)
+  assert_true(jb.dx() > 0)
+  assert_true(jb.dy() > 0)
   let mut jpeg_max_delta = 0
   let jminy = if gb.min.y > jb.min.y { gb.min.y } else { jb.min.y }
   let jmaxy = if gb.max.y < jb.max.y { gb.max.y } else { jb.max.y }
@@ -82,5 +82,5 @@ test "cross_codec" {
   }
   // JPEG tolerance: per-channel max delta (JPEG compression is lossy)
   // Default quality JPEG can have significant errors, especially at edges.
-  assert_true!(jpeg_max_delta <= 255)
+  assert_true(jpeg_max_delta <= 255)
 }

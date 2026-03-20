@@ -165,15 +165,15 @@ test "clip" {
       Some(@image.AnyImage::RGBA(mask0.sub_image(mr)))
     }
     let (r_got, sp_got, _mp_got) = clip(dst, r, src, sp, mask, mp)
-    assert_true!(r_got.eq(r0_expected))
-    assert_true!(sp_got.x == sp0_expected.x && sp_got.y == sp0_expected.y)
+    assert_true(r_got.eq(r0_expected))
+    assert_true(sp_got.x == sp0_expected.x && sp_got.y == sp0_expected.y)
     if !nil_mask {
-      assert_true!(
+      assert_true(
         _mp_got.x == mp0_expected.x && _mp_got.y == mp0_expected.y,
       )
     }
     // Verify clipped rect is within bounds
-    assert_true!(r_got.in_(dr))
+    assert_true(r_got.in_(dr))
   }
 }
 
@@ -205,10 +205,10 @@ test "fill" {
       let mut x = clipped.min.x
       while x < clipped.max.x {
         let (pr, pg, pb, pa) = dst.rgba_at(x, y).rgba()
-        assert_eq!(pr, cr)
-        assert_eq!(pg, cg)
-        assert_eq!(pb, cb)
-        assert_eq!(pa, ca)
+        assert_eq(pr, cr)
+        assert_eq(pg, cg)
+        assert_eq(pb, cb)
+        assert_eq(pa, ca)
         x += 1
       }
       y += 1
@@ -233,9 +233,9 @@ test "non_zero_src_pt" {
     Src,
   )
   let c = dst.rgba_at(0, 0)
-  assert_eq!(c.r, b'\xff')
-  assert_eq!(c.g, b'\x00')
-  assert_eq!(c.b, b'\x00')
+  assert_eq(c.r, b'\xff')
+  assert_eq(c.g, b'\x00')
+  assert_eq(c.b, b'\x00')
 }
 
 ///|
@@ -256,7 +256,7 @@ test "floyd_steinberg_checkerboard" {
   // Use Gray16{0x7fff} for close-to-50% gray, matching Go's test
   let src = @image.AnyImage::Uniform(@image.ImageUniform::{ c: @color.AnyColor::Gray16({ y: 0x7fff }) })
   floyd_steinberg_draw(dst, b, src, { x: 0, y: 0 })
-  let nErr = { val: 0 }
+  let mut n_err = 0
   let mut y = b.min.y
   while y < b.max.y {
     let mut x = b.min.x
@@ -264,14 +264,14 @@ test "floyd_steinberg_checkerboard" {
       let got = dst.color_index_at(x, y).to_int()
       let want = (x + y) % 2
       if got != want {
-        nErr.val += 1
+        n_err += 1
       }
       x += 1
     }
     y += 1
   }
   // Allow some error at edges but most should be perfect
-  assert_true!(nErr.val < 2)
+  assert_true(n_err < 2)
 }
 
 ///|
@@ -318,7 +318,7 @@ test "draw_overlap" {
           while x < dr.max.x {
             if ({ x, y } : @image.Point).in_(m.rect) {
               let c = m.rgba_at(x, y)
-              assert_true!(c.a == b'\xff')
+              assert_true(c.a == b'\xff')
             }
             x += 1
           }
@@ -348,9 +348,9 @@ test "draw_src_nonpremultiplied" {
   )
   // transparent src with Src op should set dst to transparent (a=0)
   let c0 = dst.rgba_at(0, 0)
-  assert_eq!(c0.a, b'\x00')
+  assert_eq(c0.a, b'\x00')
   // opaque green should come through
   let c2 = dst.rgba_at(2, 0)
-  assert_eq!(c2.g, b'\xff')
-  assert_eq!(c2.a, b'\xff')
+  assert_eq(c2.g, b'\xff')
+  assert_eq(c2.a, b'\xff')
 }
