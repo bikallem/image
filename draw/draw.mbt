@@ -150,10 +150,10 @@ fn draw_fill_src(
     // Fill first row pixel by pixel, then blit to remaining rows
     let mut i = row_off
     for _x = 0; _x < dx; _x = _x + 1 {
-      dst.pix[i] = r_byte
-      dst.pix[i + 1] = g_byte
-      dst.pix[i + 2] = b_byte
-      dst.pix[i + 3] = a_byte
+      dst.pix.unsafe_set(i, r_byte)
+      dst.pix.unsafe_set(i + 1, g_byte)
+      dst.pix.unsafe_set(i + 2, b_byte)
+      dst.pix.unsafe_set(i + 3, a_byte)
       i += 4
     }
     let first_row = row_off
@@ -186,10 +186,10 @@ fn draw_fill_over(
       let dg = dst.pix[i + 1].to_uint()
       let db = dst.pix[i + 2].to_uint()
       let da = dst.pix[i + 3].to_uint()
-      dst.pix[i] = ((dr * a / max_color + sr) >> 8).to_byte()
-      dst.pix[i + 1] = ((dg * a / max_color + sg) >> 8).to_byte()
-      dst.pix[i + 2] = ((db * a / max_color + sb) >> 8).to_byte()
-      dst.pix[i + 3] = ((da * a / max_color + sa) >> 8).to_byte()
+      dst.pix.unsafe_set(i, ((dr * a / max_color + sr) >> 8).to_byte())
+      dst.pix.unsafe_set(i + 1, ((dg * a / max_color + sg) >> 8).to_byte())
+      dst.pix.unsafe_set(i + 2, ((db * a / max_color + sb) >> 8).to_byte())
+      dst.pix.unsafe_set(i + 3, ((da * a / max_color + sa) >> 8).to_byte())
       i += 4
     }
     row_off += dst.stride
@@ -253,10 +253,10 @@ fn draw_copy_over(
       let dg16 = dg | (dg << 8)
       let db16 = db | (db << 8)
       let da16 = da | (da << 8)
-      dst.pix[di] = ((dr16 * a / max_color + sr16) >> 8).to_byte()
-      dst.pix[di + 1] = ((dg16 * a / max_color + sg16) >> 8).to_byte()
-      dst.pix[di + 2] = ((db16 * a / max_color + sb16) >> 8).to_byte()
-      dst.pix[di + 3] = ((da16 * a / max_color + sa16) >> 8).to_byte()
+      dst.pix.unsafe_set(di, ((dr16 * a / max_color + sr16) >> 8).to_byte())
+      dst.pix.unsafe_set(di + 1, ((dg16 * a / max_color + sg16) >> 8).to_byte())
+      dst.pix.unsafe_set(di + 2, ((db16 * a / max_color + sb16) >> 8).to_byte())
+      dst.pix.unsafe_set(di + 3, ((da16 * a / max_color + sa16) >> 8).to_byte())
       di += 4
       si += 4
     }
@@ -290,10 +290,10 @@ fn draw_nrgba(
         let sr = src.pix[si].to_uint() * sa / 0xffU
         let sg = src.pix[si + 1].to_uint() * sa / 0xffU
         let sb = src.pix[si + 2].to_uint() * sa / 0xffU
-        dst.pix[di] = sr.to_byte()
-        dst.pix[di + 1] = sg.to_byte()
-        dst.pix[di + 2] = sb.to_byte()
-        dst.pix[di + 3] = sa.to_byte()
+        dst.pix.unsafe_set(di, sr.to_byte())
+        dst.pix.unsafe_set(di + 1, sg.to_byte())
+        dst.pix.unsafe_set(di + 2, sb.to_byte())
+        dst.pix.unsafe_set(di + 3, sa.to_byte())
       } else if sa > 0U {
         // Over compositing
         let sa16 = sa | (sa << 8)
@@ -311,10 +311,10 @@ fn draw_nrgba(
         let dg = dst.pix[di + 1].to_uint()
         let db = dst.pix[di + 2].to_uint()
         let da = dst.pix[di + 3].to_uint()
-        dst.pix[di] = ((dr * a / max_color + sr16) >> 8).to_byte()
-        dst.pix[di + 1] = ((dg * a / max_color + sg16) >> 8).to_byte()
-        dst.pix[di + 2] = ((db * a / max_color + sb16) >> 8).to_byte()
-        dst.pix[di + 3] = ((da * a / max_color + sa16) >> 8).to_byte()
+        dst.pix.unsafe_set(di, ((dr * a / max_color + sr16) >> 8).to_byte())
+        dst.pix.unsafe_set(di + 1, ((dg * a / max_color + sg16) >> 8).to_byte())
+        dst.pix.unsafe_set(di + 2, ((db * a / max_color + sb16) >> 8).to_byte())
+        dst.pix.unsafe_set(di + 3, ((da * a / max_color + sa16) >> 8).to_byte())
       }
       di += 4
       si += 4
@@ -343,10 +343,10 @@ fn draw_gray(
     let mut si = s_row
     for _x = 0; _x < dx; _x = _x + 1 {
       let y = src.pix[si]
-      dst.pix[di] = y
-      dst.pix[di + 1] = y
-      dst.pix[di + 2] = y
-      dst.pix[di + 3] = b'\xff'
+      dst.pix.unsafe_set(di, y)
+      dst.pix.unsafe_set(di + 1, y)
+      dst.pix.unsafe_set(di + 2, y)
+      dst.pix.unsafe_set(di + 3, b'\xff')
       di += 4
       si += 1
     }
@@ -392,15 +392,15 @@ fn draw_rgba(
         let dg16 = dg | (dg << 8)
         let db16 = db | (db << 8)
         let da16 = da | (da << 8)
-        dst.pix[di] = ((dr16 * a / max_color + sr) >> 8).to_byte()
-        dst.pix[di + 1] = ((dg16 * a / max_color + sg) >> 8).to_byte()
-        dst.pix[di + 2] = ((db16 * a / max_color + sb) >> 8).to_byte()
-        dst.pix[di + 3] = ((da16 * a / max_color + sa) >> 8).to_byte()
+        dst.pix.unsafe_set(di, ((dr16 * a / max_color + sr) >> 8).to_byte())
+        dst.pix.unsafe_set(di + 1, ((dg16 * a / max_color + sg) >> 8).to_byte())
+        dst.pix.unsafe_set(di + 2, ((db16 * a / max_color + sb) >> 8).to_byte())
+        dst.pix.unsafe_set(di + 3, ((da16 * a / max_color + sa) >> 8).to_byte())
       } else {
-        dst.pix[di] = (sr >> 8).to_byte()
-        dst.pix[di + 1] = (sg >> 8).to_byte()
-        dst.pix[di + 2] = (sb >> 8).to_byte()
-        dst.pix[di + 3] = (sa >> 8).to_byte()
+        dst.pix.unsafe_set(di, (sr >> 8).to_byte())
+        dst.pix.unsafe_set(di + 1, (sg >> 8).to_byte())
+        dst.pix.unsafe_set(di + 2, (sb >> 8).to_byte())
+        dst.pix.unsafe_set(di + 3, (sa >> 8).to_byte())
       }
     }
   }
@@ -422,7 +422,7 @@ fn draw_paletted(
     for _x = 0; _x < dx; _x = _x + 1 {
       let sx = sp.x + _x
       let c = src.at(sx, sy)
-      dst.pix[d_row + _x] = dst.palette.index(c).to_byte()
+      dst.pix.unsafe_set(d_row + _x, dst.palette.index(c).to_byte())
     }
     d_row += dst.stride
   }

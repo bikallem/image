@@ -9,7 +9,7 @@ pub fn build_huffman_table(
 ) -> Unit raise JpegError {
   // Copy num_codes
   for i in 0..<16 {
-    table.num_codes[i] = bits_count[i]
+    table.num_codes.unsafe_set(i, bits_count[i])
   }
   // Copy symbols
   let mut sym_idx = 0

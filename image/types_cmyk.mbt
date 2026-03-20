@@ -19,7 +19,7 @@ pub fn ImageCMYK::cmyk_at(self : ImageCMYK, x : Int, y : Int) -> @color.CMYK {
     return { c: b'\x00', m: b'\x00', y: b'\x00', k: b'\x00' }
   }
   let i = self.pix_offset(x, y)
-  { c: self.pix[i], m: self.pix[i + 1], y: self.pix[i + 2], k: self.pix[i + 3] }
+  { c: self.pix.unsafe_get(i), m: self.pix.unsafe_get(i + 1), y: self.pix.unsafe_get(i + 2), k: self.pix.unsafe_get(i + 3) }
 }
 
 ///|
@@ -33,10 +33,10 @@ pub fn ImageCMYK::set_cmyk(
     return
   }
   let i = self.pix_offset(x, y)
-  self.pix[i] = c.c
-  self.pix[i + 1] = c.m
-  self.pix[i + 2] = c.y
-  self.pix[i + 3] = c.k
+  self.pix.unsafe_set(i, c.c)
+  self.pix.unsafe_set(i + 1, c.m)
+  self.pix.unsafe_set(i + 2, c.y)
+  self.pix.unsafe_set(i + 3, c.k)
 }
 
 ///|
@@ -52,10 +52,10 @@ pub fn ImageCMYK::set(
   let c1 = @color.AnyModel::CMYKModel.convert(c)
   guard c1 is @color.AnyColor::CMYK(cc) else { return }
   let i = self.pix_offset(x, y)
-  self.pix[i] = cc.c
-  self.pix[i + 1] = cc.m
-  self.pix[i + 2] = cc.y
-  self.pix[i + 3] = cc.k
+  self.pix.unsafe_set(i, cc.c)
+  self.pix.unsafe_set(i + 1, cc.m)
+  self.pix.unsafe_set(i + 2, cc.y)
+  self.pix.unsafe_set(i + 3, cc.k)
 }
 
 ///|

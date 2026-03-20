@@ -23,7 +23,7 @@ pub fn ImageNRGBA::nrgba_at(
     return { r: b'\x00', g: b'\x00', b: b'\x00', a: b'\x00' }
   }
   let i = self.pix_offset(x, y)
-  { r: self.pix[i], g: self.pix[i + 1], b: self.pix[i + 2], a: self.pix[i + 3] }
+  { r: self.pix.unsafe_get(i), g: self.pix.unsafe_get(i + 1), b: self.pix.unsafe_get(i + 2), a: self.pix.unsafe_get(i + 3) }
 }
 
 ///|
@@ -37,10 +37,10 @@ pub fn ImageNRGBA::set_nrgba(
     return
   }
   let i = self.pix_offset(x, y)
-  self.pix[i] = c.r
-  self.pix[i + 1] = c.g
-  self.pix[i + 2] = c.b
-  self.pix[i + 3] = c.a
+  self.pix.unsafe_set(i, c.r)
+  self.pix.unsafe_set(i + 1, c.g)
+  self.pix.unsafe_set(i + 2, c.b)
+  self.pix.unsafe_set(i + 3, c.a)
 }
 
 ///|
@@ -51,7 +51,7 @@ pub fn ImageNRGBA::is_opaque(self : ImageNRGBA) -> Bool {
   for y = self.rect.min.y; y < self.rect.max.y; y = y + 1 {
     let row_start = self.pix_offset + (y - self.rect.min.y) * self.stride
     for x = 0; x < self.rect.dx(); x = x + 1 {
-      if self.pix[row_start + x * 4 + 3] != b'\xff' {
+      if self.pix.unsafe_get(row_start + x * 4 + 3) != b'\xff' {
         return false
       }
     }
@@ -72,10 +72,10 @@ pub fn ImageNRGBA::set(
   let c1 = @color.AnyModel::NRGBAModel.convert(c)
   guard c1 is @color.AnyColor::NRGBA(nc) else { return }
   let i = self.pix_offset(x, y)
-  self.pix[i] = nc.r
-  self.pix[i + 1] = nc.g
-  self.pix[i + 2] = nc.b
-  self.pix[i + 3] = nc.a
+  self.pix.unsafe_set(i, nc.r)
+  self.pix.unsafe_set(i + 1, nc.g)
+  self.pix.unsafe_set(i + 2, nc.b)
+  self.pix.unsafe_set(i + 3, nc.a)
 }
 
 ///|
@@ -130,10 +130,10 @@ pub fn ImageNRGBA64::nrgba64_at(
   }
   let i = self.pix_offset(x, y)
   {
-    r: (self.pix[i].to_uint() << 8) | self.pix[i + 1].to_uint(),
-    g: (self.pix[i + 2].to_uint() << 8) | self.pix[i + 3].to_uint(),
-    b: (self.pix[i + 4].to_uint() << 8) | self.pix[i + 5].to_uint(),
-    a: (self.pix[i + 6].to_uint() << 8) | self.pix[i + 7].to_uint(),
+    r: (self.pix.unsafe_get(i).to_uint() << 8) | self.pix.unsafe_get(i + 1).to_uint(),
+    g: (self.pix.unsafe_get(i + 2).to_uint() << 8) | self.pix.unsafe_get(i + 3).to_uint(),
+    b: (self.pix.unsafe_get(i + 4).to_uint() << 8) | self.pix.unsafe_get(i + 5).to_uint(),
+    a: (self.pix.unsafe_get(i + 6).to_uint() << 8) | self.pix.unsafe_get(i + 7).to_uint(),
   }
 }
 
@@ -148,14 +148,14 @@ pub fn ImageNRGBA64::set_nrgba64(
     return
   }
   let i = self.pix_offset(x, y)
-  self.pix[i] = (c.r >> 8).to_byte()
-  self.pix[i + 1] = c.r.to_byte()
-  self.pix[i + 2] = (c.g >> 8).to_byte()
-  self.pix[i + 3] = c.g.to_byte()
-  self.pix[i + 4] = (c.b >> 8).to_byte()
-  self.pix[i + 5] = c.b.to_byte()
-  self.pix[i + 6] = (c.a >> 8).to_byte()
-  self.pix[i + 7] = c.a.to_byte()
+  self.pix.unsafe_set(i, (c.r >> 8).to_byte())
+  self.pix.unsafe_set(i + 1, c.r.to_byte())
+  self.pix.unsafe_set(i + 2, (c.g >> 8).to_byte())
+  self.pix.unsafe_set(i + 3, c.g.to_byte())
+  self.pix.unsafe_set(i + 4, (c.b >> 8).to_byte())
+  self.pix.unsafe_set(i + 5, c.b.to_byte())
+  self.pix.unsafe_set(i + 6, (c.a >> 8).to_byte())
+  self.pix.unsafe_set(i + 7, c.a.to_byte())
 }
 
 ///|
@@ -225,7 +225,7 @@ pub fn ImageAlpha::alpha_at(
     return { a: b'\x00' }
   }
   let i = self.pix_offset(x, y)
-  { a: self.pix[i] }
+  { a: self.pix.unsafe_get(i) }
 }
 
 ///|
@@ -238,7 +238,7 @@ pub fn ImageAlpha::set_alpha(
   if !({ x, y } : Point).in_(self.rect) {
     return
   }
-  self.pix[self.pix_offset(x, y)] = c.a
+  self.pix.unsafe_set(self.pix_offset(x, y), c.a)
 }
 
 ///|
@@ -249,7 +249,7 @@ pub fn ImageAlpha::is_opaque(self : ImageAlpha) -> Bool {
   for y = self.rect.min.y; y < self.rect.max.y; y = y + 1 {
     let row_start = self.pix_offset + (y - self.rect.min.y) * self.stride
     for x = 0; x < self.rect.dx(); x = x + 1 {
-      if self.pix[row_start + x] != b'\xff' {
+      if self.pix.unsafe_get(row_start + x) != b'\xff' {
         return false
       }
     }
@@ -269,7 +269,7 @@ pub fn ImageAlpha::set(
   }
   let c1 = @color.AnyModel::AlphaModel.convert(c)
   guard c1 is @color.AnyColor::Alpha(ac) else { return }
-  self.pix[self.pix_offset(x, y)] = ac.a
+  self.pix.unsafe_set(self.pix_offset(x, y), ac.a)
 }
 
 ///|
@@ -323,7 +323,7 @@ pub fn ImageAlpha16::alpha16_at(
     return { a: 0U }
   }
   let i = self.pix_offset(x, y)
-  { a: (self.pix[i].to_uint() << 8) | self.pix[i + 1].to_uint() }
+  { a: (self.pix.unsafe_get(i).to_uint() << 8) | self.pix.unsafe_get(i + 1).to_uint() }
 }
 
 ///|
@@ -337,8 +337,8 @@ pub fn ImageAlpha16::set_alpha16(
     return
   }
   let i = self.pix_offset(x, y)
-  self.pix[i] = (c.a >> 8).to_byte()
-  self.pix[i + 1] = c.a.to_byte()
+  self.pix.unsafe_set(i, (c.a >> 8).to_byte())
+  self.pix.unsafe_set(i + 1, c.a.to_byte())
 }
 
 ///|
@@ -404,7 +404,7 @@ pub fn ImageGray::gray_at(self : ImageGray, x : Int, y : Int) -> @color.Gray {
     return { y: b'\x00' }
   }
   let i = self.pix_offset(x, y)
-  { y: self.pix[i] }
+  { y: self.pix.unsafe_get(i) }
 }
 
 ///|
@@ -417,7 +417,7 @@ pub fn ImageGray::set_gray(
   if !({ x, y } : Point).in_(self.rect) {
     return
   }
-  self.pix[self.pix_offset(x, y)] = c.y
+  self.pix.unsafe_set(self.pix_offset(x, y), c.y)
 }
 
 ///|
@@ -432,7 +432,7 @@ pub fn ImageGray::set(
   }
   let c1 = @color.AnyModel::GrayModel.convert(c)
   guard c1 is @color.AnyColor::Gray(gc) else { return }
-  self.pix[self.pix_offset(x, y)] = gc.y
+  self.pix.unsafe_set(self.pix_offset(x, y), gc.y)
 }
 
 ///|
@@ -486,7 +486,7 @@ pub fn ImageGray16::gray16_at(
     return { y: 0U }
   }
   let i = self.pix_offset(x, y)
-  { y: (self.pix[i].to_uint() << 8) | self.pix[i + 1].to_uint() }
+  { y: (self.pix.unsafe_get(i).to_uint() << 8) | self.pix.unsafe_get(i + 1).to_uint() }
 }
 
 ///|
@@ -500,8 +500,8 @@ pub fn ImageGray16::set_gray16(
     return
   }
   let i = self.pix_offset(x, y)
-  self.pix[i] = (c.y >> 8).to_byte()
-  self.pix[i + 1] = c.y.to_byte()
+  self.pix.unsafe_set(i, (c.y >> 8).to_byte())
+  self.pix.unsafe_set(i + 1, c.y.to_byte())
 }
 
 ///|
@@ -589,7 +589,7 @@ pub fn ImagePaletted::color_index_at(
   if !({ x, y } : Point).in_(self.rect) {
     return b'\x00'
   }
-  self.pix[self.pix_offset(x, y)]
+  self.pix.unsafe_get(self.pix_offset(x, y))
 }
 
 ///|
@@ -602,7 +602,7 @@ pub fn ImagePaletted::set_color_index(
   if !({ x, y } : Point).in_(self.rect) {
     return
   }
-  self.pix[self.pix_offset(x, y)] = index
+  self.pix.unsafe_set(self.pix_offset(x, y), index)
 }
 
 ///|
@@ -616,7 +616,7 @@ pub fn ImagePaletted::set(
     return
   }
   let idx = self.palette.index(c)
-  self.pix[self.pix_offset(x, y)] = idx.to_byte()
+  self.pix.unsafe_set(self.pix_offset(x, y), idx.to_byte())
 }
 
 ///|

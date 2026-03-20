@@ -20,7 +20,7 @@ pub fn ImageRGBA::rgba_at(self : ImageRGBA, x : Int, y : Int) -> @color.RGBA {
     return { r: b'\x00', g: b'\x00', b: b'\x00', a: b'\x00' }
   }
   let i = self.pix_offset(x, y)
-  { r: self.pix[i], g: self.pix[i + 1], b: self.pix[i + 2], a: self.pix[i + 3] }
+  { r: self.pix.unsafe_get(i), g: self.pix.unsafe_get(i + 1), b: self.pix.unsafe_get(i + 2), a: self.pix.unsafe_get(i + 3) }
 }
 
 ///|
@@ -36,10 +36,10 @@ pub fn ImageRGBA::set(
   let c1 = @color.AnyModel::RGBAModel.convert(c)
   guard c1 is @color.AnyColor::RGBA(rgba) else { return }
   let i = self.pix_offset(x, y)
-  self.pix[i] = rgba.r
-  self.pix[i + 1] = rgba.g
-  self.pix[i + 2] = rgba.b
-  self.pix[i + 3] = rgba.a
+  self.pix.unsafe_set(i, rgba.r)
+  self.pix.unsafe_set(i + 1, rgba.g)
+  self.pix.unsafe_set(i + 2, rgba.b)
+  self.pix.unsafe_set(i + 3, rgba.a)
 }
 
 ///|
@@ -53,10 +53,10 @@ pub fn ImageRGBA::set_rgba(
     return
   }
   let i = self.pix_offset(x, y)
-  self.pix[i] = c.r
-  self.pix[i + 1] = c.g
-  self.pix[i + 2] = c.b
-  self.pix[i + 3] = c.a
+  self.pix.unsafe_set(i, c.r)
+  self.pix.unsafe_set(i + 1, c.g)
+  self.pix.unsafe_set(i + 2, c.b)
+  self.pix.unsafe_set(i + 3, c.a)
 }
 
 ///|
@@ -82,7 +82,7 @@ pub fn ImageRGBA::is_opaque(self : ImageRGBA) -> Bool {
   for y = self.rect.min.y; y < self.rect.max.y; y = y + 1 {
     let row_start = self.pix_offset + (y - self.rect.min.y) * self.stride
     for x = 0; x < self.rect.dx(); x = x + 1 {
-      if self.pix[row_start + x * 4 + 3] != b'\xff' {
+      if self.pix.unsafe_get(row_start + x * 4 + 3) != b'\xff' {
         return false
       }
     }
@@ -128,10 +128,10 @@ pub fn ImageRGBA64::rgba64_at(
   }
   let i = self.pix_offset(x, y)
   {
-    r: (self.pix[i].to_uint() << 8) | self.pix[i + 1].to_uint(),
-    g: (self.pix[i + 2].to_uint() << 8) | self.pix[i + 3].to_uint(),
-    b: (self.pix[i + 4].to_uint() << 8) | self.pix[i + 5].to_uint(),
-    a: (self.pix[i + 6].to_uint() << 8) | self.pix[i + 7].to_uint(),
+    r: (self.pix.unsafe_get(i).to_uint() << 8) | self.pix.unsafe_get(i + 1).to_uint(),
+    g: (self.pix.unsafe_get(i + 2).to_uint() << 8) | self.pix.unsafe_get(i + 3).to_uint(),
+    b: (self.pix.unsafe_get(i + 4).to_uint() << 8) | self.pix.unsafe_get(i + 5).to_uint(),
+    a: (self.pix.unsafe_get(i + 6).to_uint() << 8) | self.pix.unsafe_get(i + 7).to_uint(),
   }
 }
 
@@ -148,14 +148,14 @@ pub fn ImageRGBA64::set(
   let c1 = @color.AnyModel::RGBA64Model.convert(c)
   guard c1 is @color.AnyColor::RGBA64(rgba64) else { return }
   let i = self.pix_offset(x, y)
-  self.pix[i] = (rgba64.r >> 8).to_byte()
-  self.pix[i + 1] = rgba64.r.to_byte()
-  self.pix[i + 2] = (rgba64.g >> 8).to_byte()
-  self.pix[i + 3] = rgba64.g.to_byte()
-  self.pix[i + 4] = (rgba64.b >> 8).to_byte()
-  self.pix[i + 5] = rgba64.b.to_byte()
-  self.pix[i + 6] = (rgba64.a >> 8).to_byte()
-  self.pix[i + 7] = rgba64.a.to_byte()
+  self.pix.unsafe_set(i, (rgba64.r >> 8).to_byte())
+  self.pix.unsafe_set(i + 1, rgba64.r.to_byte())
+  self.pix.unsafe_set(i + 2, (rgba64.g >> 8).to_byte())
+  self.pix.unsafe_set(i + 3, rgba64.g.to_byte())
+  self.pix.unsafe_set(i + 4, (rgba64.b >> 8).to_byte())
+  self.pix.unsafe_set(i + 5, rgba64.b.to_byte())
+  self.pix.unsafe_set(i + 6, (rgba64.a >> 8).to_byte())
+  self.pix.unsafe_set(i + 7, rgba64.a.to_byte())
 }
 
 ///|
@@ -169,14 +169,14 @@ pub fn ImageRGBA64::set_rgba64(
     return
   }
   let i = self.pix_offset(x, y)
-  self.pix[i] = (c.r >> 8).to_byte()
-  self.pix[i + 1] = c.r.to_byte()
-  self.pix[i + 2] = (c.g >> 8).to_byte()
-  self.pix[i + 3] = c.g.to_byte()
-  self.pix[i + 4] = (c.b >> 8).to_byte()
-  self.pix[i + 5] = c.b.to_byte()
-  self.pix[i + 6] = (c.a >> 8).to_byte()
-  self.pix[i + 7] = c.a.to_byte()
+  self.pix.unsafe_set(i, (c.r >> 8).to_byte())
+  self.pix.unsafe_set(i + 1, c.r.to_byte())
+  self.pix.unsafe_set(i + 2, (c.g >> 8).to_byte())
+  self.pix.unsafe_set(i + 3, c.g.to_byte())
+  self.pix.unsafe_set(i + 4, (c.b >> 8).to_byte())
+  self.pix.unsafe_set(i + 5, c.b.to_byte())
+  self.pix.unsafe_set(i + 6, (c.a >> 8).to_byte())
+  self.pix.unsafe_set(i + 7, c.a.to_byte())
 }
 
 ///|
@@ -203,7 +203,7 @@ pub fn ImageRGBA64::is_opaque(self : ImageRGBA64) -> Bool {
     let row_start = self.pix_offset + (y - self.rect.min.y) * self.stride
     for x = 0; x < self.rect.dx(); x = x + 1 {
       let i = row_start + x * 8 + 6
-      if self.pix[i] != b'\xff' || self.pix[i + 1] != b'\xff' {
+      if self.pix.unsafe_get(i) != b'\xff' || self.pix.unsafe_get(i + 1) != b'\xff' {
         return false
       }
     }

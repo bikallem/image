@@ -161,8 +161,8 @@ fn build_enc_huffman_table(
     for _ in 0..<n {
       if sym_idx < symbols.length() {
         let sym = symbols[sym_idx]
-        codes[sym] = code
-        lengths[sym] = length
+        codes.unsafe_set(sym, code)
+        lengths.unsafe_set(sym, length)
         sym_idx += 1
         code += 1
       }
@@ -180,7 +180,7 @@ fn enc_emit_symbol(
   lengths : FixedArray[Int],
   sym : Int,
 ) -> Unit {
-  enc_write_bits(e, codes[sym], lengths[sym])
+  enc_write_bits(e, codes.unsafe_get(sym), lengths.unsafe_get(sym))
 }
 
 ///|
@@ -346,7 +346,7 @@ fn scale_quant(unscaled : FixedArray[Int], quality : Int) -> FixedArray[Byte] {
   for i in 0..<64 {
     let x = (unscaled[i] * scale + 50) / 100
     let clamped = if x < 1 { 1 } else if x > 255 { 255 } else { x }
-    result[i] = clamped.to_byte()
+    result.unsafe_set(i, clamped.to_byte())
   }
   result
 }
