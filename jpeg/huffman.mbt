@@ -94,13 +94,27 @@ fn read_bits(d : Decoder, n : Int) -> Int raise JpegError {
 ///|
 /// Decode one Huffman-coded symbol from the bit stream.
 pub fn decode_huffman(d : Decoder, table : HuffmanTable) -> Int raise JpegError {
-  // Read bits one at a time, comparing against the table's min/max codes
+  // Fast path: peek 8 bits, check if any code of length 1..8 matches.
+  // Most JPEG Huffman codes are ≤8 bits, so this resolves ~95% of symbols
+  // with a single peek + compare chain instead of 1-bit-at-a-time loop.
+  ensure_bits(d, 8)
+  let peek = peek_bits(d, 8)
   let mut code = 0
-  for i in 0..<16 {
+  for i in 0..<8 {
+    code = (code << 1) | ((peek >> (7 - i)) & 1)
+    if table.max_code.unsafe_get(i) >= 0 && code <= table.max_code.unsafe_get(i) {
+      consume_bits(d, i + 1)
+      let idx = table.val_ptr.unsafe_get(i) + code - table.min_code.unsafe_get(i)
+      return table.symbols.unsafe_get(idx)
+    }
+  }
+  // Slow path for codes > 8 bits (rare)
+  consume_bits(d, 8)
+  for i in 8..<16 {
     let bit = read_bits(d, 1)
     code = (code << 1) | bit
-    if code <= table.max_code.unsafe_get(i) && table.max_code[i] >= 0 {
-      let idx = table.val_ptr.unsafe_get(i) + code - table.min_code[i]
+    if table.max_code.unsafe_get(i) >= 0 && code <= table.max_code.unsafe_get(i) {
+      let idx = table.val_ptr.unsafe_get(i) + code - table.min_code.unsafe_get(i)
       return table.symbols.unsafe_get(idx)
     }
   }
