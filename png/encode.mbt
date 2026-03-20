@@ -147,11 +147,11 @@ pub fn encode(
   // Deflate the data
   let deflater = @flate.Deflater::new(level=flate_level)
   match deflater.encode(Some(raw_bytes[:])) {
-    @flate.Data(chunk) => idat_buf.write_bytes(chunk)
+    @flate.Data(chunk) => idat_buf.write_bytesview(chunk)
     _ => ()
   }
   match deflater.encode(None) {
-    @flate.Data(chunk) => idat_buf.write_bytes(chunk)
+    @flate.Data(chunk) => idat_buf.write_bytesview(chunk)
     _ => ()
   }
   // Adler-32 checksum of uncompressed data (big-endian)
