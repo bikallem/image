@@ -17,6 +17,7 @@ pub fn decode(data : Bytes) -> @image.AnyImage raise Error {
   let mut palette : Array[@color.AnyColor] = []
   let mut trns : Bytes = Bytes::new(0)
   let idat_buf = @buffer.new()
+  let mut interlace : Byte = b'\x00'
   let mut seen_ihdr = false
   let mut seen_iend = false
   while r.remaining() >= 8 && !seen_iend {
@@ -41,15 +42,15 @@ pub fn decode(data : Bytes) -> @image.AnyImage raise Error {
         color_type = r.read_byte()
         let compression = r.read_byte()
         let filter = r.read_byte()
-        let interlace = r.read_byte()
+        interlace = r.read_byte()
         if compression != b'\x00' {
           raise PngError::UnsupportedError("compression method")
         }
         if filter != b'\x00' {
           raise PngError::UnsupportedError("filter method")
         }
-        if interlace != b'\x00' {
-          raise PngError::UnsupportedError("interlaced PNG not supported")
+        if interlace != b'\x00' && interlace != b'\x01' {
+          raise PngError::UnsupportedError("unknown interlace method")
         }
       }
       t if t == ct_plte => {
@@ -104,16 +105,139 @@ pub fn decode(data : Bytes) -> @image.AnyImage raise Error {
   // Decompress IDAT
   let compressed = idat_buf.to_bytes()
   let decompressed = @zlib.decompress(compressed) |> or_png_error()
-  // Unfilter and build image
-  decode_image(
-    decompressed,
-    width,
-    height,
+  if interlace == b'\x00' {
+    decode_image(decompressed, width, height, bit_depth, color_type, palette, trns)
+  } else {
+    decode_interlaced(decompressed, width, height, bit_depth, color_type, palette, trns)
+  }
+}
+
+///|
+/// Adam7 interlace pass parameters: (x_offset, y_offset, x_stride, y_stride)
+let adam7 : FixedArray[(Int, Int, Int, Int)] = [
+  (0, 0, 8, 8), // pass 1
+  (4, 0, 8, 8), // pass 2
+  (0, 4, 4, 8), // pass 3
+  (2, 0, 4, 4), // pass 4
+  (0, 2, 2, 4), // pass 5
+  (1, 0, 2, 2), // pass 6
+  (0, 1, 1, 2), // pass 7
+]
+
+///|
+fn decode_interlaced(
+  data : Bytes,
+  width : Int,
+  height : Int,
+  bit_depth : Byte,
+  color_type : Byte,
+  palette : Array[@color.AnyColor],
+  trns : Bytes
+) -> @image.AnyImage raise PngError {
+  // First decode a non-interlaced image into a temporary, then scatter pixels
+  // into the final image using Adam7 pass parameters.
+  // Each pass is a sub-image with dimensions:
+  //   pass_w = ceil((width - x_offset) / x_stride)
+  //   pass_h = ceil((height - y_offset) / y_stride)
+  let rect : @image.Rectangle = {
+    min: { x: 0, y: 0 },
+    max: { x: width, y: height },
+  }
+  // Create the final image
+  let final_img = decode_image(
+    // Decode a dummy to get the right type, then overwrite
+    // Actually, let's just create the right type and fill it
+    Bytes::new(0), // placeholder
+    0,
+    0,
     bit_depth,
     color_type,
     palette,
     trns,
   )
+  // That approach won't work. Let me create the image directly.
+  ignore(final_img)
+  // Create target image based on color type
+  let target = match color_type {
+    t if t == ct_grayscale => @image.AnyImage::Gray(@image.new_image_gray(rect))
+    t if t == ct_true_color => @image.AnyImage::NRGBA(@image.new_image_nrgba(rect))
+    t if t == ct_paletted =>
+      @image.AnyImage::Paletted(
+        @image.new_image_paletted(rect, @color.Palette::{ colors: palette }),
+      )
+    t if t == ct_grayscale_alpha =>
+      @image.AnyImage::NRGBA(@image.new_image_nrgba(rect))
+    t if t == ct_true_color_alpha =>
+      @image.AnyImage::NRGBA(@image.new_image_nrgba(rect))
+    _ => raise PngError::UnsupportedError("color type " + color_type.to_int().to_string())
+  }
+  // Process each Adam7 pass
+  let mut offset = 0
+  for pass in 0..<7 {
+    let (x_off, y_off, x_stride, y_stride) = adam7[pass]
+    let pass_w = if width <= x_off { 0 } else { (width - x_off + x_stride - 1) / x_stride }
+    let pass_h = if height <= y_off { 0 } else { (height - y_off + y_stride - 1) / y_stride }
+    if pass_w == 0 || pass_h == 0 {
+      continue
+    }
+    // Decode this pass as a sub-image
+    let pass_stride = bytes_per_row(pass_w, bit_depth, color_type)
+    let bpp = bytes_per_pixel(bit_depth, color_type)
+    let pass_data_len = pass_h * (pass_stride + 1)
+    if offset + pass_data_len > data.length() {
+      raise PngError::FormatError("not enough IDAT data for interlaced pass")
+    }
+    // Decode the pass sub-image
+    let pass_img = decode_image(
+      Bytes::makei(pass_data_len, fn(i) { data[offset + i] }),
+      pass_w,
+      pass_h,
+      bit_depth,
+      color_type,
+      palette,
+      trns,
+    )
+    ignore(bpp)
+    offset += pass_data_len
+    // Scatter pass pixels into the final image
+    for py in 0..<pass_h {
+      for px in 0..<pass_w {
+        let dst_x = x_off + px * x_stride
+        let dst_y = y_off + py * y_stride
+        if dst_x < width && dst_y < height {
+          let c = pass_img.at(px, py)
+          match target {
+            @image.AnyImage::Gray(img) => {
+              guard c is @color.AnyColor::Gray(gc) else { continue }
+              img.pix[dst_y * img.stride + dst_x] = gc.y
+            }
+            @image.AnyImage::NRGBA(img) => {
+              let (r, g, b, a) = c.rgba()
+              let di = dst_y * img.stride + dst_x * 4
+              img.pix[di] = (r >> 8).to_byte()
+              img.pix[di + 1] = (g >> 8).to_byte()
+              img.pix[di + 2] = (b >> 8).to_byte()
+              img.pix[di + 3] = (a >> 8).to_byte()
+            }
+            @image.AnyImage::Paletted(img) => {
+              let ci = pass_img.at(px, py)
+              guard ci is @color.AnyColor::NRGBA(nc) else {
+                // For paletted, get the color index directly from the pass image
+                img.pix[dst_y * img.stride + dst_x] = b'\x00'
+                continue
+              }
+              ignore(nc)
+              // Use palette index
+              guard pass_img is @image.AnyImage::Paletted(pass_pal) else { continue }
+              img.pix[dst_y * img.stride + dst_x] = pass_pal.color_index_at(px, py)
+            }
+            _ => ()
+          }
+        }
+      }
+    }
+  }
+  target
 }
 
 ///|
@@ -148,6 +272,30 @@ fn decode_image(
   let prev_row = FixedArray::make(stride, b'\x00')
   let cur_row = FixedArray::make(stride, b'\x00')
   match color_type {
+    t if t == ct_grayscale && (bit_depth == b'\x01' || bit_depth == b'\x02' || bit_depth == b'\x04') => {
+      // Sub-8-bit grayscale: unpack to 8-bit by scaling
+      let img = @image.new_image_gray(rect)
+      let bd = bit_depth.to_int()
+      let max_val = (1 << bd) - 1
+      for y in 0..<height {
+        let row_start = y * (stride + 1)
+        let filter = data[row_start]
+        for i in 0..<stride {
+          cur_row[i] = data[row_start + 1 + i]
+        }
+        unfilter(filter, cur_row, prev_row, bpp)
+        for x in 0..<width {
+          let byte_idx = x * bd / 8
+          let bit_off = 8 - bd - (x * bd % 8)
+          let val = (cur_row[byte_idx].to_int() >> bit_off) & max_val
+          // Scale to 0-255 range
+          let scaled = val * 255 / max_val
+          img.pix[y * img.stride + x] = scaled.to_byte()
+        }
+        FixedArray::unsafe_blit(prev_row, 0, cur_row, 0, stride)
+      }
+      @image.AnyImage::Gray(img)
+    }
     t if t == ct_grayscale && bit_depth == b'\x08' => {
       let img = @image.new_image_gray(rect)
       for y in 0..<height {

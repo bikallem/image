@@ -69,10 +69,9 @@ test "paeth_decode" {
 /// Port of Go's TestReader from reader_test.go.
 /// Decode pngsuite PNGs and verify they decode without error.
 test "png_reader" {
-  // Only test formats supported by the decoder (8/16-bit grayscale, RGB, paletted, alpha)
-  // basn0g01/02/04 are sub-8-bit grayscale which may not be supported
+  // Test all pngsuite basn* formats including sub-8-bit grayscale
   let test_files = [
-    "basn0g08", "basn0g16",
+    "basn0g01", "basn0g02", "basn0g04", "basn0g08", "basn0g16",
     "basn2c08", "basn2c16", "basn3p01", "basn3p02", "basn3p04",
     "basn3p08", "basn4a08", "basn4a16", "basn6a08", "basn6a16",
   ]
@@ -104,6 +103,18 @@ test "png_reader_error" {
     assert_true(result is Err(_))
   }
   // CRC and no-end files may or may not error depending on strictness
+  // Test interlaced PNG
+  let interlaced_data = @fs.read_file_to_bytes(
+    "png/testdata/gray-gradient.interlaced.png",
+  )
+  let interlaced_img = decode(interlaced_data)
+  assert_true(interlaced_img.bounds().dx() > 0)
+  assert_true(interlaced_img.bounds().dy() > 0)
+  // Compare with non-interlaced version
+  let normal_data = @fs.read_file_to_bytes("png/testdata/gray-gradient.png")
+  let normal_img = decode(normal_data)
+  assert_eq(interlaced_img.bounds().dx(), normal_img.bounds().dx())
+  assert_eq(interlaced_img.bounds().dy(), normal_img.bounds().dy())
   let maybe_invalid = [
     "png/testdata/invalid-crc32.png",
     "png/testdata/invalid-noend.png",
