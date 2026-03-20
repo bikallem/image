@@ -70,6 +70,9 @@ pub(all) struct Decoder {
   mut height : Int
   mut restart_interval : Int
   bits : BitReader
+  mut progressive : Bool
+  mut eob_run : Int
+  prog_coeffs : FixedArray[Array[FixedArray[Int]]]
 }
 pub fn Decoder::new(Bytes) -> Self
 

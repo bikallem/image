@@ -22,6 +22,8 @@ pub fn encode(@image.ImagePaletted) -> Bytes raise
 
 pub fn encode_all(GIF) -> Bytes raise
 
+pub fn encode_image(@image.AnyImage, n_colors? : Int) -> Bytes raise
+
 // Errors
 pub(all) suberror GifError {
   FormatError(String)

@@ -18,6 +18,8 @@ pub fn new_image_alpha(Rectangle) -> ImageAlpha
 
 pub fn new_image_alpha16(Rectangle) -> ImageAlpha16
 
+pub fn new_image_cmyk(Rectangle) -> ImageCMYK
+
 pub fn new_image_gray(Rectangle) -> ImageGray
 
 pub fn new_image_gray16(Rectangle) -> ImageGray16
@@ -69,6 +71,7 @@ pub(all) enum AnyImage {
   Paletted(ImagePaletted)
   YCbCr(ImageYCbCr)
   NYCbCrA(ImageNYCbCrA)
+  CMYK(ImageCMYK)
   Uniform(ImageUniform)
 }
 pub impl Image for AnyImage
@@ -104,6 +107,19 @@ pub fn ImageAlpha16::pix_offset(Self, Int, Int) -> Int
 pub fn ImageAlpha16::set(Self, Int, Int, @color.AnyColor) -> Unit
 pub fn ImageAlpha16::set_alpha16(Self, Int, Int, @color.Alpha16) -> Unit
 pub fn ImageAlpha16::sub_image(Self, Rectangle) -> Self
+
+pub(all) struct ImageCMYK {
+  pix : FixedArray[Byte]
+  pix_offset : Int
+  stride : Int
+  rect : Rectangle
+}
+pub fn ImageCMYK::cmyk_at(Self, Int, Int) -> @color.CMYK
+pub fn ImageCMYK::is_opaque(Self) -> Bool
+pub fn ImageCMYK::pix_offset(Self, Int, Int) -> Int
+pub fn ImageCMYK::set(Self, Int, Int, @color.AnyColor) -> Unit
+pub fn ImageCMYK::set_cmyk(Self, Int, Int, @color.CMYK) -> Unit
+pub fn ImageCMYK::sub_image(Self, Rectangle) -> Self
 
 pub(all) struct ImageGray {
   pix : FixedArray[Byte]
@@ -162,6 +178,7 @@ pub(all) struct ImageNYCbCrA {
 pub fn ImageNYCbCrA::a_offset(Self, Int, Int) -> Int
 pub fn ImageNYCbCrA::is_opaque(Self) -> Bool
 pub fn ImageNYCbCrA::nycbcra_at(Self, Int, Int) -> @color.NYCbCrA
+pub fn ImageNYCbCrA::sub_image(Self, Rectangle) -> Self
 
 pub(all) struct ImagePaletted {
   pix : FixedArray[Byte]
@@ -221,6 +238,7 @@ pub(all) struct ImageYCbCr {
 }
 pub fn ImageYCbCr::c_offset(Self, Int, Int) -> Int
 pub fn ImageYCbCr::is_opaque(Self) -> Bool
+pub fn ImageYCbCr::sub_image(Self, Rectangle) -> Self
 pub fn ImageYCbCr::y_offset(Self, Int, Int) -> Int
 pub fn ImageYCbCr::ycbcr_at(Self, Int, Int) -> @color.YCbCr
 

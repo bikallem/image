@@ -2,13 +2,21 @@
 package "bikallem/image/color"
 
 // Values
+pub let black : AnyColor
+
 pub fn cmyk_to_rgb(Byte, Byte, Byte, Byte) -> (Byte, Byte, Byte)
+
+pub let opaque : AnyColor
 
 pub fn rgb_to_cmyk(Byte, Byte, Byte) -> (Byte, Byte, Byte, Byte)
 
 pub fn rgb_to_ycbcr(Byte, Byte, Byte) -> (Byte, Byte, Byte)
 
 pub fn sq_diff(UInt, UInt) -> UInt
+
+pub let transparent : AnyColor
+
+pub let white : AnyColor
 
 pub fn ycbcr_to_rgb(Byte, Byte, Byte) -> (Byte, Byte, Byte)
 
