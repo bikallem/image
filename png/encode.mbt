@@ -119,30 +119,60 @@ pub fn encode(
         }
     }
   }
-  // Compress and write IDAT
+  // Compress raw image data using deflate directly, streaming into idat_buf.
+  // This avoids the zlib::compress wrapper which copies data multiple times.
   let flate_level : @flate.CompressionLevel = match compression {
     DefaultCompression => @flate.DefaultCompression
     NoCompression => @flate.NoCompression
     BestSpeed => @flate.BestSpeed
     BestCompression => @flate.BestCompression
   }
-  let compressed = or_png_error(@zlib.compress(raw_buf.to_bytes(), level=flate_level))
-  // Write IDAT chunk directly to avoid copying compressed data
-  write_u32_be(buf, compressed.length().reinterpret_as_uint())
+  let raw_bytes = raw_buf.to_bytes()
+  let idat_buf = @buffer.new(size_hint=raw_bytes.length())
+  // Zlib header (CMF=0x78, FLG depends on level)
+  let cmf : Int = 0x78 // deflate, window=32K
+  let flevel = match compression {
+    NoCompression => 0
+    BestSpeed => 1
+    DefaultCompression => 2
+    BestCompression => 3
+  }
+  let mut flg = flevel << 6
+  let remainder = (cmf * 256 + flg) % 31
+  if remainder != 0 {
+    flg += 31 - remainder
+  }
+  idat_buf.write_byte(cmf.to_byte())
+  idat_buf.write_byte(flg.to_byte())
+  // Deflate the data
+  let deflater = @flate.Deflater::new(level=flate_level)
+  match deflater.encode(Some(raw_bytes[:])) {
+    @flate.Data(chunk) => idat_buf.write_bytes(chunk)
+    _ => ()
+  }
+  match deflater.encode(None) {
+    @flate.Data(chunk) => idat_buf.write_bytes(chunk)
+    _ => ()
+  }
+  // Adler-32 checksum of uncompressed data (big-endian)
+  let adler = @checksum.adler32(raw_bytes[:])
+  idat_buf.write_byte((adler >> 24).to_byte())
+  idat_buf.write_byte((adler >> 16).to_byte())
+  idat_buf.write_byte((adler >> 8).to_byte())
+  idat_buf.write_byte(adler.to_byte())
+  // Write IDAT chunk: length + type + data + CRC
+  let idat_bytes = idat_buf.to_bytes()
+  write_u32_be(buf, idat_bytes.length().reinterpret_as_uint())
   write_u32_be(buf, ct_idat)
-  for i in 0..<compressed.length() {
-    buf.write_byte(compressed[i])
-  }
-  // CRC over "IDAT" + compressed data
-  let idat_crc_data = FixedArray::make(4 + compressed.length(), b'\x00')
-  idat_crc_data[0] = (ct_idat >> 24).to_byte()
-  idat_crc_data[1] = (ct_idat >> 16).to_byte()
-  idat_crc_data[2] = (ct_idat >> 8).to_byte()
-  idat_crc_data[3] = ct_idat.to_byte()
-  for i in 0..<compressed.length() {
-    idat_crc_data[4 + i] = compressed[i]
-  }
-  write_u32_be(buf, @checksum.crc32(Bytes::from_fixedarray(idat_crc_data)[:]))
+  buf.write_bytes(idat_bytes)
+  // CRC over "IDAT" type + data
+  let crc_buf = @buffer.new(size_hint=4 + idat_bytes.length())
+  crc_buf.write_byte((ct_idat >> 24).to_byte())
+  crc_buf.write_byte((ct_idat >> 16).to_byte())
+  crc_buf.write_byte((ct_idat >> 8).to_byte())
+  crc_buf.write_byte(ct_idat.to_byte())
+  crc_buf.write_bytes(idat_bytes)
+  write_u32_be(buf, @checksum.crc32(crc_buf.to_bytes()[:]))
   // Write IEND
   write_chunk(buf, ct_iend, FixedArray::make(0, b'\x00'))
   buf.to_bytes()
