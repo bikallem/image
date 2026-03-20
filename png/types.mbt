@@ -80,7 +80,7 @@ pub fn ByteReader::read_byte(self : ByteReader) -> Byte raise PngError {
   if self.pos >= self.data.length() {
     raise UnexpectedEOF
   }
-  let b = self.data[self.pos]
+  let b = self.data.unsafe_get(self.pos)
   self.pos = self.pos + 1
   b
 }
@@ -95,7 +95,7 @@ pub fn ByteReader::read_bytes(
   }
   let buf = @buffer.new(size_hint=n)
   for i in 0..<n {
-    buf.write_byte(self.data[self.pos + i])
+    buf.write_byte(self.data.unsafe_get(self.pos + i))
   }
   self.pos = self.pos + n
   buf.to_bytes()

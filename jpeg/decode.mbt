@@ -214,7 +214,7 @@ fn process_dqt(d : Decoder) -> Unit raise JpegError {
         raise JpegError::FormatError("bad DQT segment: not enough data")
       }
       for i in 0..<64 {
-        d.quant[tq].data[i] = d.r.read_byte().to_int()
+        d.quant[tq].data.unsafe_set(i, d.r.read_byte().to_int())
       }
       remaining -= 64
     } else if pq == 1 {
@@ -224,7 +224,7 @@ fn process_dqt(d : Decoder) -> Unit raise JpegError {
       for i in 0..<64 {
         let hi = d.r.read_byte().to_int()
         let lo = d.r.read_byte().to_int()
-        d.quant[tq].data[i] = (hi << 8) | lo
+        d.quant[tq].data.unsafe_set(i, (hi << 8) | lo)
       }
       remaining -= 128
     } else {

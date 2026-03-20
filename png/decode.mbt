@@ -296,7 +296,7 @@ fn decode_image(
         let row_start = y * (stride + 1)
         let filter = data[row_start]
         for i in 0..<stride {
-          cur_row[i] = data[row_start + 1 + i]
+          cur_row[i] = data.unsafe_get(row_start + 1 + i)
         }
         unfilter(filter, cur_row, prev_row, bpp)
         for x in 0..<width {
@@ -317,7 +317,7 @@ fn decode_image(
         let row_start = y * (stride + 1)
         let filter = data[row_start]
         for i in 0..<stride {
-          cur_row[i] = data[row_start + 1 + i]
+          cur_row[i] = data.unsafe_get(row_start + 1 + i)
         }
         unfilter(filter, cur_row, prev_row, bpp)
         for x in 0..<width {
@@ -333,7 +333,7 @@ fn decode_image(
         let row_start = y * (stride + 1)
         let filter = data[row_start]
         for i in 0..<stride {
-          cur_row[i] = data[row_start + 1 + i]
+          cur_row[i] = data.unsafe_get(row_start + 1 + i)
         }
         unfilter(filter, cur_row, prev_row, bpp)
         for x in 0..<width {
@@ -350,7 +350,7 @@ fn decode_image(
         let row_start = y * (stride + 1)
         let filter = data[row_start]
         for i in 0..<stride {
-          cur_row[i] = data[row_start + 1 + i]
+          cur_row[i] = data.unsafe_get(row_start + 1 + i)
         }
         unfilter(filter, cur_row, prev_row, bpp)
         for x in 0..<width {
@@ -371,7 +371,7 @@ fn decode_image(
         let row_start = y * (stride + 1)
         let filter = data[row_start]
         for i in 0..<stride {
-          cur_row[i] = data[row_start + 1 + i]
+          cur_row[i] = data.unsafe_get(row_start + 1 + i)
         }
         unfilter(filter, cur_row, prev_row, bpp)
         if bit_depth == b'\x08' {
@@ -414,7 +414,7 @@ fn decode_image(
         let row_start = y * (stride + 1)
         let filter = data[row_start]
         for i in 0..<stride {
-          cur_row[i] = data[row_start + 1 + i]
+          cur_row[i] = data.unsafe_get(row_start + 1 + i)
         }
         unfilter(filter, cur_row, prev_row, bpp)
         for x in 0..<width {
@@ -436,7 +436,7 @@ fn decode_image(
         let row_start = y * (stride + 1)
         let filter = data[row_start]
         for i in 0..<stride {
-          cur_row[i] = data[row_start + 1 + i]
+          cur_row[i] = data.unsafe_get(row_start + 1 + i)
         }
         unfilter(filter, cur_row, prev_row, bpp)
         for x in 0..<width {
