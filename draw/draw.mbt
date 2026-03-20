@@ -81,6 +81,14 @@ pub fn draw_mask(
           @imageutil.draw_ycbcr(dst0, r, src0, sp)
           return
         }
+        @image.AnyImage::NRGBA(src0) => {
+          draw_nrgba(dst0, r, src0, sp, op)
+          return
+        }
+        @image.AnyImage::Gray(src0) => {
+          draw_gray(dst0, r, src0, sp)
+          return
+        }
         _ => ()
       }
       draw_rgba(dst0, r, src, sp, mask, op)
@@ -104,14 +112,19 @@ fn draw_fill_src(
   let g_byte = (sg >> 8).to_byte()
   let b_byte = (sb >> 8).to_byte()
   let a_byte = (sa >> 8).to_byte()
-  for y = r.min.y; y < r.max.y; y = y + 1 {
-    for x = r.min.x; x < r.max.x; x = x + 1 {
-      let i = dst.pix_offset(x, y)
+  let dx = r.dx()
+  let mut row_off = dst.pix_offset + (r.min.y - dst.rect.min.y) * dst.stride +
+    (r.min.x - dst.rect.min.x) * 4
+  for _y = r.min.y; _y < r.max.y; _y = _y + 1 {
+    let mut i = row_off
+    for _x = 0; _x < dx; _x = _x + 1 {
       dst.pix[i] = r_byte
       dst.pix[i + 1] = g_byte
       dst.pix[i + 2] = b_byte
       dst.pix[i + 3] = a_byte
+      i += 4
     }
+    row_off += dst.stride
   }
 }
 
@@ -125,9 +138,12 @@ fn draw_fill_over(
   sa : UInt
 ) -> Unit {
   let a = max_color - sa
-  for y = r.min.y; y < r.max.y; y = y + 1 {
-    for x = r.min.x; x < r.max.x; x = x + 1 {
-      let i = dst.pix_offset(x, y)
+  let dx = r.dx()
+  let mut row_off = dst.pix_offset + (r.min.y - dst.rect.min.y) * dst.stride +
+    (r.min.x - dst.rect.min.x) * 4
+  for _y = r.min.y; _y < r.max.y; _y = _y + 1 {
+    let mut i = row_off
+    for _x = 0; _x < dx; _x = _x + 1 {
       let dr = dst.pix[i].to_uint()
       let dg = dst.pix[i + 1].to_uint()
       let db = dst.pix[i + 2].to_uint()
@@ -136,7 +152,9 @@ fn draw_fill_over(
       dst.pix[i + 1] = ((dg * a / max_color + sg) >> 8).to_byte()
       dst.pix[i + 2] = ((db * a / max_color + sb) >> 8).to_byte()
       dst.pix[i + 3] = ((da * a / max_color + sa) >> 8).to_byte()
+      i += 4
     }
+    row_off += dst.stride
   }
 }
 
@@ -147,17 +165,16 @@ fn draw_copy_src(
   src : @image.ImageRGBA,
   sp : @image.Point
 ) -> Unit {
-  for y = r.min.y; y < r.max.y; y = y + 1 {
-    let sy = sp.y + y - r.min.y
-    for x = r.min.x; x < r.max.x; x = x + 1 {
-      let sx = sp.x + x - r.min.x
-      let si = src.pix_offset(sx, sy)
-      let di = dst.pix_offset(x, y)
-      dst.pix[di] = src.pix[si]
-      dst.pix[di + 1] = src.pix[si + 1]
-      dst.pix[di + 2] = src.pix[si + 2]
-      dst.pix[di + 3] = src.pix[si + 3]
-    }
+  let dx = r.dx()
+  let n = dx * 4
+  let mut d_row = dst.pix_offset + (r.min.y - dst.rect.min.y) * dst.stride +
+    (r.min.x - dst.rect.min.x) * 4
+  let mut s_row = src.pix_offset + (sp.y - src.rect.min.y) * src.stride +
+    (sp.x - src.rect.min.x) * 4
+  for _y = r.min.y; _y < r.max.y; _y = _y + 1 {
+    FixedArray::unsafe_blit(dst.pix, d_row, src.pix, s_row, n)
+    d_row += dst.stride
+    s_row += src.stride
   }
 }
 
@@ -168,15 +185,18 @@ fn draw_copy_over(
   src : @image.ImageRGBA,
   sp : @image.Point
 ) -> Unit {
-  for y = r.min.y; y < r.max.y; y = y + 1 {
-    let sy = sp.y + y - r.min.y
-    for x = r.min.x; x < r.max.x; x = x + 1 {
-      let sx = sp.x + x - r.min.x
-      let si = src.pix_offset(sx, sy)
+  let dx = r.dx()
+  let mut d_row = dst.pix_offset + (r.min.y - dst.rect.min.y) * dst.stride +
+    (r.min.x - dst.rect.min.x) * 4
+  let mut s_row = src.pix_offset + (sp.y - src.rect.min.y) * src.stride +
+    (sp.x - src.rect.min.x) * 4
+  for _y = r.min.y; _y < r.max.y; _y = _y + 1 {
+    let mut di = d_row
+    let mut si = s_row
+    for _x = 0; _x < dx; _x = _x + 1 {
       let sa = src.pix[si + 3].to_uint()
       let sa16 = sa | (sa << 8)
       let a = max_color - sa16
-      let di = dst.pix_offset(x, y)
       let sr16 = src.pix[si].to_uint()
       let sr16 = sr16 | (sr16 << 8)
       let sg16 = src.pix[si + 1].to_uint()
@@ -195,7 +215,97 @@ fn draw_copy_over(
       dst.pix[di + 1] = ((dg16 * a / max_color + sg16) >> 8).to_byte()
       dst.pix[di + 2] = ((db16 * a / max_color + sb16) >> 8).to_byte()
       dst.pix[di + 3] = ((da16 * a / max_color + sa16) >> 8).to_byte()
+      di += 4
+      si += 4
     }
+    d_row += dst.stride
+    s_row += src.stride
+  }
+}
+
+///|
+fn draw_nrgba(
+  dst : @image.ImageRGBA,
+  r : @image.Rectangle,
+  src : @image.ImageNRGBA,
+  sp : @image.Point,
+  op : Op
+) -> Unit {
+  let dx = r.dx()
+  let mut d_row = dst.pix_offset + (r.min.y - dst.rect.min.y) * dst.stride +
+    (r.min.x - dst.rect.min.x) * 4
+  let mut s_row = src.pix_offset + (sp.y - src.rect.min.y) * src.stride +
+    (sp.x - src.rect.min.x) * 4
+  for _y = r.min.y; _y < r.max.y; _y = _y + 1 {
+    let mut di = d_row
+    let mut si = s_row
+    for _x = 0; _x < dx; _x = _x + 1 {
+      let sa = src.pix[si + 3].to_uint()
+      if op == Src || sa == 0xff {
+        // Premultiply and store
+        let sr = src.pix[si].to_uint() * sa / 0xffU
+        let sg = src.pix[si + 1].to_uint() * sa / 0xffU
+        let sb = src.pix[si + 2].to_uint() * sa / 0xffU
+        dst.pix[di] = sr.to_byte()
+        dst.pix[di + 1] = sg.to_byte()
+        dst.pix[di + 2] = sb.to_byte()
+        dst.pix[di + 3] = sa.to_byte()
+      } else if sa > 0U {
+        // Over compositing
+        let sa16 = sa | (sa << 8)
+        let a = max_color - sa16
+        let sr = src.pix[si].to_uint()
+        let sr16 = sr * sa / 0xffU
+        let sr16 = sr16 | (sr16 << 8)
+        let sg = src.pix[si + 1].to_uint()
+        let sg16 = sg * sa / 0xffU
+        let sg16 = sg16 | (sg16 << 8)
+        let sb = src.pix[si + 2].to_uint()
+        let sb16 = sb * sa / 0xffU
+        let sb16 = sb16 | (sb16 << 8)
+        let dr = dst.pix[di].to_uint()
+        let dg = dst.pix[di + 1].to_uint()
+        let db = dst.pix[di + 2].to_uint()
+        let da = dst.pix[di + 3].to_uint()
+        dst.pix[di] = ((dr * a / max_color + sr16) >> 8).to_byte()
+        dst.pix[di + 1] = ((dg * a / max_color + sg16) >> 8).to_byte()
+        dst.pix[di + 2] = ((db * a / max_color + sb16) >> 8).to_byte()
+        dst.pix[di + 3] = ((da * a / max_color + sa16) >> 8).to_byte()
+      }
+      di += 4
+      si += 4
+    }
+    d_row += dst.stride
+    s_row += src.stride
+  }
+}
+
+///|
+fn draw_gray(
+  dst : @image.ImageRGBA,
+  r : @image.Rectangle,
+  src : @image.ImageGray,
+  sp : @image.Point
+) -> Unit {
+  let dx = r.dx()
+  let mut d_row = dst.pix_offset + (r.min.y - dst.rect.min.y) * dst.stride +
+    (r.min.x - dst.rect.min.x) * 4
+  let mut s_row = src.pix_offset + (sp.y - src.rect.min.y) * src.stride +
+    (sp.x - src.rect.min.x)
+  for _y = r.min.y; _y < r.max.y; _y = _y + 1 {
+    let mut di = d_row
+    let mut si = s_row
+    for _x = 0; _x < dx; _x = _x + 1 {
+      let y = src.pix[si]
+      dst.pix[di] = y
+      dst.pix[di + 1] = y
+      dst.pix[di + 2] = y
+      dst.pix[di + 3] = b'\xff'
+      di += 4
+      si += 1
+    }
+    d_row += dst.stride
+    s_row += src.stride
   }
 }
 
