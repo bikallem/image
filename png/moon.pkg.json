@@ -1,8 +1,8 @@
 {
   "import": [
-    "blem/image/image",
-    "blem/image/color",
-    "blem/image/internal/binary",
+    "bikallem/image/image",
+    "bikallem/image/color",
+    "bikallem/image/internal/binary",
     "bikallem/compress/zlib",
     "bikallem/compress/checksum",
     "moonbitlang/core/buffer"

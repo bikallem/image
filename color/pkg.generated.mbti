@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "blem/image/color"
+package "bikallem/image/color"
 
 // Values
 pub fn cmyk_to_rgb(Byte, Byte, Byte, Byte) -> (Byte, Byte, Byte)

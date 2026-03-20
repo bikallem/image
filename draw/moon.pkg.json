@@ -1,14 +1,14 @@
 {
   "import": [
-    "blem/image/image",
-    "blem/image/color",
-    "blem/image/internal/imageutil"
+    "bikallem/image/image",
+    "bikallem/image/color",
+    "bikallem/image/internal/imageutil"
   ],
   "wbtest-import": [
     "moonbitlang/x/fs",
     "moonbitlang/core/bench",
-    "blem/image/png",
-    "blem/image/jpeg",
-    "blem/image/gif"
+    "bikallem/image/png",
+    "bikallem/image/jpeg",
+    "bikallem/image/gif"
   ]
 }

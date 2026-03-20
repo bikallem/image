@@ -1,3 +1,3 @@
-module github.com/blem/image/testperf
+module github.com/bikallem/image/testperf
 
 go 1.22

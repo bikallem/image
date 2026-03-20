@@ -1,8 +1,8 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "blem/image/image"
+package "bikallem/image/image"
 
 import {
-  "blem/image/color",
+  "bikallem/image/color",
 }
 
 // Values

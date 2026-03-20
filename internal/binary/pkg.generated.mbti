@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "blem/image/internal/binary"
+package "bikallem/image/internal/binary"
 
 // Values
 pub fn read_uint16_be(FixedArray[Byte], Int) -> UInt
