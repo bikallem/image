@@ -5,7 +5,7 @@ pub fn decode(data : Bytes) -> @image.AnyImage raise Error {
   if gif.image.is_empty() {
     raise GifError::FormatError("no image data")
   }
-  @image.AnyImage::Paletted(gif.image[0])
+  @image.AnyImage::Paletted(gif.image.unsafe_get(0))
 }
 
 ///|
@@ -27,7 +27,7 @@ pub fn decode_config(data : Bytes) -> @image.Config raise Error {
 fn bytes_to_string(b : Bytes) -> String {
   let buf = StringBuilder::new()
   for i in 0..<b.length() {
-    buf.write_char(b[i].to_int().unsafe_to_char())
+    buf.write_char(b.unsafe_get(i).to_int().unsafe_to_char())
   }
   buf.to_string()
 }
@@ -135,7 +135,7 @@ pub fn decode_all(data : Bytes) -> GIF raise Error {
           pixel_count
         }
         for i in 0..<copy_count {
-          img.pix[i] = decompressed[i]
+          img.pix.unsafe_set(i, decompressed[i])
         }
         images.push(img)
         delays.push(delay)

@@ -25,17 +25,17 @@ pub fn draw_ycbcr(
       let sx = sp.x + x - x0
       let yi = src.y_offset(sx, sy)
       let ci = src.c_offset(sx, sy)
-      let yy1 = src.y_[yi].to_int() * 0x10101
-      let cb1 = src.cb[ci].to_int() - 128
-      let cr1 = src.cr[ci].to_int() - 128
+      let yy1 = src.y_.unsafe_get(yi).to_int() * 0x10101
+      let cb1 = src.cb.unsafe_get(ci).to_int() - 128
+      let cr1 = src.cr.unsafe_get(ci).to_int() - 128
       let rr = clamp_uint8(yy1 + 91881 * cr1)
       let gg = clamp_uint8(yy1 - 22554 * cb1 - 46802 * cr1)
       let bb = clamp_uint8(yy1 + 116130 * cb1)
       let di = dst.pix_offset(x, y)
-      dst.pix[di] = (rr >> 8).to_byte()
-      dst.pix[di + 1] = (gg >> 8).to_byte()
-      dst.pix[di + 2] = (bb >> 8).to_byte()
-      dst.pix[di + 3] = b'\xff'
+      dst.pix.unsafe_set(di, (rr >> 8).to_byte())
+      dst.pix.unsafe_set(di + 1, (gg >> 8).to_byte())
+      dst.pix.unsafe_set(di + 2, (bb >> 8).to_byte())
+      dst.pix.unsafe_set(di + 3, b'\xff')
     }
   }
 }

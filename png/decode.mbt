@@ -93,12 +93,12 @@ pub fn decode(data : Bytes) -> @image.AnyImage raise Error {
         guard palette.unsafe_get(i) is @color.AnyColor::RGBA(c) else {
           continue
         }
-        palette[i] = @color.AnyColor::NRGBA({
+        palette.unsafe_set(i, @color.AnyColor::NRGBA({
           r: c.r,
           g: c.g,
           b: c.b,
           a: trns.unsafe_get(i),
-        })
+        }))
       }
     }
   }
@@ -184,7 +184,7 @@ fn decode_interlaced(
   // Process each Adam7 pass
   let mut offset = 0
   for pass in 0..<7 {
-    let (x_off, y_off, x_stride, y_stride) = adam7[pass]
+    let (x_off, y_off, x_stride, y_stride) = adam7.unsafe_get(pass)
     let pass_w = if width <= x_off {
       0
     } else {
@@ -232,10 +232,10 @@ fn decode_interlaced(
             @image.AnyImage::NRGBA(img) => {
               let (r, g, b, a) = c.rgba()
               let di = dst_y * img.stride + dst_x * 4
-              img.pix[di] = (r >> 8).to_byte()
-              img.pix[di + 1] = (g >> 8).to_byte()
-              img.pix[di + 2] = (b >> 8).to_byte()
-              img.pix[di + 3] = (a >> 8).to_byte()
+              img.pix.unsafe_set(di, (r >> 8).to_byte())
+              img.pix.unsafe_set(di + 1, (g >> 8).to_byte())
+              img.pix.unsafe_set(di + 2, (b >> 8).to_byte())
+              img.pix.unsafe_set(di + 3, (a >> 8).to_byte())
             }
             @image.AnyImage::Paletted(img) => {
               let ci = pass_img.at(px, py)
@@ -307,7 +307,7 @@ fn decode_image(
       let max_val = (1 << bd) - 1
       for y in 0..<height {
         let row_start = y * (stride + 1)
-        let filter = data[row_start]
+        let filter = data.unsafe_get(row_start)
         for i in 0..<stride {
           cur_row[i] = data.unsafe_get(row_start + 1 + i)
         }
@@ -328,7 +328,7 @@ fn decode_image(
       let img = @image.new_image_gray(rect)
       for y in 0..<height {
         let row_start = y * (stride + 1)
-        let filter = data[row_start]
+        let filter = data.unsafe_get(row_start)
         for i in 0..<stride {
           cur_row[i] = data.unsafe_get(row_start + 1 + i)
         }
@@ -344,7 +344,7 @@ fn decode_image(
       let img = @image.new_image_gray16(rect)
       for y in 0..<height {
         let row_start = y * (stride + 1)
-        let filter = data[row_start]
+        let filter = data.unsafe_get(row_start)
         for i in 0..<stride {
           cur_row[i] = data.unsafe_get(row_start + 1 + i)
         }
@@ -364,7 +364,7 @@ fn decode_image(
       let img = @image.new_image_nrgba(rect)
       for y in 0..<height {
         let row_start = y * (stride + 1)
-        let filter = data[row_start]
+        let filter = data.unsafe_get(row_start)
         for i in 0..<stride {
           cur_row[i] = data.unsafe_get(row_start + 1 + i)
         }
@@ -385,7 +385,7 @@ fn decode_image(
       let img = @image.new_image_paletted(rect, pal)
       for y in 0..<height {
         let row_start = y * (stride + 1)
-        let filter = data[row_start]
+        let filter = data.unsafe_get(row_start)
         for i in 0..<stride {
           cur_row[i] = data.unsafe_get(row_start + 1 + i)
         }
@@ -398,28 +398,28 @@ fn decode_image(
           for x in 0..<width {
             let byte_idx = x / 2
             let shift = if x % 2 == 0 { 4 } else { 0 }
-            img.pix[y * img.stride + x] = ((
+            img.pix.unsafe_set(y * img.stride + x, ((
               cur_row.unsafe_get(byte_idx).to_int() >> shift
             ) &
-            0x0f).to_byte()
+            0x0f).to_byte())
           }
         } else if bit_depth == b'\x02' {
           for x in 0..<width {
             let byte_idx = x / 4
             let shift = (3 - x % 4) * 2
-            img.pix[y * img.stride + x] = ((
+            img.pix.unsafe_set(y * img.stride + x, ((
               cur_row.unsafe_get(byte_idx).to_int() >> shift
             ) &
-            0x03).to_byte()
+            0x03).to_byte())
           }
         } else if bit_depth == b'\x01' {
           for x in 0..<width {
             let byte_idx = x / 8
             let shift = 7 - x % 8
-            img.pix[y * img.stride + x] = ((
+            img.pix.unsafe_set(y * img.stride + x, ((
               cur_row.unsafe_get(byte_idx).to_int() >> shift
             ) &
-            0x01).to_byte()
+            0x01).to_byte())
           }
         }
         @blit.blit_fixed_array(prev_row, 0, cur_row, 0, stride)
@@ -434,7 +434,7 @@ fn decode_image(
       }
       for y in 0..<height {
         let row_start = y * (stride + 1)
-        let filter = data[row_start]
+        let filter = data.unsafe_get(row_start)
         for i in 0..<stride {
           cur_row[i] = data.unsafe_get(row_start + 1 + i)
         }
@@ -456,7 +456,7 @@ fn decode_image(
       let img = @image.new_image_nrgba(rect)
       for y in 0..<height {
         let row_start = y * (stride + 1)
-        let filter = data[row_start]
+        let filter = data.unsafe_get(row_start)
         for i in 0..<stride {
           cur_row[i] = data.unsafe_get(row_start + 1 + i)
         }
@@ -524,23 +524,23 @@ fn unfilter(
     f if f == ft_none => ()
     f if f == ft_sub =>
       for i = bpp; i < n; i = i + 1 {
-        cur[i] = (cur[i].to_int() + cur[i - bpp].to_int()).to_byte()
+        cur.unsafe_set(i, (cur.unsafe_get(i).to_int() + cur.unsafe_get(i - bpp).to_int()).to_byte())
       }
     f if f == ft_up =>
       for i = 0; i < n; i = i + 1 {
-        cur[i] = (cur[i].to_int() + prev[i].to_int()).to_byte()
+        cur.unsafe_set(i, (cur.unsafe_get(i).to_int() + prev.unsafe_get(i).to_int()).to_byte())
       }
     f if f == ft_average =>
       for i = 0; i < n; i = i + 1 {
         let a = if i >= bpp { cur[i - bpp].to_int() } else { 0 }
-        cur[i] = (cur[i].to_int() + (a + prev[i].to_int()) / 2).to_byte()
+        cur.unsafe_set(i, (cur.unsafe_get(i).to_int() + (a + prev.unsafe_get(i).to_int()) / 2).to_byte())
       }
     f if f == ft_paeth =>
       for i = 0; i < n; i = i + 1 {
         let a = if i >= bpp { cur[i - bpp].to_int() } else { 0 }
-        let b = prev[i].to_int()
+        let b = prev.unsafe_get(i).to_int()
         let c = if i >= bpp { prev[i - bpp].to_int() } else { 0 }
-        cur[i] = (cur[i].to_int() + paeth(a, b, c)).to_byte()
+        cur.unsafe_set(i, (cur.unsafe_get(i).to_int() + paeth(a, b, c)).to_byte())
       }
     _ => raise PngError::FormatError("unknown filter type")
   }

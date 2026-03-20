@@ -213,7 +213,7 @@ pub fn BitReader::new() -> BitReader {
 pub fn Decoder::new(data : Bytes) -> Decoder {
   let quant = FixedArray::make(4, QuantTable::new())
   for i in 0..<4 {
-    quant[i] = QuantTable::new()
+    quant.unsafe_set(i, QuantTable::new())
   }
   let huff : FixedArray[FixedArray[HuffmanTable]] = FixedArray::make(
     2,
@@ -222,13 +222,13 @@ pub fn Decoder::new(data : Bytes) -> Decoder {
   for tc in 0..<2 {
     let row = FixedArray::make(4, HuffmanTable::new())
     for th in 0..<4 {
-      row[th] = HuffmanTable::new()
+      row.unsafe_set(th, HuffmanTable::new())
     }
-    huff[tc] = row
+    huff.unsafe_set(tc, row)
   }
   let comp = FixedArray::make(3, Component::new())
   for i in 0..<3 {
-    comp[i] = Component::new()
+    comp.unsafe_set(i, Component::new())
   }
   let prog_coeffs : FixedArray[Array[FixedArray[Int]]] = FixedArray::make(4, [])
   {

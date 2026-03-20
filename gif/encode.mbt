@@ -43,7 +43,7 @@ pub fn encode_all(gif : GIF) -> Bytes raise Error {
   write_uint16_le(buf, height.reinterpret_as_uint())
   // Use first frame's palette as global color table
   let first_pal = if gif.image.length() > 0 {
-    gif.image[0].palette.colors
+    gif.image.unsafe_get(0).palette.colors
   } else {
     []
   }
@@ -62,7 +62,7 @@ pub fn encode_all(gif : GIF) -> Bytes raise Error {
       buf.write_byte(ext_graphic_control)
       buf.write_byte(b'\x04') // block size
       let disp = if i < gif.disposal.length() {
-        gif.disposal[i]
+        gif.disposal.unsafe_get(i)
       } else {
         b'\x00'
       }
@@ -87,7 +87,7 @@ pub fn encode_all(gif : GIF) -> Bytes raise Error {
     let pixel_count = img.rect.dx() * img.rect.dy()
     let pixel_buf = @buffer.new(size_hint=pixel_count)
     for j in 0..<pixel_count {
-      pixel_buf.write_byte(img.pix[img.pix_offset + j])
+      pixel_buf.write_byte(img.pix.unsafe_get(img.pix_offset + j))
     }
     let pixels = pixel_buf.to_bytes()
     // Compress with LZW
@@ -124,7 +124,7 @@ fn write_color_table(
 ) -> Unit {
   for i in 0..<size {
     if i < palette.length() {
-      let (r, g, b, _) = palette[i].rgba()
+      let (r, g, b, _) = palette.unsafe_get(i).rgba()
       buf.write_byte((r >> 8).to_byte())
       buf.write_byte((g >> 8).to_byte())
       buf.write_byte((b >> 8).to_byte())
@@ -157,7 +157,7 @@ fn write_sub_blocks(buf : @buffer.Buffer, data : Bytes) -> Unit {
     let block_size = if remaining > 255 { 255 } else { remaining }
     buf.write_byte(block_size.to_byte())
     for i in 0..<block_size {
-      buf.write_byte(data[pos + i])
+      buf.write_byte(data.unsafe_get(pos + i))
     }
     pos = pos + block_size
   }

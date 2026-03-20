@@ -21,17 +21,17 @@ pub fn process_sos(d : Decoder) -> @image.AnyImage raise JpegError {
     // Find matching component
     let mut found = false
     for j in 0..<d.num_components {
-      if d.comp[j].id == cs {
-        d.comp[j].dc_huff_idx = td
-        d.comp[j].ac_huff_idx = ta
+      if d.comp.unsafe_get(j).id == cs {
+        d.comp.unsafe_get(j).dc_huff_idx = td
+        d.comp.unsafe_get(j).ac_huff_idx = ta
         found = true
       }
     }
     if !found {
       // Try by position
       if i < d.num_components {
-        d.comp[i].dc_huff_idx = td
-        d.comp[i].ac_huff_idx = ta
+        d.comp.unsafe_get(i).dc_huff_idx = td
+        d.comp.unsafe_get(i).ac_huff_idx = ta
       }
     }
   }
@@ -41,7 +41,7 @@ pub fn process_sos(d : Decoder) -> @image.AnyImage raise JpegError {
   let _ah_al = d.r.read_byte()
   // Reset DC predictors
   for i in 0..<d.num_components {
-    d.comp[i].dc_pred = 0
+    d.comp.unsafe_get(i).dc_pred = 0
   }
   // Flush bit buffer
   flush_bits(d)
@@ -50,11 +50,11 @@ pub fn process_sos(d : Decoder) -> @image.AnyImage raise JpegError {
   let mut max_h = 1
   let mut max_v = 1
   for i in 0..<d.num_components {
-    if d.comp[i].h > max_h {
-      max_h = d.comp[i].h
+    if d.comp.unsafe_get(i).h > max_h {
+      max_h = d.comp.unsafe_get(i).h
     }
-    if d.comp[i].v > max_v {
-      max_v = d.comp[i].v
+    if d.comp.unsafe_get(i).v > max_v {
+      max_v = d.comp.unsafe_get(i).v
     }
   }
   let mcu_width = max_h * 8
@@ -70,8 +70,8 @@ pub fn process_sos(d : Decoder) -> @image.AnyImage raise JpegError {
   let comp_width = FixedArray::make(d.num_components, 0)
   let comp_height = FixedArray::make(d.num_components, 0)
   for i in 0..<d.num_components {
-    let cw = mcu_cols * d.comp[i].h * 8
-    let ch = mcu_rows * d.comp[i].v * 8
+    let cw = mcu_cols * d.comp.unsafe_get(i).h * 8
+    let ch = mcu_rows * d.comp.unsafe_get(i).v * 8
     comp_width.unsafe_set(i, cw)
     comp_height.unsafe_set(i, ch)
     comp_data.unsafe_set(i, FixedArray::make(cw * ch, b'\x00'))
@@ -91,7 +91,7 @@ pub fn process_sos(d : Decoder) -> @image.AnyImage raise JpegError {
           flush_bits(d)
           // Reset DC predictors
           for i in 0..<d.num_components {
-            d.comp[i].dc_pred = 0
+            d.comp.unsafe_get(i).dc_pred = 0
           }
           // Consume the restart marker
           consume_restart_marker(d)
@@ -100,18 +100,18 @@ pub fn process_sos(d : Decoder) -> @image.AnyImage raise JpegError {
       mcu_count += 1
       // Decode each component's data units in this MCU
       for ci in 0..<d.num_components {
-        let h = d.comp[ci].h
-        let v = d.comp[ci].v
+        let h = d.comp.unsafe_get(ci).h
+        let v = d.comp.unsafe_get(ci).v
         for vy in 0..<v {
           for hx in 0..<h {
             // Decode one 8x8 block
             decode_block(d, ci, block)
             // Dequantize
-            let qt_idx = d.comp[ci].qt
+            let qt_idx = d.comp.unsafe_get(ci).qt
             for k in 0..<64 {
               block.unsafe_set(
                 k,
-                block.unsafe_get(k) * d.quant[qt_idx].data.unsafe_get(unzig[k]),
+                block.unsafe_get(k) * d.quant.unsafe_get(qt_idx).data.unsafe_get(unzig.unsafe_get(k)),
               )
             }
             // Reorder from zig-zag to natural order for IDCT
@@ -119,7 +119,7 @@ pub fn process_sos(d : Decoder) -> @image.AnyImage raise JpegError {
               nat.unsafe_set(k, 0)
             }
             for k in 0..<64 {
-              nat.unsafe_set(unzig[k], block.unsafe_get(k))
+              nat.unsafe_set(unzig.unsafe_get(k), block.unsafe_get(k))
             }
             // IDCT
             idct(nat, idct_out)
@@ -203,13 +203,13 @@ fn decode_block(
   for k in 0..<64 {
     block.unsafe_set(k, 0)
   }
-  let dc_table = d.huff.unsafe_get(0)[d.comp[ci].dc_huff_idx]
-  let ac_table = d.huff.unsafe_get(1)[d.comp[ci].ac_huff_idx]
+  let dc_table = d.huff.unsafe_get(0)[d.comp.unsafe_get(ci).dc_huff_idx]
+  let ac_table = d.huff.unsafe_get(1)[d.comp.unsafe_get(ci).ac_huff_idx]
   // Decode DC coefficient
   let dc_size = decode_huffman(d, dc_table)
   let dc_diff = receive_and_extend(d, dc_size)
-  d.comp[ci].dc_pred = d.comp[ci].dc_pred + dc_diff
-  block.unsafe_set(0, d.comp[ci].dc_pred)
+  d.comp.unsafe_get(ci).dc_pred = d.comp.unsafe_get(ci).dc_pred + dc_diff
+  block.unsafe_set(0, d.comp.unsafe_get(ci).dc_pred)
   // Decode AC coefficients
   let mut k = 1
   while k < 64 {
@@ -252,16 +252,16 @@ fn process_sos_progressive(d : Decoder) -> Unit raise JpegError {
     let ta = td_ta & 0x0F
     let mut ci = -1
     for j in 0..<d.num_components {
-      if d.comp[j].id == cs {
+      if d.comp.unsafe_get(j).id == cs {
         ci = j
-        d.comp[j].dc_huff_idx = td
-        d.comp[j].ac_huff_idx = ta
+        d.comp.unsafe_get(j).dc_huff_idx = td
+        d.comp.unsafe_get(j).ac_huff_idx = ta
       }
     }
     if ci < 0 {
       ci = i
-      d.comp[i].dc_huff_idx = td
-      d.comp[i].ac_huff_idx = ta
+      d.comp.unsafe_get(i).dc_huff_idx = td
+      d.comp.unsafe_get(i).ac_huff_idx = ta
     }
     scan_comp.unsafe_set(i, ci)
   }
@@ -277,11 +277,11 @@ fn process_sos_progressive(d : Decoder) -> Unit raise JpegError {
   let mut max_h = 1
   let mut max_v = 1
   for i in 0..<d.num_components {
-    if d.comp[i].h > max_h {
-      max_h = d.comp[i].h
+    if d.comp.unsafe_get(i).h > max_h {
+      max_h = d.comp.unsafe_get(i).h
     }
-    if d.comp[i].v > max_v {
-      max_v = d.comp[i].v
+    if d.comp.unsafe_get(i).v > max_v {
+      max_v = d.comp.unsafe_get(i).v
     }
   }
   let mcu_cols = (d.width + max_h * 8 - 1) / (max_h * 8)
@@ -289,8 +289,8 @@ fn process_sos_progressive(d : Decoder) -> Unit raise JpegError {
   // Allocate prog_coeffs if needed
   for i in 0..<ns {
     let ci = scan_comp.unsafe_get(i)
-    let n_blocks = mcu_cols * mcu_rows * d.comp[ci].h * d.comp[ci].v
-    if d.prog_coeffs[ci].length() == 0 {
+    let n_blocks = mcu_cols * mcu_rows * d.comp.unsafe_get(ci).h * d.comp.unsafe_get(ci).v
+    if d.prog_coeffs.unsafe_get(ci).length() == 0 {
       let blocks : Array[FixedArray[Int]] = Array::new(capacity=n_blocks)
       for _ in 0..<n_blocks {
         blocks.push(FixedArray::make(64, 0))
@@ -300,7 +300,7 @@ fn process_sos_progressive(d : Decoder) -> Unit raise JpegError {
   }
   // Reset DC predictors
   for i in 0..<d.num_components {
-    d.comp[i].dc_pred = 0
+    d.comp.unsafe_get(i).dc_pred = 0
   }
   // Decode scan
   let mut mcu_count = 0
@@ -313,7 +313,7 @@ fn process_sos_progressive(d : Decoder) -> Unit raise JpegError {
         mcu_count % d.restart_interval == 0 {
         flush_bits(d)
         for i in 0..<d.num_components {
-          d.comp[i].dc_pred = 0
+          d.comp.unsafe_get(i).dc_pred = 0
         }
         consume_restart_marker(d)
         d.eob_run = 0
@@ -321,8 +321,8 @@ fn process_sos_progressive(d : Decoder) -> Unit raise JpegError {
       mcu_count += 1
       for si in 0..<ns {
         let ci = scan_comp.unsafe_get(si)
-        let hi = d.comp[ci].h
-        let vi = d.comp[ci].v
+        let hi = d.comp.unsafe_get(ci).h
+        let vi = d.comp.unsafe_get(ci).v
         let n_blocks = hi * vi
         for j = 0; j < n_blocks; j = j + 1 {
           let (bx, by) = if ns != 1 {
@@ -338,7 +338,7 @@ fn process_sos_progressive(d : Decoder) -> Unit raise JpegError {
             (bx, by)
           }
           let block_idx = by * mcu_cols * hi + bx
-          if block_idx >= d.prog_coeffs[ci].length() {
+          if block_idx >= d.prog_coeffs.unsafe_get(ci).length() {
             continue
           }
           let b = d.prog_coeffs.unsafe_get(ci)[block_idx]
@@ -348,7 +348,7 @@ fn process_sos_progressive(d : Decoder) -> Unit raise JpegError {
               // DC refinement
               let bit = read_bit(d)
               if bit {
-                b.unsafe_set(0, b[0] | (1 << al))
+                b.unsafe_set(0, b.unsafe_get(0) | (1 << al))
               }
             } else {
               // AC refinement — complex, skip for now
@@ -359,17 +359,17 @@ fn process_sos_progressive(d : Decoder) -> Unit raise JpegError {
             let mut zig = ss
             if zig == 0 {
               // DC coefficient
-              let dc_table = d.huff.unsafe_get(0)[d.comp[ci].dc_huff_idx]
+              let dc_table = d.huff.unsafe_get(0)[d.comp.unsafe_get(ci).dc_huff_idx]
               let dc_size = decode_huffman(d, dc_table)
               let dc_diff = receive_and_extend(d, dc_size)
-              d.comp[ci].dc_pred += dc_diff
-              b[0] = d.comp[ci].dc_pred << al
+              d.comp.unsafe_get(ci).dc_pred += dc_diff
+              b.unsafe_set(0, d.comp.unsafe_get(ci).dc_pred << al)
               zig = 1
             }
             if zig <= se && d.eob_run > 0 {
               d.eob_run -= 1
             } else {
-              let ac_table = d.huff.unsafe_get(1)[d.comp[ci].ac_huff_idx]
+              let ac_table = d.huff.unsafe_get(1)[d.comp.unsafe_get(ci).ac_huff_idx]
               while zig <= se {
                 let rs = decode_huffman(d, ac_table)
                 let val0 = (rs >> 4) & 0x0F
@@ -380,7 +380,7 @@ fn process_sos_progressive(d : Decoder) -> Unit raise JpegError {
                     break
                   }
                   let ac = receive_and_extend(d, val1)
-                  b.unsafe_set(unzig[zig], ac << al)
+                  b.unsafe_set(unzig.unsafe_get(zig), ac << al)
                 } else {
                   if val0 != 0x0F {
                     d.eob_run = 1 << val0
@@ -414,7 +414,7 @@ fn refine_ac(
 ) -> Unit raise JpegError {
   // Simplified AC refinement: read and apply bits
   let delta = 1 << al
-  let ac_table = d.huff.unsafe_get(1)[d.comp[ci].ac_huff_idx]
+  let ac_table = d.huff.unsafe_get(1)[d.comp.unsafe_get(ci).ac_huff_idx]
   let mut zig = ss
   if d.eob_run == 0 {
     while zig <= se {
@@ -462,7 +462,7 @@ fn refine_ac(
         zig += 1
       }
       if zig <= se && z != 0 {
-        b.unsafe_set(unzig[zig], z)
+        b.unsafe_set(unzig.unsafe_get(zig), z)
       }
       zig += 1
     }
@@ -502,11 +502,11 @@ fn reconstruct_progressive(d : Decoder) -> @image.AnyImage {
   let mut max_h = 1
   let mut max_v = 1
   for i in 0..<d.num_components {
-    if d.comp[i].h > max_h {
-      max_h = d.comp[i].h
+    if d.comp.unsafe_get(i).h > max_h {
+      max_h = d.comp.unsafe_get(i).h
     }
-    if d.comp[i].v > max_v {
-      max_v = d.comp[i].v
+    if d.comp.unsafe_get(i).v > max_v {
+      max_v = d.comp.unsafe_get(i).v
     }
   }
   let mcu_cols = (d.width + max_h * 8 - 1) / (max_h * 8)
@@ -519,8 +519,8 @@ fn reconstruct_progressive(d : Decoder) -> @image.AnyImage {
   let comp_width = FixedArray::make(d.num_components, 0)
   let comp_height = FixedArray::make(d.num_components, 0)
   for i in 0..<d.num_components {
-    let cw = mcu_cols * d.comp[i].h * 8
-    let ch = mcu_rows * d.comp[i].v * 8
+    let cw = mcu_cols * d.comp.unsafe_get(i).h * 8
+    let ch = mcu_rows * d.comp.unsafe_get(i).v * 8
     comp_width.unsafe_set(i, cw)
     comp_height.unsafe_set(i, ch)
     comp_data.unsafe_set(i, FixedArray::make(cw * ch, b'\x00'))
@@ -529,11 +529,11 @@ fn reconstruct_progressive(d : Decoder) -> @image.AnyImage {
   let idct_out = @blit.make_uninit(64)
   // For each component, dequantize and IDCT all blocks
   for ci in 0..<d.num_components {
-    if d.prog_coeffs[ci].length() == 0 {
+    if d.prog_coeffs.unsafe_get(ci).length() == 0 {
       continue
     }
-    let stride = mcu_cols * d.comp[ci].h
-    let qt_idx = d.comp[ci].qt
+    let stride = mcu_cols * d.comp.unsafe_get(ci).h
+    let qt_idx = d.comp.unsafe_get(ci).qt
     for block_idx, b in d.prog_coeffs.unsafe_get(ci) {
       let bx = block_idx % stride
       let by = block_idx / stride
@@ -542,10 +542,10 @@ fn reconstruct_progressive(d : Decoder) -> @image.AnyImage {
         nat.unsafe_set(k, 0)
       }
       for k in 0..<64 {
-        nat.unsafe_set(unzig[k], b[k] * d.quant[qt_idx].data.unsafe_get(k))
+        nat.unsafe_set(unzig.unsafe_get(k), b.unsafe_get(k) * d.quant.unsafe_get(qt_idx).data.unsafe_get(k))
       }
       // Note: b[k] is stored at zig-zag position k, quant is also zig-zag
-      // nat[unzig[k]] places into natural order for IDCT
+      // nat[unzig.unsafe_get(k)] places into natural order for IDCT
       idct(nat, idct_out)
       // Write to comp_data
       let cw = comp_width.unsafe_get(ci)

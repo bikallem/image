@@ -109,19 +109,19 @@ pub fn floyd_steinberg_draw(
       }
       quant_err_next.unsafe_set(
         xi * 4,
-        quant_err_next[xi * 4] + diff_r * 5 / 16,
+        quant_err_next.unsafe_get(xi * 4) + diff_r * 5 / 16,
       )
       quant_err_next.unsafe_set(
         xi * 4 + 1,
-        quant_err_next[xi * 4 + 1] + diff_g * 5 / 16,
+        quant_err_next.unsafe_get(xi * 4 + 1) + diff_g * 5 / 16,
       )
       quant_err_next.unsafe_set(
         xi * 4 + 2,
-        quant_err_next[xi * 4 + 2] + diff_b * 5 / 16,
+        quant_err_next.unsafe_get(xi * 4 + 2) + diff_b * 5 / 16,
       )
       quant_err_next.unsafe_set(
         xi * 4 + 3,
-        quant_err_next[xi * 4 + 3] + diff_a * 5 / 16,
+        quant_err_next.unsafe_get(xi * 4 + 3) + diff_a * 5 / 16,
       )
       if xi + 1 < w {
         quant_err_next.unsafe_set(

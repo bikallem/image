@@ -78,7 +78,7 @@ fn median_cut(
     if best_range == 0 {
       break
     }
-    let box_ = boxes[best_idx]
+    let box_ = boxes.unsafe_get(best_idx)
     box_.sort_by(fn(a, b) {
       let va = match best_channel {
         0 => a.0.to_int()
@@ -95,7 +95,7 @@ fn median_cut(
     let mid = box_.length() / 2
     let box2 = Array::new(capacity=box_.length() - mid)
     for i = mid; i < box_.length(); i = i + 1 {
-      box2.push(box_[i])
+      box2.push(box_.unsafe_get(i))
     }
     while box_.length() > mid {
       ignore(box_.pop())

@@ -146,10 +146,10 @@ fn process_sof(d : Decoder) -> Unit raise JpegError {
     let comp_id = d.r.read_byte().to_int()
     let sampling = d.r.read_byte().to_int()
     let qt_idx = d.r.read_byte().to_int()
-    d.comp[i].id = comp_id
-    d.comp[i].h = (sampling >> 4) & 0x0F
-    d.comp[i].v = sampling & 0x0F
-    d.comp[i].qt = qt_idx
+    d.comp.unsafe_get(i).id = comp_id
+    d.comp.unsafe_get(i).h = (sampling >> 4) & 0x0F
+    d.comp.unsafe_get(i).v = sampling & 0x0F
+    d.comp.unsafe_get(i).qt = qt_idx
     if qt_idx >= 4 {
       raise JpegError::FormatError("quantization table index out of range")
     }
@@ -214,7 +214,7 @@ fn process_dqt(d : Decoder) -> Unit raise JpegError {
         raise JpegError::FormatError("bad DQT segment: not enough data")
       }
       for i in 0..<64 {
-        d.quant[tq].data.unsafe_set(i, d.r.read_byte().to_int())
+        d.quant.unsafe_get(tq).data.unsafe_set(i, d.r.read_byte().to_int())
       }
       remaining -= 64
     } else if pq == 1 {
@@ -224,7 +224,7 @@ fn process_dqt(d : Decoder) -> Unit raise JpegError {
       for i in 0..<64 {
         let hi = d.r.read_byte().to_int()
         let lo = d.r.read_byte().to_int()
-        d.quant[tq].data.unsafe_set(i, (hi << 8) | lo)
+        d.quant.unsafe_get(tq).data.unsafe_set(i, (hi << 8) | lo)
       }
       remaining -= 128
     } else {

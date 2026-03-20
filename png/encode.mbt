@@ -32,11 +32,11 @@ pub fn encode(
   let ihdr = FixedArray::make(13, b'\x00')
   @binary.write_uint32_be(ihdr, 0, width.reinterpret_as_uint())
   @binary.write_uint32_be(ihdr, 4, height.reinterpret_as_uint())
-  ihdr[8] = bit_depth
-  ihdr[9] = color_type
-  ihdr[10] = b'\x00' // compression
-  ihdr[11] = b'\x00' // filter
-  ihdr[12] = b'\x00' // interlace
+  ihdr.unsafe_set(8, bit_depth)
+  ihdr.unsafe_set(9, color_type)
+  ihdr.unsafe_set(10, b'\x00') // compression
+  ihdr.unsafe_set(11, b'\x00') // filter
+  ihdr.unsafe_set(12, b'\x00') // interlace
   write_chunk(buf, ct_ihdr, ihdr)
   // Write PLTE if paletted
   match img {
@@ -45,9 +45,9 @@ pub fn encode(
       let mut has_alpha = false
       for i, c in p.palette.colors {
         let (r, g, b, a) = c.rgba()
-        pal_data[i * 3] = (r >> 8).to_byte()
-        pal_data[i * 3 + 1] = (g >> 8).to_byte()
-        pal_data[i * 3 + 2] = (b >> 8).to_byte()
+        pal_data.unsafe_set(i * 3, (r >> 8).to_byte())
+        pal_data.unsafe_set(i * 3 + 1, (g >> 8).to_byte())
+        pal_data.unsafe_set(i * 3 + 2, (b >> 8).to_byte())
         if a != 0xffffU {
           has_alpha = true
         }
@@ -57,7 +57,7 @@ pub fn encode(
         let trns_data = FixedArray::make(p.palette.colors.length(), b'\xff')
         for i, c in p.palette.colors {
           let (_, _, _, a) = c.rgba()
-          trns_data[i] = (a >> 8).to_byte()
+          trns_data.unsafe_set(i, (a >> 8).to_byte())
         }
         write_chunk(buf, ct_trns, trns_data)
       }

@@ -156,11 +156,11 @@ fn build_enc_huffman_table(
   let mut code = 0
   let mut sym_idx = 0
   for i in 0..<16 {
-    let n = counts[i]
+    let n = counts.unsafe_get(i)
     let length = i + 1
     for _ in 0..<n {
       if sym_idx < symbols.length() {
-        let sym = symbols[sym_idx]
+        let sym = symbols.unsafe_get(sym_idx)
         codes.unsafe_set(sym, code)
         lengths.unsafe_set(sym, length)
         sym_idx += 1
@@ -259,12 +259,12 @@ fn encode_block(
   ac_lengths : FixedArray[Int],
 ) -> Int {
   // DC coefficient: quantize with 8x scale factor (matching Go)
-  let dc = jpeg_div(block[0], 8 * quant[0])
+  let dc = jpeg_div(block.unsafe_get(0), 8 * quant.unsafe_get(0))
   enc_dc_coeff(e, dc_codes, dc_lengths, dc - dc_pred)
   // AC coefficients in zig-zag order
   let mut run = 0
   for zig = 1; zig < 64; zig = zig + 1 {
-    let ac = jpeg_div(block[unzig[zig]], 8 * quant[zig])
+    let ac = jpeg_div(block.unsafe_get(unzig.unsafe_get(zig)), 8 * quant.unsafe_get(zig))
     if ac == 0 {
       run += 1
     } else {
@@ -298,7 +298,7 @@ fn extract_block(
       let sy = by * 8 + py
       let csx = if sx >= plane_w { plane_w - 1 } else { sx }
       let csy = if sy >= plane_h { plane_h - 1 } else { sy }
-      dst[py * 8 + px] = plane[csy * plane_w + csx]
+      dst.unsafe_set(py * 8 + px, plane[csy * plane_w + csx])
     }
   }
 }
@@ -344,7 +344,7 @@ fn scale_quant(unscaled : FixedArray[Int], quality : Int) -> FixedArray[Byte] {
   let scale = if q < 50 { 5000 / q } else { 200 - q * 2 }
   let result = FixedArray::make(64, b'\x00')
   for i in 0..<64 {
-    let x = (unscaled[i] * scale + 50) / 100
+    let x = (unscaled.unsafe_get(i) * scale + 50) / 100
     let clamped = if x < 1 { 1 } else if x > 255 { 255 } else { x }
     result.unsafe_set(i, clamped.to_byte())
   }
@@ -391,9 +391,9 @@ pub fn encode(img : @image.AnyImage, quality? : Int = 75) -> Bytes {
       let ay = bounds.min_y + py
       let idx = py * width + px
       match img {
-        @image.AnyImage::Gray(g) => y_plane[idx] = g.gray_at(ax, ay).y
+        @image.AnyImage::Gray(g) => y_plane.unsafe_set(idx, g.gray_at(ax, ay).y)
         @image.AnyImage::Gray16(g) =>
-          y_plane[idx] = (g.gray16_at(ax, ay).y >> 8).to_byte()
+          y_plane.unsafe_set(idx, (g.gray16_at(ax, ay).y >> 8).to_byte())
         _ => {
           let c = img.at(ax, ay)
           let (rv, gv, bv, av) = c.rgba()
@@ -407,9 +407,9 @@ pub fn encode(img : @image.AnyImage, quality? : Int = 75) -> Bytes {
             )
           }
           let (yv, cbv, crv) = @color.rgb_to_ycbcr(r8, g8, b8)
-          y_plane[idx] = yv
-          cb_plane[idx] = cbv
-          cr_plane[idx] = crv
+          y_plane.unsafe_set(idx, yv)
+          cb_plane.unsafe_set(idx, cbv)
+          cr_plane.unsafe_set(idx, crv)
         }
       }
     }
