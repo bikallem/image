@@ -109,7 +109,10 @@ pub fn process_sos(d : Decoder) -> @image.AnyImage raise JpegError {
             // Dequantize
             let qt_idx = d.comp[ci].qt
             for k in 0..<64 {
-              block.unsafe_set(k, block.unsafe_get(k) * d.quant[qt_idx].data.unsafe_get(unzig[k]))
+              block.unsafe_set(
+                k,
+                block.unsafe_get(k) * d.quant[qt_idx].data.unsafe_get(unzig[k]),
+              )
             }
             // Reorder from zig-zag to natural order for IDCT
             for k in 0..<64 {
@@ -129,7 +132,9 @@ pub fn process_sos(d : Decoder) -> @image.AnyImage raise JpegError {
                 let cx = block_x * 8 + px
                 let cy = block_y * 8 + py
                 if cx < cw && cy < comp_height.unsafe_get(ci) {
-                  comp_data.unsafe_get(ci)[cy * cw + cx] = idct_out.unsafe_get(py * 8 + px)
+                  comp_data.unsafe_get(ci)[cy * cw + cx] = idct_out.unsafe_get(
+                    py * 8 + px,
+                  )
                 }
               }
             }
@@ -139,13 +144,21 @@ pub fn process_sos(d : Decoder) -> @image.AnyImage raise JpegError {
     }
   }
   // Build output image
-  let rect : @image.Rectangle = { min_x: 0, min_y: 0, max_x: d.width, max_y: d.height }
+  let rect : @image.Rectangle = {
+    min_x: 0,
+    min_y: 0,
+    max_x: d.width,
+    max_y: d.height,
+  }
   if d.num_components == 1 {
     // Grayscale
     let img = @image.new_image_gray(rect)
     for y in 0..<d.height {
       for x in 0..<d.width {
-        img.pix.unsafe_set(y * img.stride + x, comp_data.unsafe_get(0)[y * comp_width.unsafe_get(0) + x])
+        img.pix.unsafe_set(
+          y * img.stride + x,
+          comp_data.unsafe_get(0)[y * comp_width.unsafe_get(0) + x],
+        )
       }
     }
     @image.AnyImage::Gray(img)
@@ -541,19 +554,29 @@ fn reconstruct_progressive(d : Decoder) -> @image.AnyImage {
           let cx = bx * 8 + px
           let cy = by * 8 + py
           if cx < cw && cy < comp_height.unsafe_get(ci) {
-            comp_data.unsafe_get(ci)[cy * cw + cx] = idct_out.unsafe_get(py * 8 + px)
+            comp_data.unsafe_get(ci)[cy * cw + cx] = idct_out.unsafe_get(
+              py * 8 + px,
+            )
           }
         }
       }
     }
   }
   // Build output image (same as sequential)
-  let rect : @image.Rectangle = { min_x: 0, min_y: 0, max_x: d.width, max_y: d.height }
+  let rect : @image.Rectangle = {
+    min_x: 0,
+    min_y: 0,
+    max_x: d.width,
+    max_y: d.height,
+  }
   if d.num_components == 1 {
     let img = @image.new_image_gray(rect)
     for y in 0..<d.height {
       for x in 0..<d.width {
-        img.pix.unsafe_set(y * img.stride + x, comp_data.unsafe_get(0)[y * comp_width.unsafe_get(0) + x])
+        img.pix.unsafe_set(
+          y * img.stride + x,
+          comp_data.unsafe_get(0)[y * comp_width.unsafe_get(0) + x],
+        )
       }
     }
     @image.AnyImage::Gray(img)

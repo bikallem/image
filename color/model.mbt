@@ -164,7 +164,8 @@ fn ycbcr_model(c : AnyColor) -> AnyColor {
 fn nycbcra_model(c : AnyColor) -> AnyColor {
   match c {
     NYCbCrA(_) => c
-    YCbCr(yc) => AnyColor::NYCbCrA({ y: yc.y, cb: yc.cb, cr: yc.cr, a: b'\xff' })
+    YCbCr(yc) =>
+      AnyColor::NYCbCrA({ y: yc.y, cb: yc.cb, cr: yc.cr, a: b'\xff' })
     _ => {
       let (r, g, b, a) = c.rgba()
       let (rr, gg, bb) = if a != 0U {

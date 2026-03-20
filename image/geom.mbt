@@ -90,16 +90,20 @@ pub fn Rectangle::size(self : Rectangle) -> Point {
 ///|
 pub fn Rectangle::add(self : Rectangle, p : Point) -> Rectangle {
   {
-    min_x: self.min_x + p.x, min_y: self.min_y + p.y,
-    max_x: self.max_x + p.x, max_y: self.max_y + p.y,
+    min_x: self.min_x + p.x,
+    min_y: self.min_y + p.y,
+    max_x: self.max_x + p.x,
+    max_y: self.max_y + p.y,
   }
 }
 
 ///|
 pub fn Rectangle::sub(self : Rectangle, p : Point) -> Rectangle {
   {
-    min_x: self.min_x - p.x, min_y: self.min_y - p.y,
-    max_x: self.max_x - p.x, max_y: self.max_y - p.y,
+    min_x: self.min_x - p.x,
+    min_y: self.min_y - p.y,
+    max_x: self.max_x - p.x,
+    max_y: self.max_y - p.y,
   }
 }
 
@@ -123,7 +127,7 @@ pub fn Rectangle::inset(self : Rectangle, n : Int) -> Rectangle {
     min_y = min_y + n
     max_y = max_y - n
   }
-  { min_x: min_x, min_y: min_y, max_x: max_x, max_y: max_y }
+  { min_x, min_y, max_x, max_y }
 }
 
 ///|
@@ -144,10 +148,7 @@ pub fn Rectangle::intersect(self : Rectangle, s : Rectangle) -> Rectangle {
   if max_y > s.max_y {
     max_y = s.max_y
   }
-  let r : Rectangle = {
-    min_x: min_x, min_y: min_y,
-    max_x: max_x, max_y: max_y,
-  }
+  let r : Rectangle = { min_x, min_y, max_x, max_y }
   if r.empty() {
     return { min_x: 0, min_y: 0, max_x: 0, max_y: 0 }
   }
@@ -178,7 +179,7 @@ pub fn Rectangle::union(self : Rectangle, s : Rectangle) -> Rectangle {
   if max_y < s.max_y {
     max_y = s.max_y
   }
-  { min_x: min_x, min_y: min_y, max_x: max_x, max_y: max_y }
+  { min_x, min_y, max_x, max_y }
 }
 
 ///|
@@ -228,7 +229,7 @@ pub fn Rectangle::canon(self : Rectangle) -> Rectangle {
     min_y = max_y
     max_y = tmp
   }
-  { min_x: min_x, min_y: min_y, max_x: max_x, max_y: max_y }
+  { min_x, min_y, max_x, max_y }
 }
 
 ///|

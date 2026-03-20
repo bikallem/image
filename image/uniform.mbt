@@ -22,7 +22,12 @@ pub fn ImageUniform::color_model(self : ImageUniform) -> @color.AnyModel {
 
 ///|
 pub fn ImageUniform::bounds(_self : ImageUniform) -> Rectangle {
-  { min_x: -1000000000, min_y: -1000000000, max_x: 1000000000, max_y: 1000000000 }
+  {
+    min_x: -1000000000,
+    min_y: -1000000000,
+    max_x: 1000000000,
+    max_y: 1000000000,
+  }
 }
 
 ///|

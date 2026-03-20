@@ -256,8 +256,10 @@ pub impl Eq for Point
 pub impl Show for Point
 
 pub(all) struct Rectangle {
-  min : Point
-  max : Point
+  min_x : Int
+  min_y : Int
+  max_x : Int
+  max_y : Int
 }
 pub fn Rectangle::add(Self, Point) -> Self
 pub fn Rectangle::canon(Self) -> Self
@@ -268,6 +270,8 @@ pub fn Rectangle::eq(Self, Self) -> Bool
 pub fn Rectangle::in_(Self, Self) -> Bool
 pub fn Rectangle::inset(Self, Int) -> Self
 pub fn Rectangle::intersect(Self, Self) -> Self
+pub fn Rectangle::max(Self) -> Point
+pub fn Rectangle::min(Self) -> Point
 pub fn Rectangle::overlaps(Self, Self) -> Bool
 pub fn Rectangle::size(Self) -> Point
 pub fn Rectangle::sub(Self, Point) -> Self

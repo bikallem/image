@@ -20,7 +20,12 @@ pub fn ImageRGBA::rgba_at(self : ImageRGBA, x : Int, y : Int) -> @color.RGBA {
     return { r: b'\x00', g: b'\x00', b: b'\x00', a: b'\x00' }
   }
   let i = self.pix_offset(x, y)
-  { r: self.pix.unsafe_get(i), g: self.pix.unsafe_get(i + 1), b: self.pix.unsafe_get(i + 2), a: self.pix.unsafe_get(i + 3) }
+  {
+    r: self.pix.unsafe_get(i),
+    g: self.pix.unsafe_get(i + 1),
+    b: self.pix.unsafe_get(i + 2),
+    a: self.pix.unsafe_get(i + 3),
+  }
 }
 
 ///|
@@ -128,10 +133,14 @@ pub fn ImageRGBA64::rgba64_at(
   }
   let i = self.pix_offset(x, y)
   {
-    r: (self.pix.unsafe_get(i).to_uint() << 8) | self.pix.unsafe_get(i + 1).to_uint(),
-    g: (self.pix.unsafe_get(i + 2).to_uint() << 8) | self.pix.unsafe_get(i + 3).to_uint(),
-    b: (self.pix.unsafe_get(i + 4).to_uint() << 8) | self.pix.unsafe_get(i + 5).to_uint(),
-    a: (self.pix.unsafe_get(i + 6).to_uint() << 8) | self.pix.unsafe_get(i + 7).to_uint(),
+    r: (self.pix.unsafe_get(i).to_uint() << 8) |
+    self.pix.unsafe_get(i + 1).to_uint(),
+    g: (self.pix.unsafe_get(i + 2).to_uint() << 8) |
+    self.pix.unsafe_get(i + 3).to_uint(),
+    b: (self.pix.unsafe_get(i + 4).to_uint() << 8) |
+    self.pix.unsafe_get(i + 5).to_uint(),
+    a: (self.pix.unsafe_get(i + 6).to_uint() << 8) |
+    self.pix.unsafe_get(i + 7).to_uint(),
   }
 }
 
@@ -203,7 +212,8 @@ pub fn ImageRGBA64::is_opaque(self : ImageRGBA64) -> Bool {
     let row_start = self.pix_offset + (y - self.rect.min_y) * self.stride
     for x = 0; x < self.rect.dx(); x = x + 1 {
       let i = row_start + x * 8 + 6
-      if self.pix.unsafe_get(i) != b'\xff' || self.pix.unsafe_get(i + 1) != b'\xff' {
+      if self.pix.unsafe_get(i) != b'\xff' ||
+        self.pix.unsafe_get(i + 1) != b'\xff' {
         return false
       }
     }

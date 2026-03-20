@@ -1,4 +1,5 @@
 ///|
+// #valtype
 pub(all) struct ImageCMYK {
   pix : FixedArray[Byte]
   pix_offset : Int
@@ -19,7 +20,12 @@ pub fn ImageCMYK::cmyk_at(self : ImageCMYK, x : Int, y : Int) -> @color.CMYK {
     return { c: b'\x00', m: b'\x00', y: b'\x00', k: b'\x00' }
   }
   let i = self.pix_offset(x, y)
-  { c: self.pix.unsafe_get(i), m: self.pix.unsafe_get(i + 1), y: self.pix.unsafe_get(i + 2), k: self.pix.unsafe_get(i + 3) }
+  {
+    c: self.pix.unsafe_get(i),
+    m: self.pix.unsafe_get(i + 1),
+    y: self.pix.unsafe_get(i + 2),
+    k: self.pix.unsafe_get(i + 3),
+  }
 }
 
 ///|

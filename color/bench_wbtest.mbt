@@ -29,18 +29,9 @@ test (b : @bench.T) {
   b.bench(name="ycbcr_to_rgba/128", fn() { b.keep(c128.rgba()) })
   b.bench(name="ycbcr_to_rgba/255", fn() { b.keep(c255.rgba()) })
   // BenchmarkNYCbCrAToRGBA
-  let n0 : NYCbCrA = {
-    y: b'\x00', cb: b'\x00', cr: b'\x00',
-    a: b'\xff',
-  }
-  let n128 : NYCbCrA = {
-    y: b'\x80', cb: b'\x80', cr: b'\x80',
-    a: b'\xff',
-  }
-  let n255 : NYCbCrA = {
-    y: b'\xff', cb: b'\xff', cr: b'\xff',
-    a: b'\xff',
-  }
+  let n0 : NYCbCrA = { y: b'\x00', cb: b'\x00', cr: b'\x00', a: b'\xff' }
+  let n128 : NYCbCrA = { y: b'\x80', cb: b'\x80', cr: b'\x80', a: b'\xff' }
+  let n255 : NYCbCrA = { y: b'\xff', cb: b'\xff', cr: b'\xff', a: b'\xff' }
   b.bench(name="nycbcra_to_rgba/0", fn() { b.keep(n0.rgba()) })
   b.bench(name="nycbcra_to_rgba/128", fn() { b.keep(n128.rgba()) })
   b.bench(name="nycbcra_to_rgba/255", fn() { b.keep(n255.rgba()) })

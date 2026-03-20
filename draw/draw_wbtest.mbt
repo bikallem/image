@@ -345,7 +345,13 @@ test "draw_overlap" {
         // Draw region of m onto itself with offset
         let sr = @image.rect(4, 4, 12, 12)
         let dr = sr.add({ x: xoff, y: yoff })
-        draw(@image.AnyImage::RGBA(m), dr, @image.AnyImage::RGBA(m), sr.min(), op)
+        draw(
+          @image.AnyImage::RGBA(m),
+          dr,
+          @image.AnyImage::RGBA(m),
+          sr.min(),
+          op,
+        )
         // Just verify it doesn't crash and produces valid pixels
         y = dr.min_y
         while y < dr.max_y {

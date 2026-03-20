@@ -120,7 +120,12 @@ pub fn decode_all(data : Bytes) -> GIF raise Error {
           )
           |> or_gif_error()
         // Build paletted image
-        let rect : @image.Rectangle = { min_x: 0, min_y: 0, max_x: img_width, max_y: img_height }
+        let rect : @image.Rectangle = {
+          min_x: 0,
+          min_y: 0,
+          max_x: img_width,
+          max_y: img_height,
+        }
         let pal = @color.Palette::{ colors: palette }
         let img = @image.new_image_paletted(rect, pal)
         let pixel_count = img_width * img_height

@@ -116,9 +116,12 @@ pub impl Eq for NRGBA64
 pub impl Show for NRGBA64
 
 pub(all) struct NYCbCrA {
-  ycbcr : YCbCr
+  y : Byte
+  cb : Byte
+  cr : Byte
   a : Byte
 }
+pub fn NYCbCrA::ycbcr(Self) -> YCbCr
 pub impl Color for NYCbCrA
 pub impl Eq for NYCbCrA
 pub impl Show for NYCbCrA

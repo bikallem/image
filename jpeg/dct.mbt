@@ -199,7 +199,10 @@ pub fn fdct(pixels : FixedArray[Byte], block : FixedArray[Int]) -> Unit {
     let ta = t1 - t2
     let tb = t0 - t3
     tmp.unsafe_set(base, (t8 + t9) << 3)
-    tmp.unsafe_set(base + 1, (t7 * w1pw7 + t6 * w7 + t5 * w1mw7 + t4 * w1 + 1024) >> 11)
+    tmp.unsafe_set(
+      base + 1,
+      (t7 * w1pw7 + t6 * w7 + t5 * w1mw7 + t4 * w1 + 1024) >> 11,
+    )
     // Actually use a simpler approach: just scale by 8
     // Re-implement using separable 1D DCT
     let _ = ta
@@ -226,10 +229,22 @@ pub fn fdct(pixels : FixedArray[Byte], block : FixedArray[Int]) -> Unit {
     tmp.unsafe_set(base + 2, (eo0 * w6 + eo1 * w2 + 1024) >> 11)
     tmp.unsafe_set(base + 6, (eo0 * w2 - eo1 * w6 + 1024) >> 11)
     // Odd part
-    tmp.unsafe_set(base + 1, (o0 * w7 + o1 * w1mw7 + o2 * w1pw7 + o3 * w1 + 1024) >> 11)
-    tmp.unsafe_set(base + 3, (o0 * w3 - o1 * w3mw5 - o2 * w3pw5 - o3 * w5 + 1024) >> 11)
-    tmp.unsafe_set(base + 5, (o0 * w5 - o1 * w3pw5 + o2 * w3mw5 + o3 * w3 + 1024) >> 11)
-    tmp.unsafe_set(base + 7, (o0 * w1 - o1 * w1pw7 + o2 * w1mw7 - o3 * w7 + 1024) >> 11)
+    tmp.unsafe_set(
+      base + 1,
+      (o0 * w7 + o1 * w1mw7 + o2 * w1pw7 + o3 * w1 + 1024) >> 11,
+    )
+    tmp.unsafe_set(
+      base + 3,
+      (o0 * w3 - o1 * w3mw5 - o2 * w3pw5 - o3 * w5 + 1024) >> 11,
+    )
+    tmp.unsafe_set(
+      base + 5,
+      (o0 * w5 - o1 * w3pw5 + o2 * w3mw5 + o3 * w3 + 1024) >> 11,
+    )
+    tmp.unsafe_set(
+      base + 7,
+      (o0 * w1 - o1 * w1pw7 + o2 * w1mw7 - o3 * w7 + 1024) >> 11,
+    )
     // Undo the first two assignments that were computed before the cleaner version
     ignore(t8)
     ignore(t9)
@@ -260,9 +275,21 @@ pub fn fdct(pixels : FixedArray[Byte], block : FixedArray[Int]) -> Unit {
     block.unsafe_set(32 + x, (ee0 - ee1 + 4) >> 3)
     block.unsafe_set(16 + x, (eo0 * w6 + eo1 * w2 + 8192) >> 14)
     block.unsafe_set(48 + x, (eo0 * w2 - eo1 * w6 + 8192) >> 14)
-    block.unsafe_set(8 + x, (o0 * w7 + o1 * w1mw7 + o2 * w1pw7 + o3 * w1 + 8192) >> 14)
-    block.unsafe_set(24 + x, (o0 * w3 - o1 * w3mw5 - o2 * w3pw5 - o3 * w5 + 8192) >> 14)
-    block.unsafe_set(40 + x, (o0 * w5 - o1 * w3pw5 + o2 * w3mw5 + o3 * w3 + 8192) >> 14)
-    block.unsafe_set(56 + x, (o0 * w1 - o1 * w1pw7 + o2 * w1mw7 - o3 * w7 + 8192) >> 14)
+    block.unsafe_set(
+      8 + x,
+      (o0 * w7 + o1 * w1mw7 + o2 * w1pw7 + o3 * w1 + 8192) >> 14,
+    )
+    block.unsafe_set(
+      24 + x,
+      (o0 * w3 - o1 * w3mw5 - o2 * w3pw5 - o3 * w5 + 8192) >> 14,
+    )
+    block.unsafe_set(
+      40 + x,
+      (o0 * w5 - o1 * w3pw5 + o2 * w3mw5 + o3 * w3 + 8192) >> 14,
+    )
+    block.unsafe_set(
+      56 + x,
+      (o0 * w1 - o1 * w1pw7 + o2 * w1mw7 - o3 * w7 + 8192) >> 14,
+    )
   }
 }

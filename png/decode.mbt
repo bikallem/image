@@ -90,7 +90,9 @@ pub fn decode(data : Bytes) -> @image.AnyImage raise Error {
   if trns.length() > 0 && color_type == ct_paletted {
     for i in 0..<trns.length() {
       if i < palette.length() {
-        guard palette.unsafe_get(i) is @color.AnyColor::RGBA(c) else { continue }
+        guard palette.unsafe_get(i) is @color.AnyColor::RGBA(c) else {
+          continue
+        }
         palette[i] = @color.AnyColor::NRGBA({
           r: c.r,
           g: c.g,
@@ -141,7 +143,12 @@ fn decode_interlaced(
   // Each pass is a sub-image with dimensions:
   //   pass_w = ceil((width - x_offset) / x_stride)
   //   pass_h = ceil((height - y_offset) / y_stride)
-  let rect : @image.Rectangle = { min_x: 0, min_y: 0, max_x: width, max_y: height }
+  let rect : @image.Rectangle = {
+    min_x: 0,
+    min_y: 0,
+    max_x: width,
+    max_y: height,
+  }
   // Create the final image
   let final_img = decode_image(
     // Decode a dummy to get the right type, then overwrite
@@ -242,7 +249,10 @@ fn decode_interlaced(
               guard pass_img is @image.AnyImage::Paletted(pass_pal) else {
                 continue
               }
-              img.pix.unsafe_set(dst_y * img.stride + dst_x, pass_pal.color_index_at(px, py))
+              img.pix.unsafe_set(
+                dst_y * img.stride + dst_x,
+                pass_pal.color_index_at(px, py),
+              )
             }
             _ => ()
           }
@@ -279,7 +289,12 @@ fn decode_image(
       data.length().to_string(),
     )
   }
-  let rect : @image.Rectangle = { min_x: 0, min_y: 0, max_x: width, max_y: height }
+  let rect : @image.Rectangle = {
+    min_x: 0,
+    min_y: 0,
+    max_x: width,
+    max_y: height,
+  }
   // Unfilter rows — prev_row must be zero, cur_row will be fully written
   let prev_row = FixedArray::make(stride, b'\x00')
   let cur_row = @blit.make_uninit(stride)
@@ -336,7 +351,10 @@ fn decode_image(
         unfilter(filter, cur_row, prev_row, bpp)
         for x in 0..<width {
           img.pix.unsafe_set(y * img.stride + x * 2, cur_row.unsafe_get(x * 2))
-          img.pix.unsafe_set(y * img.stride + x * 2 + 1, cur_row.unsafe_get(x * 2 + 1))
+          img.pix.unsafe_set(
+            y * img.stride + x * 2 + 1,
+            cur_row.unsafe_get(x * 2 + 1),
+          )
         }
         @blit.blit_fixed_array(prev_row, 0, cur_row, 0, stride)
       }
@@ -380,21 +398,27 @@ fn decode_image(
           for x in 0..<width {
             let byte_idx = x / 2
             let shift = if x % 2 == 0 { 4 } else { 0 }
-            img.pix[y * img.stride + x] = ((cur_row.unsafe_get(byte_idx).to_int() >> shift) &
+            img.pix[y * img.stride + x] = ((
+              cur_row.unsafe_get(byte_idx).to_int() >> shift
+            ) &
             0x0f).to_byte()
           }
         } else if bit_depth == b'\x02' {
           for x in 0..<width {
             let byte_idx = x / 4
             let shift = (3 - x % 4) * 2
-            img.pix[y * img.stride + x] = ((cur_row.unsafe_get(byte_idx).to_int() >> shift) &
+            img.pix[y * img.stride + x] = ((
+              cur_row.unsafe_get(byte_idx).to_int() >> shift
+            ) &
             0x03).to_byte()
           }
         } else if bit_depth == b'\x01' {
           for x in 0..<width {
             let byte_idx = x / 8
             let shift = 7 - x % 8
-            img.pix[y * img.stride + x] = ((cur_row.unsafe_get(byte_idx).to_int() >> shift) &
+            img.pix[y * img.stride + x] = ((
+              cur_row.unsafe_get(byte_idx).to_int() >> shift
+            ) &
             0x01).to_byte()
           }
         }

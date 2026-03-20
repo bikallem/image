@@ -200,7 +200,8 @@ let crc32_table : FixedArray[UInt] = {
 
 ///|
 fn crc32_byte(crc : UInt, b : Byte) -> UInt {
-  (crc >> 8) ^ crc32_table.unsafe_get((crc.lxor(b.to_uint()) & 0xFFU).reinterpret_as_int())
+  (crc >> 8) ^
+  crc32_table.unsafe_get((crc.lxor(b.to_uint()) & 0xFFU).reinterpret_as_int())
 }
 
 ///|

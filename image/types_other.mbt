@@ -23,7 +23,12 @@ pub fn ImageNRGBA::nrgba_at(
     return { r: b'\x00', g: b'\x00', b: b'\x00', a: b'\x00' }
   }
   let i = self.pix_offset(x, y)
-  { r: self.pix.unsafe_get(i), g: self.pix.unsafe_get(i + 1), b: self.pix.unsafe_get(i + 2), a: self.pix.unsafe_get(i + 3) }
+  {
+    r: self.pix.unsafe_get(i),
+    g: self.pix.unsafe_get(i + 1),
+    b: self.pix.unsafe_get(i + 2),
+    a: self.pix.unsafe_get(i + 3),
+  }
 }
 
 ///|
@@ -130,10 +135,14 @@ pub fn ImageNRGBA64::nrgba64_at(
   }
   let i = self.pix_offset(x, y)
   {
-    r: (self.pix.unsafe_get(i).to_uint() << 8) | self.pix.unsafe_get(i + 1).to_uint(),
-    g: (self.pix.unsafe_get(i + 2).to_uint() << 8) | self.pix.unsafe_get(i + 3).to_uint(),
-    b: (self.pix.unsafe_get(i + 4).to_uint() << 8) | self.pix.unsafe_get(i + 5).to_uint(),
-    a: (self.pix.unsafe_get(i + 6).to_uint() << 8) | self.pix.unsafe_get(i + 7).to_uint(),
+    r: (self.pix.unsafe_get(i).to_uint() << 8) |
+    self.pix.unsafe_get(i + 1).to_uint(),
+    g: (self.pix.unsafe_get(i + 2).to_uint() << 8) |
+    self.pix.unsafe_get(i + 3).to_uint(),
+    b: (self.pix.unsafe_get(i + 4).to_uint() << 8) |
+    self.pix.unsafe_get(i + 5).to_uint(),
+    a: (self.pix.unsafe_get(i + 6).to_uint() << 8) |
+    self.pix.unsafe_get(i + 7).to_uint(),
   }
 }
 
@@ -323,7 +332,10 @@ pub fn ImageAlpha16::alpha16_at(
     return { a: 0U }
   }
   let i = self.pix_offset(x, y)
-  { a: (self.pix.unsafe_get(i).to_uint() << 8) | self.pix.unsafe_get(i + 1).to_uint() }
+  {
+    a: (self.pix.unsafe_get(i).to_uint() << 8) |
+    self.pix.unsafe_get(i + 1).to_uint(),
+  }
 }
 
 ///|
@@ -486,7 +498,10 @@ pub fn ImageGray16::gray16_at(
     return { y: 0U }
   }
   let i = self.pix_offset(x, y)
-  { y: (self.pix.unsafe_get(i).to_uint() << 8) | self.pix.unsafe_get(i + 1).to_uint() }
+  {
+    y: (self.pix.unsafe_get(i).to_uint() << 8) |
+    self.pix.unsafe_get(i + 1).to_uint(),
+  }
 }
 
 ///|
