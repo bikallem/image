@@ -1,5 +1,5 @@
 ///|
-pub fn websafe() -> Array[@color.AnyColor] {
+pub let websafe : ReadOnlyArray[@color.AnyColor] =
   [
     @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' }),
     @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x33', a: b'\xff' }),
@@ -218,4 +218,3 @@ pub fn websafe() -> Array[@color.AnyColor] {
     @color.AnyColor::RGBA({ r: b'\xFF', g: b'\xFF', b: b'\xCC', a: b'\xff' }),
     @color.AnyColor::RGBA({ r: b'\xFF', g: b'\xFF', b: b'\xFF', a: b'\xff' }),
   ]
-}

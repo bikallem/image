@@ -1,5 +1,5 @@
 ///|
-pub fn plan9() -> Array[@color.AnyColor] {
+pub let plan9 : ReadOnlyArray[@color.AnyColor] =
   [
     @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' }),
     @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x44', a: b'\xff' }),
@@ -258,4 +258,3 @@ pub fn plan9() -> Array[@color.AnyColor] {
     @color.AnyColor::RGBA({ r: b'\xFF', g: b'\xFF', b: b'\xAA', a: b'\xff' }),
     @color.AnyColor::RGBA({ r: b'\xFF', g: b'\xFF', b: b'\xFF', a: b'\xff' }),
   ]
-}
