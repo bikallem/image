@@ -154,16 +154,43 @@ else
 fi
 
 # --- Print table ---
+# Right-align a string to exactly W visible characters.
+# Compensates for multi-byte µ (2 bytes but 1 display column).
+ralign() {
+  local w="$1" s="$2"
+  # Count how many µ characters (each is 2 bytes but 1 column)
+  local n_mu
+  n_mu=$(echo -n "$s" | grep -o 'µ' | wc -l)
+  local pad=$((w + n_mu))
+  printf "%${pad}s" "$s"
+}
+
+lalign() {
+  local w="$1" s="$2"
+  local n_mu
+  n_mu=$(echo -n "$s" | grep -o 'µ' | wc -l)
+  local pad=$((w + n_mu))
+  printf "%-${pad}s" "$s"
+}
+
 W_NAME=28; W_MB=12; W_GO=12; W_R=7
-sep="$(printf '+%*s+%*s+%*s+%*s+' $((W_NAME+2)) '' $((W_MB+2)) '' $((W_GO+2)) '' $((W_R+2)) '' | tr ' ' '-')"
+sep="+$(printf '%*s' $((W_NAME+2)) '' | tr ' ' '-')+$(printf '%*s' $((W_MB+2)) '' | tr ' ' '-')+$(printf '%*s' $((W_GO+2)) '' | tr ' ' '-')+$(printf '%*s' $((W_R+2)) '' | tr ' ' '-')+"
+
+print_row() {
+  local name="$1" mb="$2" go="$3" ratio="$4"
+  printf "| %s | %s | %s | %s |\n" \
+    "$(lalign $W_NAME "$name")" \
+    "$(ralign $W_MB "$mb")" \
+    "$(ralign $W_GO "$go")" \
+    "$(ralign $W_R "$ratio")"
+}
 
 printf "\n%s\n" "$sep"
-printf "| %-${W_NAME}s | %${W_MB}s | %${W_GO}s | %${W_R}s |\n" "Benchmark" "MoonBit" "Go" "Ratio"
+print_row "Benchmark" "MoonBit" "Go" "Ratio"
 printf "%s\n" "$sep"
 
 for cat in "${CATEGORIES[@]}"; do
   printed_header=false
-  # Gather and sort keys for this category
   keys=()
   for key in "${!MB_RESULTS[@]}"; do
     [[ "$key" == "$cat/"* ]] && keys+=("$key")
@@ -173,8 +200,7 @@ for cat in "${CATEGORIES[@]}"; do
 
   for key in "${sorted[@]}"; do
     if ! $printed_header; then
-      printf "| %-${W_NAME}s | %${W_MB}s | %${W_GO}s | %${W_R}s |\n" \
-        "$(echo "$cat" | tr a-z A-Z)" "" "" ""
+      print_row "$(echo "$cat" | tr a-z A-Z)" "" "" ""
       printed_header=true
     fi
     short="${key#$cat/}"
@@ -183,8 +209,7 @@ for cat in "${CATEGORIES[@]}"; do
     go_us=""
     [ -n "$go_name" ] && go_us="${GO_RESULTS[$go_name]:-}"
 
-    printf "| %-${W_NAME}s | %${W_MB}s | %${W_GO}s | %${W_R}s |\n" \
-      "  $short" "$(fmt "$mb_us")" "$(fmt "$go_us")" "$(ratio "$mb_us" "$go_us")"
+    print_row "  $short" "$(fmt "$mb_us")" "$(fmt "$go_us")" "$(ratio "$mb_us" "$go_us")"
   done
   printf "%s\n" "$sep"
 done
