@@ -179,6 +179,29 @@ pub fn encode(
 }
 
 ///|
+/// CRC32 IEEE polynomial table (standard byte-at-a-time).
+let crc32_table : FixedArray[UInt] = {
+  let t = FixedArray::make(256, 0U)
+  for i in 0..<256 {
+    let mut crc : UInt = i.reinterpret_as_uint()
+    for _ in 0..<8 {
+      if (crc & 1U) == 1U {
+        crc = (crc >> 1) ^ 0xEDB88320U
+      } else {
+        crc = crc >> 1
+      }
+    }
+    t.unsafe_set(i, crc)
+  }
+  t
+}
+
+///|
+fn crc32_byte(crc : UInt, b : Byte) -> UInt {
+  (crc >> 8) ^ crc32_table.unsafe_get((crc.lxor(b.to_uint()) & 0xFFU).reinterpret_as_int())
+}
+
+///|
 fn write_u32_be(buf : @buffer.Buffer, v : UInt) -> Unit {
   buf.write_byte((v >> 24).to_byte())
   buf.write_byte((v >> 16).to_byte())
@@ -200,13 +223,15 @@ fn write_chunk(
   for i in 0..<data.length() {
     buf.write_byte(data.unsafe_get(i))
   }
-  // CRC over type + data
-  let crc_data = @blit.make_uninit(4 + data.length())
-  crc_data[0] = (chunk_type >> 24).to_byte()
-  crc_data[1] = (chunk_type >> 16).to_byte()
-  crc_data[2] = (chunk_type >> 8).to_byte()
-  crc_data[3] = chunk_type.to_byte()
-  @blit.blit_fixed_array(crc_data, 4, data, 0, data.length())
-  let crc = @checksum.crc32(Bytes::from_array(crc_data)[:])
-  write_u32_be(buf, crc)
+  // CRC over type + data — compute using the lookup table directly
+  // to avoid Bytes::from_array copy (which was 5.76% of callgrind)
+  let mut crc = 0xFFFFFFFFU
+  crc = crc32_byte(crc, (chunk_type >> 24).to_byte())
+  crc = crc32_byte(crc, (chunk_type >> 16).to_byte())
+  crc = crc32_byte(crc, (chunk_type >> 8).to_byte())
+  crc = crc32_byte(crc, chunk_type.to_byte())
+  for i in 0..<data.length() {
+    crc = crc32_byte(crc, data.unsafe_get(i))
+  }
+  write_u32_be(buf, crc.lxor(0xFFFFFFFFU))
 }
