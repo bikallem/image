@@ -42,6 +42,7 @@ pub fn ycbcr_to_rgb(y : Byte, cb : Byte, cr : Byte) -> (Byte, Byte, Byte) {
 
 ///|
 /// YCbCr represents a fully opaque 24-bit Y'CbCr color.
+#valtype
 pub(all) struct YCbCr {
   y : Byte
   cb : Byte
@@ -123,6 +124,7 @@ pub fn cmyk_to_rgb(
 ///|
 /// CMYK represents a fully opaque CMYK color, having 8 bits for each of cyan,
 /// magenta, yellow and black.
+#valtype
 pub(all) struct CMYK {
   c : Byte
   m : Byte

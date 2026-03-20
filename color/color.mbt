@@ -8,6 +8,7 @@ pub(open) trait Color {
 ///|
 /// RGBA represents a traditional 32-bit alpha-premultiplied color, having 8
 /// bits for each of red, green, blue and alpha.
+#valtype
 pub(all) struct RGBA {
   r : Byte
   g : Byte
@@ -31,6 +32,7 @@ pub impl Color for RGBA with rgba(self) -> (UInt, UInt, UInt, UInt) {
 ///|
 /// RGBA64 represents a 64-bit alpha-premultiplied color, having 16 bits for
 /// each of red, green, blue and alpha.
+#valtype
 pub(all) struct RGBA64 {
   r : UInt
   g : UInt
@@ -45,6 +47,7 @@ pub impl Color for RGBA64 with rgba(self) -> (UInt, UInt, UInt, UInt) {
 
 ///|
 /// NRGBA represents a non-alpha-premultiplied 32-bit color.
+#valtype
 pub(all) struct NRGBA {
   r : Byte
   g : Byte
@@ -68,6 +71,7 @@ pub impl Color for NRGBA with rgba(self) -> (UInt, UInt, UInt, UInt) {
 ///|
 /// NRGBA64 represents a non-alpha-premultiplied 64-bit color,
 /// having 16 bits for each of red, green, blue and alpha.
+#valtype
 pub(all) struct NRGBA64 {
   r : UInt
   g : UInt
@@ -86,6 +90,7 @@ pub impl Color for NRGBA64 with rgba(self) -> (UInt, UInt, UInt, UInt) {
 
 ///|
 /// Alpha represents an 8-bit alpha color.
+#valtype
 pub(all) struct Alpha {
   a : Byte
 } derive(Eq, Show)
@@ -99,6 +104,7 @@ pub impl Color for Alpha with rgba(self) -> (UInt, UInt, UInt, UInt) {
 
 ///|
 /// Alpha16 represents a 16-bit alpha color.
+#valtype
 pub(all) struct Alpha16 {
   a : UInt
 } derive(Eq, Show)
@@ -111,6 +117,7 @@ pub impl Color for Alpha16 with rgba(self) -> (UInt, UInt, UInt, UInt) {
 
 ///|
 /// Gray represents an 8-bit grayscale color.
+#valtype
 pub(all) struct Gray {
   y : Byte
 } derive(Eq, Show)
@@ -124,6 +131,7 @@ pub impl Color for Gray with rgba(self) -> (UInt, UInt, UInt, UInt) {
 
 ///|
 /// Gray16 represents a 16-bit grayscale color.
+#valtype
 pub(all) struct Gray16 {
   y : UInt
 } derive(Eq, Show)

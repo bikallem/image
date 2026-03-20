@@ -1,5 +1,6 @@
 ///|
 /// A Point is an X, Y coordinate pair. The axes increase right and down.
+#valtype
 pub(all) struct Point {
   x : Int
   y : Int
