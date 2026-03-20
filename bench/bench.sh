@@ -12,23 +12,58 @@ declare -A MB_TO_GO=(
   [color/ycbcr_to_rgb/128]=YCbCrToRGB_128
   [color/ycbcr_to_rgb/255]=YCbCrToRGB_255
   [color/rgb_to_ycbcr/0]=RGBToYCbCr_0
+  [color/rgb_to_ycbcr/Cb]=RGBToYCbCr_Cb
+  [color/rgb_to_ycbcr/Cr]=RGBToYCbCr_Cr
+  [color/ycbcr_to_rgba/0]=YCbCrToRGBA_0
   [color/ycbcr_to_rgba/128]=YCbCrToRGBA_128
+  [color/ycbcr_to_rgba/255]=YCbCrToRGBA_255
+  [color/nycbcra_to_rgba/0]=NYCbCrAToRGBA_0
   [color/nycbcra_to_rgba/128]=NYCbCrAToRGBA_128
+  [color/nycbcra_to_rgba/255]=NYCbCrAToRGBA_255
   # Image
   [image/at/rgba]=RGBAAt
   [image/set/rgba]=RGBASetRGBA
+  [image/at/rgba64]=RGBA64At
+  [image/set/rgba64]=RGBA64SetRGBA64
+  [image/at/nrgba]=NRGBAAt
+  [image/set/nrgba]=NRGBASetNRGBA
+  [image/at/nrgba64]=NRGBA64At
+  [image/set/nrgba64]=NRGBA64SetNRGBA64
+  [image/at/alpha]=AlphaAt
+  [image/set/alpha]=AlphaSetAlpha
+  [image/at/alpha16]=Alpha16At
+  [image/set/alpha16]=Alpha16SetAlpha16
   [image/at/gray]=GrayAt
   [image/set/gray]=GraySetGray
+  [image/at/gray16]=Gray16At
+  [image/set/gray16]=Gray16SetGray16
   # Draw
+  [draw/fill_over]=DrawFillOver
   [draw/fill_src]=DrawFillSrc
-  [draw/copy_src]=DrawCopySrc
   [draw/copy_over]=DrawCopyOver
+  [draw/copy_src]=DrawCopySrc
+  [draw/nrgba_over]=DrawNRGBAOver
+  [draw/nrgba_src]=DrawNRGBASrc
+  [draw/ycbcr]=DrawYCbCr
+  [draw/gray]=DrawGray
+  [draw/glyph_over]=DrawGlyphOver
+  [draw/generic_over]=DrawGenericOver
+  [draw/generic_src]=DrawGenericSrc
+  [draw/paletted_fill]=DrawPalettedFill
+  [draw/paletted_rgba]=DrawPalettedRGBA
   # PNG
+  [png/paeth]=PNGPaeth
   [png/decode_gray]=PNGDecodeGray
+  [png/decode_nrgba_gradient]=PNGDecodeNRGBAGradient
+  [png/decode_nrgba_opaque]=PNGDecodeNRGBAOpaque
+  [png/decode_paletted]=PNGDecodePaletted
   [png/decode_rgb]=PNGDecodeRGB
   [png/encode_gray]=PNGEncodeGray
+  [png/encode_nrgba]=PNGEncodeNRGBA
+  [png/encode_paletted]=PNGEncodePaletted
   [png/encode_rgb_opaque]=PNGEncodeRGBA
   # JPEG
+  # fdct/idct have no direct Go equivalent (Go doesn't export DCT functions)
   [jpeg/decode_baseline]=JPEGDecode
   [jpeg/encode_rgba]=JPEGEncodeRGBA
   # GIF
