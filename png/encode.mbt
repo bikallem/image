@@ -165,14 +165,16 @@ pub fn encode(
   write_u32_be(buf, idat_bytes.length().reinterpret_as_uint())
   write_u32_be(buf, ct_idat)
   buf.write_bytes(idat_bytes)
-  // CRC over "IDAT" type + data
-  let crc_buf = @buffer.new(size_hint=4 + idat_bytes.length())
-  crc_buf.write_byte((ct_idat >> 24).to_byte())
-  crc_buf.write_byte((ct_idat >> 16).to_byte())
-  crc_buf.write_byte((ct_idat >> 8).to_byte())
-  crc_buf.write_byte(ct_idat.to_byte())
-  crc_buf.write_bytes(idat_bytes)
-  write_u32_be(buf, @checksum.crc32(crc_buf.to_bytes()[:]))
+  // CRC over "IDAT" type + data — inline to avoid Buffer+Bytes copy
+  let mut idat_crc = 0xFFFFFFFFU
+  idat_crc = crc32_byte(idat_crc, (ct_idat >> 24).to_byte())
+  idat_crc = crc32_byte(idat_crc, (ct_idat >> 16).to_byte())
+  idat_crc = crc32_byte(idat_crc, (ct_idat >> 8).to_byte())
+  idat_crc = crc32_byte(idat_crc, ct_idat.to_byte())
+  for i in 0..<idat_bytes.length() {
+    idat_crc = crc32_byte(idat_crc, idat_bytes.unsafe_get(i))
+  }
+  write_u32_be(buf, idat_crc.lxor(0xFFFFFFFFU))
   // Write IEND
   write_chunk(buf, ct_iend, FixedArray::make(0, b'\x00'))
   buf.to_bytes()
