@@ -16,7 +16,8 @@ pub fn ImageCMYK::pix_offset(self : ImageCMYK, x : Int, y : Int) -> Int {
 
 ///|
 pub fn ImageCMYK::cmyk_at(self : ImageCMYK, x : Int, y : Int) -> @color.CMYK {
-  if x < self.rect.min_x || x >= self.rect.max_x || y < self.rect.min_y || y >= self.rect.max_y {
+  let r = self.rect
+  if x < r.min_x || x >= r.max_x || y < r.min_y || y >= r.max_y {
     return { c: b'\x00', m: b'\x00', y: b'\x00', k: b'\x00' }
   }
   let i = self.pix_offset(x, y)
@@ -35,7 +36,8 @@ pub fn ImageCMYK::set_cmyk(
   y : Int,
   c : @color.CMYK,
 ) -> Unit {
-  if x < self.rect.min_x || x >= self.rect.max_x || y < self.rect.min_y || y >= self.rect.max_y {
+  let r = self.rect
+  if x < r.min_x || x >= r.max_x || y < r.min_y || y >= r.max_y {
     return
   }
   let i = self.pix_offset(x, y)
@@ -52,7 +54,8 @@ pub fn ImageCMYK::set(
   y : Int,
   c : @color.AnyColor,
 ) -> Unit {
-  if x < self.rect.min_x || x >= self.rect.max_x || y < self.rect.min_y || y >= self.rect.max_y {
+  let r = self.rect
+  if x < r.min_x || x >= r.max_x || y < r.min_y || y >= r.max_y {
     return
   }
   let c1 = @color.AnyModel::CMYKModel.convert(c)
