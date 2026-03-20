@@ -19,7 +19,7 @@ pub fn ImageNRGBA::nrgba_at(
   x : Int,
   y : Int,
 ) -> @color.NRGBA {
-  if !({ x, y } : Point).in_(self.rect) {
+  if x < self.rect.min_x || x >= self.rect.max_x || y < self.rect.min_y || y >= self.rect.max_y {
     return { r: b'\x00', g: b'\x00', b: b'\x00', a: b'\x00' }
   }
   let i = self.pix_offset(x, y)
@@ -38,7 +38,7 @@ pub fn ImageNRGBA::set_nrgba(
   y : Int,
   c : @color.NRGBA,
 ) -> Unit {
-  if !({ x, y } : Point).in_(self.rect) {
+  if x < self.rect.min_x || x >= self.rect.max_x || y < self.rect.min_y || y >= self.rect.max_y {
     return
   }
   let i = self.pix_offset(x, y)
@@ -71,7 +71,7 @@ pub fn ImageNRGBA::set(
   y : Int,
   c : @color.AnyColor,
 ) -> Unit {
-  if !({ x, y } : Point).in_(self.rect) {
+  if x < self.rect.min_x || x >= self.rect.max_x || y < self.rect.min_y || y >= self.rect.max_y {
     return
   }
   let c1 = @color.AnyModel::NRGBAModel.convert(c)
@@ -130,7 +130,7 @@ pub fn ImageNRGBA64::nrgba64_at(
   x : Int,
   y : Int,
 ) -> @color.NRGBA64 {
-  if !({ x, y } : Point).in_(self.rect) {
+  if x < self.rect.min_x || x >= self.rect.max_x || y < self.rect.min_y || y >= self.rect.max_y {
     return { r: 0U, g: 0U, b: 0U, a: 0U }
   }
   let i = self.pix_offset(x, y)
@@ -153,7 +153,7 @@ pub fn ImageNRGBA64::set_nrgba64(
   y : Int,
   c : @color.NRGBA64,
 ) -> Unit {
-  if !({ x, y } : Point).in_(self.rect) {
+  if x < self.rect.min_x || x >= self.rect.max_x || y < self.rect.min_y || y >= self.rect.max_y {
     return
   }
   let i = self.pix_offset(x, y)
@@ -174,7 +174,7 @@ pub fn ImageNRGBA64::set(
   y : Int,
   c : @color.AnyColor,
 ) -> Unit {
-  if !({ x, y } : Point).in_(self.rect) {
+  if x < self.rect.min_x || x >= self.rect.max_x || y < self.rect.min_y || y >= self.rect.max_y {
     return
   }
   let c1 = @color.AnyModel::NRGBA64Model.convert(c)
@@ -230,7 +230,7 @@ pub fn ImageAlpha::alpha_at(
   x : Int,
   y : Int,
 ) -> @color.Alpha {
-  if !({ x, y } : Point).in_(self.rect) {
+  if x < self.rect.min_x || x >= self.rect.max_x || y < self.rect.min_y || y >= self.rect.max_y {
     return { a: b'\x00' }
   }
   let i = self.pix_offset(x, y)
@@ -244,7 +244,7 @@ pub fn ImageAlpha::set_alpha(
   y : Int,
   c : @color.Alpha,
 ) -> Unit {
-  if !({ x, y } : Point).in_(self.rect) {
+  if x < self.rect.min_x || x >= self.rect.max_x || y < self.rect.min_y || y >= self.rect.max_y {
     return
   }
   self.pix.unsafe_set(self.pix_offset(x, y), c.a)
@@ -273,7 +273,7 @@ pub fn ImageAlpha::set(
   y : Int,
   c : @color.AnyColor,
 ) -> Unit {
-  if !({ x, y } : Point).in_(self.rect) {
+  if x < self.rect.min_x || x >= self.rect.max_x || y < self.rect.min_y || y >= self.rect.max_y {
     return
   }
   let c1 = @color.AnyModel::AlphaModel.convert(c)
@@ -328,7 +328,7 @@ pub fn ImageAlpha16::alpha16_at(
   x : Int,
   y : Int,
 ) -> @color.Alpha16 {
-  if !({ x, y } : Point).in_(self.rect) {
+  if x < self.rect.min_x || x >= self.rect.max_x || y < self.rect.min_y || y >= self.rect.max_y {
     return { a: 0U }
   }
   let i = self.pix_offset(x, y)
@@ -345,7 +345,7 @@ pub fn ImageAlpha16::set_alpha16(
   y : Int,
   c : @color.Alpha16,
 ) -> Unit {
-  if !({ x, y } : Point).in_(self.rect) {
+  if x < self.rect.min_x || x >= self.rect.max_x || y < self.rect.min_y || y >= self.rect.max_y {
     return
   }
   let i = self.pix_offset(x, y)
@@ -360,7 +360,7 @@ pub fn ImageAlpha16::set(
   y : Int,
   c : @color.AnyColor,
 ) -> Unit {
-  if !({ x, y } : Point).in_(self.rect) {
+  if x < self.rect.min_x || x >= self.rect.max_x || y < self.rect.min_y || y >= self.rect.max_y {
     return
   }
   let c1 = @color.AnyModel::Alpha16Model.convert(c)
@@ -412,7 +412,7 @@ pub fn ImageGray::pix_offset(self : ImageGray, x : Int, y : Int) -> Int {
 
 ///|
 pub fn ImageGray::gray_at(self : ImageGray, x : Int, y : Int) -> @color.Gray {
-  if !({ x, y } : Point).in_(self.rect) {
+  if x < self.rect.min_x || x >= self.rect.max_x || y < self.rect.min_y || y >= self.rect.max_y {
     return { y: b'\x00' }
   }
   let i = self.pix_offset(x, y)
@@ -426,7 +426,7 @@ pub fn ImageGray::set_gray(
   y : Int,
   c : @color.Gray,
 ) -> Unit {
-  if !({ x, y } : Point).in_(self.rect) {
+  if x < self.rect.min_x || x >= self.rect.max_x || y < self.rect.min_y || y >= self.rect.max_y {
     return
   }
   self.pix.unsafe_set(self.pix_offset(x, y), c.y)
@@ -439,7 +439,7 @@ pub fn ImageGray::set(
   y : Int,
   c : @color.AnyColor,
 ) -> Unit {
-  if !({ x, y } : Point).in_(self.rect) {
+  if x < self.rect.min_x || x >= self.rect.max_x || y < self.rect.min_y || y >= self.rect.max_y {
     return
   }
   let c1 = @color.AnyModel::GrayModel.convert(c)
@@ -494,7 +494,7 @@ pub fn ImageGray16::gray16_at(
   x : Int,
   y : Int,
 ) -> @color.Gray16 {
-  if !({ x, y } : Point).in_(self.rect) {
+  if x < self.rect.min_x || x >= self.rect.max_x || y < self.rect.min_y || y >= self.rect.max_y {
     return { y: 0U }
   }
   let i = self.pix_offset(x, y)
@@ -511,7 +511,7 @@ pub fn ImageGray16::set_gray16(
   y : Int,
   c : @color.Gray16,
 ) -> Unit {
-  if !({ x, y } : Point).in_(self.rect) {
+  if x < self.rect.min_x || x >= self.rect.max_x || y < self.rect.min_y || y >= self.rect.max_y {
     return
   }
   let i = self.pix_offset(x, y)
@@ -526,7 +526,7 @@ pub fn ImageGray16::set(
   y : Int,
   c : @color.AnyColor,
 ) -> Unit {
-  if !({ x, y } : Point).in_(self.rect) {
+  if x < self.rect.min_x || x >= self.rect.max_x || y < self.rect.min_y || y >= self.rect.max_y {
     return
   }
   let c1 = @color.AnyModel::Gray16Model.convert(c)
@@ -588,7 +588,7 @@ pub fn ImagePaletted::at(
       a: b'\x00',
     })
   }
-  if !({ x, y } : Point).in_(self.rect) {
+  if x < self.rect.min_x || x >= self.rect.max_x || y < self.rect.min_y || y >= self.rect.max_y {
     return self.palette.colors.unsafe_get(0)
   }
   let idx = self.pix.unsafe_get(self.pix_offset(x, y)).to_int()
@@ -601,7 +601,7 @@ pub fn ImagePaletted::color_index_at(
   x : Int,
   y : Int,
 ) -> Byte {
-  if !({ x, y } : Point).in_(self.rect) {
+  if x < self.rect.min_x || x >= self.rect.max_x || y < self.rect.min_y || y >= self.rect.max_y {
     return b'\x00'
   }
   self.pix.unsafe_get(self.pix_offset(x, y))
@@ -614,7 +614,7 @@ pub fn ImagePaletted::set_color_index(
   y : Int,
   index : Byte,
 ) -> Unit {
-  if !({ x, y } : Point).in_(self.rect) {
+  if x < self.rect.min_x || x >= self.rect.max_x || y < self.rect.min_y || y >= self.rect.max_y {
     return
   }
   self.pix.unsafe_set(self.pix_offset(x, y), index)
@@ -627,7 +627,7 @@ pub fn ImagePaletted::set(
   y : Int,
   c : @color.AnyColor,
 ) -> Unit {
-  if !({ x, y } : Point).in_(self.rect) {
+  if x < self.rect.min_x || x >= self.rect.max_x || y < self.rect.min_y || y >= self.rect.max_y {
     return
   }
   let idx = self.palette.index(c)

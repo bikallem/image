@@ -49,7 +49,7 @@ pub fn ImageYCbCr::ycbcr_at(
   x : Int,
   y : Int,
 ) -> @color.YCbCr {
-  if !({ x, y } : Point).in_(self.rect) {
+  if x < self.rect.min_x || x >= self.rect.max_x || y < self.rect.min_y || y >= self.rect.max_y {
     return { y: b'\x00', cb: b'\x00', cr: b'\x00' }
   }
   let yi = self.y_offset(x, y)

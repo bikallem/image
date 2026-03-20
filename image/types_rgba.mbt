@@ -16,7 +16,7 @@ pub fn ImageRGBA::pix_offset(self : ImageRGBA, x : Int, y : Int) -> Int {
 
 ///|
 pub fn ImageRGBA::rgba_at(self : ImageRGBA, x : Int, y : Int) -> @color.RGBA {
-  if !({ x, y } : Point).in_(self.rect) {
+  if x < self.rect.min_x || x >= self.rect.max_x || y < self.rect.min_y || y >= self.rect.max_y {
     return { r: b'\x00', g: b'\x00', b: b'\x00', a: b'\x00' }
   }
   let i = self.pix_offset(x, y)
@@ -35,7 +35,7 @@ pub fn ImageRGBA::set(
   y : Int,
   c : @color.AnyColor,
 ) -> Unit {
-  if !({ x, y } : Point).in_(self.rect) {
+  if x < self.rect.min_x || x >= self.rect.max_x || y < self.rect.min_y || y >= self.rect.max_y {
     return
   }
   let c1 = @color.AnyModel::RGBAModel.convert(c)
@@ -54,7 +54,7 @@ pub fn ImageRGBA::set_rgba(
   y : Int,
   c : @color.RGBA,
 ) -> Unit {
-  if !({ x, y } : Point).in_(self.rect) {
+  if x < self.rect.min_x || x >= self.rect.max_x || y < self.rect.min_y || y >= self.rect.max_y {
     return
   }
   let i = self.pix_offset(x, y)
@@ -128,7 +128,7 @@ pub fn ImageRGBA64::rgba64_at(
   x : Int,
   y : Int,
 ) -> @color.RGBA64 {
-  if !({ x, y } : Point).in_(self.rect) {
+  if x < self.rect.min_x || x >= self.rect.max_x || y < self.rect.min_y || y >= self.rect.max_y {
     return { r: 0U, g: 0U, b: 0U, a: 0U }
   }
   let i = self.pix_offset(x, y)
@@ -151,7 +151,7 @@ pub fn ImageRGBA64::set(
   y : Int,
   c : @color.AnyColor,
 ) -> Unit {
-  if !({ x, y } : Point).in_(self.rect) {
+  if x < self.rect.min_x || x >= self.rect.max_x || y < self.rect.min_y || y >= self.rect.max_y {
     return
   }
   let c1 = @color.AnyModel::RGBA64Model.convert(c)
@@ -174,7 +174,7 @@ pub fn ImageRGBA64::set_rgba64(
   y : Int,
   c : @color.RGBA64,
 ) -> Unit {
-  if !({ x, y } : Point).in_(self.rect) {
+  if x < self.rect.min_x || x >= self.rect.max_x || y < self.rect.min_y || y >= self.rect.max_y {
     return
   }
   let i = self.pix_offset(x, y)
