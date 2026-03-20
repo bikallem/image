@@ -61,9 +61,7 @@ fn main {
     }
   }
   for _ in 0..<5 {
-    try { ignore(@png.encode(@image.AnyImage::RGBA(rgba_img))) } catch {
-      _ => ()
-    }
+    ignore(@png.encode(@image.AnyImage::RGBA(rgba_img)))
   }
 
   // 6. JPEG decode

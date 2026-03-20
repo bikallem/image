@@ -12,7 +12,7 @@ pub(all) enum CompressionLevel {
 pub fn encode(
   img : @image.AnyImage,
   compression~ : CompressionLevel = DefaultCompression
-) -> Bytes raise Error {
+) -> Bytes {
   let buf = @buffer.new()
   // Write PNG signature
   for i in 0..<8 {
@@ -207,6 +207,6 @@ fn write_chunk(
   crc_data[2] = (chunk_type >> 8).to_byte()
   crc_data[3] = chunk_type.to_byte()
   @blit.blit_fixed_array(crc_data, 4, data, 0, data.length())
-  let crc = @checksum.crc32(Bytes::from_fixedarray(crc_data)[:])
+  let crc = @checksum.crc32(Bytes::from_array(crc_data)[:])
   write_u32_be(buf, crc)
 }

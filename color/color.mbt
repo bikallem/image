@@ -178,7 +178,7 @@ pub let white : AnyColor = AnyColor::Gray16({ y: 0xffff })
 pub let transparent : AnyColor = AnyColor::Alpha16({ a: 0 })
 
 ///|
-pub let opaque : AnyColor = AnyColor::Alpha16({ a: 0xffff })
+pub let fully_opaque : AnyColor = AnyColor::Alpha16({ a: 0xffff })
 
 ///|
 /// sqDiff returns the squared-difference of x and y, shifted by 2 so that

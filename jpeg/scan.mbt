@@ -464,7 +464,7 @@ fn read_bit(d : Decoder) -> Bool raise JpegError {
 
 ///|
 /// Reconstruct the full image from progressive coefficients.
-fn reconstruct_progressive(d : Decoder) -> @image.AnyImage raise JpegError {
+fn reconstruct_progressive(d : Decoder) -> @image.AnyImage {
   let mut max_h = 1
   let mut max_v = 1
   for i in 0..<d.num_components {

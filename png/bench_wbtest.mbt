@@ -58,7 +58,7 @@ test (b : @bench.T) {
   }
   b.bench(
     name="encode_gray",
-    fn() { b.keep(try? encode(@image.AnyImage::Gray(gray_img))) },
+    fn() { b.keep(encode(@image.AnyImage::Gray(gray_img))) },
   )
   let rgba_img = @image.new_image_rgba(r)
   for y in 0..<480 {
@@ -77,7 +77,7 @@ test (b : @bench.T) {
   }
   b.bench(
     name="encode_rgb_opaque",
-    fn() { b.keep(try? encode(@image.AnyImage::RGBA(rgba_img))) },
+    fn() { b.keep(encode(@image.AnyImage::RGBA(rgba_img))) },
   )
   let nrgba_img = @image.new_image_nrgba(r)
   for y in 0..<480 {
@@ -96,7 +96,7 @@ test (b : @bench.T) {
   }
   b.bench(
     name="encode_nrgba",
-    fn() { b.keep(try? encode(@image.AnyImage::NRGBA(nrgba_img))) },
+    fn() { b.keep(encode(@image.AnyImage::NRGBA(nrgba_img))) },
   )
   let pal_img = @image.new_image_paletted(
     r,
@@ -120,6 +120,6 @@ test (b : @bench.T) {
   }
   b.bench(
     name="encode_paletted",
-    fn() { b.keep(try? encode(@image.AnyImage::Paletted(pal_img))) },
+    fn() { b.keep(encode(@image.AnyImage::Paletted(pal_img))) },
   )
 }
