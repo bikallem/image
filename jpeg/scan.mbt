@@ -1,4 +1,26 @@
 ///|
+fn reset_dc_preds(d : Decoder) -> Unit {
+  for i in 0..<d.num_components {
+    d.comp.unsafe_get(i).dc_pred = 0
+  }
+}
+
+///|
+fn max_sampling(d : Decoder) -> (Int, Int) {
+  let mut max_h = 1
+  let mut max_v = 1
+  for i in 0..<d.num_components {
+    if d.comp.unsafe_get(i).h > max_h {
+      max_h = d.comp.unsafe_get(i).h
+    }
+    if d.comp.unsafe_get(i).v > max_v {
+      max_v = d.comp.unsafe_get(i).v
+    }
+  }
+  (max_h, max_v)
+}
+
+///|
 /// Process a SOS segment and decode the scan data, returning the final image.
 pub fn process_sos(d : Decoder) -> @image.AnyImage raise JpegError {
   let length = d.r.read_uint16_be()
@@ -39,24 +61,11 @@ pub fn process_sos(d : Decoder) -> @image.AnyImage raise JpegError {
   let _ss = d.r.read_byte()
   let _se = d.r.read_byte()
   let _ah_al = d.r.read_byte()
-  // Reset DC predictors
-  for i in 0..<d.num_components {
-    d.comp.unsafe_get(i).dc_pred = 0
-  }
+  reset_dc_preds(d)
   // Flush bit buffer
   flush_bits(d)
   // Compute MCU grid dimensions
-  // Find max H and V sampling factors
-  let mut max_h = 1
-  let mut max_v = 1
-  for i in 0..<d.num_components {
-    if d.comp.unsafe_get(i).h > max_h {
-      max_h = d.comp.unsafe_get(i).h
-    }
-    if d.comp.unsafe_get(i).v > max_v {
-      max_v = d.comp.unsafe_get(i).v
-    }
-  }
+  let (max_h, max_v) = max_sampling(d)
   let mcu_width = max_h * 8
   let mcu_height = max_v * 8
   let mcu_cols = (d.width + mcu_width - 1) / mcu_width
@@ -89,10 +98,7 @@ pub fn process_sos(d : Decoder) -> @image.AnyImage raise JpegError {
         if mcu_count > 0 && mcu_count % d.restart_interval == 0 {
           // Read restart marker
           flush_bits(d)
-          // Reset DC predictors
-          for i in 0..<d.num_components {
-            d.comp.unsafe_get(i).dc_pred = 0
-          }
+          reset_dc_preds(d)
           // Consume the restart marker
           consume_restart_marker(d)
         }
@@ -272,16 +278,7 @@ fn process_sos_progressive(d : Decoder) -> Unit raise JpegError {
   flush_bits(d)
   d.eob_run = 0
   // Compute MCU grid
-  let mut max_h = 1
-  let mut max_v = 1
-  for i in 0..<d.num_components {
-    if d.comp.unsafe_get(i).h > max_h {
-      max_h = d.comp.unsafe_get(i).h
-    }
-    if d.comp.unsafe_get(i).v > max_v {
-      max_v = d.comp.unsafe_get(i).v
-    }
-  }
+  let (max_h, max_v) = max_sampling(d)
   let mcu_cols = (d.width + max_h * 8 - 1) / (max_h * 8)
   let mcu_rows = (d.height + max_v * 8 - 1) / (max_v * 8)
   // Allocate prog_coeffs if needed
@@ -299,10 +296,7 @@ fn process_sos_progressive(d : Decoder) -> Unit raise JpegError {
       d.prog_coeffs.unsafe_set(ci, blocks)
     }
   }
-  // Reset DC predictors
-  for i in 0..<d.num_components {
-    d.comp.unsafe_get(i).dc_pred = 0
-  }
+  reset_dc_preds(d)
   // Decode scan
   let mut mcu_count = 0
   let mut block_count = 0
@@ -313,9 +307,7 @@ fn process_sos_progressive(d : Decoder) -> Unit raise JpegError {
         mcu_count > 0 &&
         mcu_count % d.restart_interval == 0 {
         flush_bits(d)
-        for i in 0..<d.num_components {
-          d.comp.unsafe_get(i).dc_pred = 0
-        }
+        reset_dc_preds(d)
         consume_restart_marker(d)
         d.eob_run = 0
       }
@@ -500,16 +492,7 @@ fn read_bit(d : Decoder) -> Bool raise JpegError {
 ///|
 /// Reconstruct the full image from progressive coefficients.
 fn reconstruct_progressive(d : Decoder) -> @image.AnyImage {
-  let mut max_h = 1
-  let mut max_v = 1
-  for i in 0..<d.num_components {
-    if d.comp.unsafe_get(i).h > max_h {
-      max_h = d.comp.unsafe_get(i).h
-    }
-    if d.comp.unsafe_get(i).v > max_v {
-      max_v = d.comp.unsafe_get(i).v
-    }
-  }
+  let (max_h, max_v) = max_sampling(d)
   let mcu_cols = (d.width + max_h * 8 - 1) / (max_h * 8)
   let mcu_rows = (d.height + max_v * 8 - 1) / (max_v * 8)
   // Allocate component planes

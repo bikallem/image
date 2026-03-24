@@ -423,10 +423,10 @@ fn draw_paletted(
   let mut d_row = dst.pix_offset +
     (r.min_y - dst.rect.min_y) * dst.stride +
     (r.min_x - dst.rect.min_x)
-  // Color cache: map recently seen RGBA to palette index.
-  // Key = (r<<24 | g<<16 | b<<8 | a), Value = palette index.
-  // 256-entry direct-mapped cache (~95% hit rate for natural images).
-  let cache_keys = FixedArray::make(256, -1)
+  // Color cache: 256-entry direct-mapped cache (~95% hit rate for natural images).
+  // Split key across two arrays to hold all 64 bits of RGBA.
+  let cache_hi = FixedArray::make(256, -1) // (r << 16) | g
+  let cache_lo = FixedArray::make(256, -1) // (b << 16) | a
   let cache_vals = FixedArray::make(256, 0)
   for _y = r.min_y; _y < r.max_y; _y = _y + 1 {
     let sy = sp.y + _y - r.min_y
@@ -434,16 +434,16 @@ fn draw_paletted(
       let sx = sp.x + _x
       let c = src.at(sx, sy)
       let (cr, cg, cb, ca) = c.rgba()
-      let key = (cr.reinterpret_as_int() << 16) | cg.reinterpret_as_int()
-      let slot = key
-        .lxor(cb.reinterpret_as_int() << 8)
-        .lxor(ca.reinterpret_as_int())
-        .land(0xFF)
-      if cache_keys.unsafe_get(slot) == key {
+      let hi = (cr.reinterpret_as_int() << 16) | cg.reinterpret_as_int()
+      let lo = (cb.reinterpret_as_int() << 16) | ca.reinterpret_as_int()
+      let slot = hi.lxor(lo).lxor(hi >> 8).land(0xFF)
+      if cache_hi.unsafe_get(slot) == hi &&
+        cache_lo.unsafe_get(slot) == lo {
         dst.pix.unsafe_set(d_row + _x, cache_vals.unsafe_get(slot).to_byte())
       } else {
         let idx = dst.palette.index(c)
-        cache_keys.unsafe_set(slot, key)
+        cache_hi.unsafe_set(slot, hi)
+        cache_lo.unsafe_set(slot, lo)
         cache_vals.unsafe_set(slot, idx)
         dst.pix.unsafe_set(d_row + _x, idx.to_byte())
       }

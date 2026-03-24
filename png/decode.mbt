@@ -388,48 +388,43 @@ fn decode_image(
           cur_row[i] = data.unsafe_get(row_start + 1 + i)
         }
         unfilter(filter, cur_row, prev_row, bpp)
-        if bit_depth == b'\x08' {
-          for x in 0..<width {
-            img.pix.unsafe_set(y * img.stride + x, cur_row.unsafe_get(x))
-          }
-        } else if bit_depth == b'\x04' {
-          for x in 0..<width {
-            let byte_idx = x / 2
-            let shift = if x % 2 == 0 { 4 } else { 0 }
-            img.pix.unsafe_set(
-              y * img.stride + x,
-              ((cur_row.unsafe_get(byte_idx).to_int() >> shift) & 0x0f).to_byte(),
-            )
-          }
-        } else if bit_depth == b'\x02' {
-          for x in 0..<width {
-            let byte_idx = x / 4
-            let shift = (3 - x % 4) * 2
-            img.pix.unsafe_set(
-              y * img.stride + x,
-              ((cur_row.unsafe_get(byte_idx).to_int() >> shift) & 0x03).to_byte(),
-            )
-          }
-        } else if bit_depth == b'\x01' {
-          for x in 0..<width {
-            let byte_idx = x / 8
-            let shift = 7 - x % 8
-            img.pix.unsafe_set(
-              y * img.stride + x,
-              ((cur_row.unsafe_get(byte_idx).to_int() >> shift) & 0x01).to_byte(),
-            )
-          }
+        match bit_depth {
+          b'\x08' =>
+            for x in 0..<width {
+              img.pix.unsafe_set(y * img.stride + x, cur_row.unsafe_get(x))
+            }
+          b'\x04' =>
+            for x in 0..<width {
+              let shift = if x % 2 == 0 { 4 } else { 0 }
+              img.pix.unsafe_set(
+                y * img.stride + x,
+                ((cur_row.unsafe_get(x / 2).to_int() >> shift) & 0x0f).to_byte(),
+              )
+            }
+          b'\x02' =>
+            for x in 0..<width {
+              let shift = (3 - x % 4) * 2
+              img.pix.unsafe_set(
+                y * img.stride + x,
+                ((cur_row.unsafe_get(x / 4).to_int() >> shift) & 0x03).to_byte(),
+              )
+            }
+          b'\x01' =>
+            for x in 0..<width {
+              let shift = 7 - x % 8
+              img.pix.unsafe_set(
+                y * img.stride + x,
+                ((cur_row.unsafe_get(x / 8).to_int() >> shift) & 0x01).to_byte(),
+              )
+            }
+          _ => ()
         }
         @blit.blit_fixed_array(prev_row, 0, cur_row, 0, stride)
       }
       @image.AnyImage::Paletted(img)
     }
     t if t == ct_grayscale_alpha => {
-      let img = if bit_depth == b'\x08' {
-        @image.new_image_nrgba(rect)
-      } else {
-        @image.new_image_nrgba(rect)
-      }
+      let img = @image.new_image_nrgba(rect)
       for y in 0..<height {
         let row_start = y * (stride + 1)
         let filter = data.unsafe_get(row_start)

@@ -132,23 +132,6 @@ pub fn new_image_ycbcr(
 }
 
 ///|
-pub fn new_image_ycbcr_separate(
-  r : Rectangle,
-  subsample_ratio : YCbCrSubsampleRatio,
-) -> ImageYCbCr {
-  let (w, h, cw, ch) = ycbcr_size(r, subsample_ratio)
-  {
-    y_: FixedArray::make(w * h, b'\x00'),
-    cb: FixedArray::make(cw * ch, b'\x00'),
-    cr: FixedArray::make(cw * ch, b'\x00'),
-    y_stride: w,
-    c_stride: cw,
-    subsample_ratio,
-    rect: r,
-  }
-}
-
-///|
 pub(all) struct ImageNYCbCrA {
   ycbcr : ImageYCbCr
   a : FixedArray[Byte]

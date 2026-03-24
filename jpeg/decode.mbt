@@ -76,37 +76,33 @@ fn decode_jpeg(d : Decoder) -> @image.AnyImage raise JpegError {
   )
   while !done && d.r.remaining() > 0 {
     let marker = read_marker(d)
-    if marker == marker_eoi {
-      done = true
-    } else if marker == marker_sof0 || marker == marker_sof0 + 1U {
-      process_sof(d)
-    } else if marker == marker_sof2 {
-      d.progressive = true
-      process_sof(d)
-    } else if marker == marker_dht {
-      process_dht(d)
-    } else if marker == marker_dqt {
-      process_dqt(d)
-    } else if marker == marker_dri {
-      process_dri(d)
-    } else if marker == marker_sos {
-      if d.progressive {
-        process_sos_progressive(d)
-      } else {
-        img = process_sos(d)
-        done = true
+    match marker {
+      m if m == marker_eoi => done = true
+      m if m == marker_sof0 || m == marker_sof0 + 1U => process_sof(d)
+      m if m == marker_sof2 => {
+        d.progressive = true
+        process_sof(d)
       }
-    } else if marker >= marker_app0 && marker <= marker_app15 {
-      let length = d.r.read_uint16_be()
-      d.r.skip(length.reinterpret_as_int() - 2)
-    } else if marker == marker_com {
-      let length = d.r.read_uint16_be()
-      d.r.skip(length.reinterpret_as_int() - 2)
-    } else {
-      let length = d.r.read_uint16_be()
-      let skip_len = length.reinterpret_as_int() - 2
-      if skip_len >= 0 {
-        d.r.skip(skip_len)
+      m if m == marker_dht => process_dht(d)
+      m if m == marker_dqt => process_dqt(d)
+      m if m == marker_dri => process_dri(d)
+      m if m == marker_sos =>
+        if d.progressive {
+          process_sos_progressive(d)
+        } else {
+          img = process_sos(d)
+          done = true
+        }
+      m if (m >= marker_app0 && m <= marker_app15) || m == marker_com => {
+        let length = d.r.read_uint16_be()
+        d.r.skip(length.reinterpret_as_int() - 2)
+      }
+      _ => {
+        let length = d.r.read_uint16_be()
+        let skip_len = length.reinterpret_as_int() - 2
+        if skip_len >= 0 {
+          d.r.skip(skip_len)
+        }
       }
     }
   }
