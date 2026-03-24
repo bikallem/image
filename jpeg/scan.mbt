@@ -106,21 +106,18 @@ pub fn process_sos(d : Decoder) -> @image.AnyImage raise JpegError {
           for hx in 0..<h {
             // Decode one 8x8 block
             decode_block(d, ci, block)
-            // Dequantize
+            // Dequantize and reorder to natural order in one step
+            // (matching Go's reconstructBlock: b[unzig[zig]] *= qt[zig])
             let qt_idx = d.comp.unsafe_get(ci).qt
-            for k in 0..<64 {
-              block.unsafe_set(
-                k,
-                block.unsafe_get(k) *
-                d.quant.unsafe_get(qt_idx).data.unsafe_get(unzig.unsafe_get(k)),
-              )
-            }
-            // Reorder from zig-zag to natural order for IDCT
             for k in 0..<64 {
               nat.unsafe_set(k, 0)
             }
             for k in 0..<64 {
-              nat.unsafe_set(unzig.unsafe_get(k), block.unsafe_get(k))
+              nat.unsafe_set(
+                unzig.unsafe_get(k),
+                block.unsafe_get(k) *
+                d.quant.unsafe_get(qt_idx).data.unsafe_get(k),
+              )
             }
             // IDCT
             idct(nat, idct_out)
