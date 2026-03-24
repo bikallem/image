@@ -40,7 +40,10 @@ fn quantize_image(
   // Create paletted image
   let pal = @color.Palette::{ colors: palette }
   let result = @image.new_image_paletted(bounds, pal)
-  // Map each pixel to nearest palette entry
+  // Map each pixel to nearest palette entry with color cache
+  let cache_hi = FixedArray::make(256, -1)
+  let cache_lo = FixedArray::make(256, -1)
+  let cache_vals = FixedArray::make(256, 0)
   if img is @image.AnyImage::RGBA(rgba) {
     for y in bounds.min_y..<bounds.max_y {
       let src_row = rgba.pix_offset + (y - rgba.rect.min_y) * rgba.stride +
@@ -50,13 +53,24 @@ fn quantize_image(
         (bounds.min_x - result.rect.min_x)
       for x in 0..<w {
         let si = src_row + x * 4
-        let c = @color.AnyColor::RGBA({
-          r: rgba.pix.unsafe_get(si),
-          g: rgba.pix.unsafe_get(si + 1),
-          b: rgba.pix.unsafe_get(si + 2),
-          a: rgba.pix.unsafe_get(si + 3),
-        })
-        result.pix.unsafe_set(dst_row + x, pal.index(c).to_byte())
+        let r = rgba.pix.unsafe_get(si)
+        let g = rgba.pix.unsafe_get(si + 1)
+        let b = rgba.pix.unsafe_get(si + 2)
+        let a = rgba.pix.unsafe_get(si + 3)
+        let hi = (r.to_int() << 8) | g.to_int()
+        let lo = (b.to_int() << 8) | a.to_int()
+        let slot = hi.lxor(lo).lxor(hi >> 4).land(0xFF)
+        if cache_hi.unsafe_get(slot) == hi &&
+          cache_lo.unsafe_get(slot) == lo {
+          result.pix.unsafe_set(dst_row + x, cache_vals.unsafe_get(slot).to_byte())
+        } else {
+          let c = @color.AnyColor::RGBA({ r, g, b, a })
+          let idx = pal.index(c)
+          cache_hi.unsafe_set(slot, hi)
+          cache_lo.unsafe_set(slot, lo)
+          cache_vals.unsafe_set(slot, idx)
+          result.pix.unsafe_set(dst_row + x, idx.to_byte())
+        }
       }
     }
   } else {
