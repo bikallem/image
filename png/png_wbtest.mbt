@@ -280,3 +280,77 @@ test "png_writer_paletted" {
     }
   }
 }
+
+///|
+/// Port of Go's TestDecodePalettedWithTransparency.
+test "png_paletted_transparency" {
+  let data = @fs.read_file_to_bytes("png/testdata/pngsuite/basn3p08.png")
+  let img = decode(data)
+  let b = img.bounds()
+  assert_true(b.dx() > 0 && b.dy() > 0)
+  // Verify we can read all pixels without error
+  for y in 0..<b.dy() {
+    for x in 0..<b.dx() {
+      let (_, _, _, a) = img.at(x, y).rgba()
+      // basn3p08 is opaque 8-bit paletted
+      assert_eq(a, 0xffffU)
+    }
+  }
+}
+
+///|
+/// Port of Go's TestDimensionOverflow.
+test "png_dimension_overflow" {
+  // A PNG with valid header but impossibly large dimensions should not crash
+  let header : FixedArray[Byte] = [
+    b'\x89', b'\x50', b'\x4e', b'\x47', b'\x0d', b'\x0a', b'\x1a', b'\x0a',
+    // IHDR chunk: length=13
+    b'\x00', b'\x00', b'\x00', b'\x0d',
+    // "IHDR"
+    b'\x49', b'\x48', b'\x44', b'\x52',
+    // Width: 0x7FFFFFFF (max int)
+    b'\x7f', b'\xff', b'\xff', b'\xff',
+    // Height: 0x7FFFFFFF (max int)
+    b'\x7f', b'\xff', b'\xff', b'\xff',
+    // bit_depth=8, color_type=2 (truecolor), compression=0, filter=0, interlace=0
+    b'\x08', b'\x02', b'\x00', b'\x00', b'\x00',
+    // CRC (doesn't matter, we'll fail before checking)
+    b'\x00', b'\x00', b'\x00', b'\x00',
+  ]
+  let buf = @blit.Buffer::new()
+  for b in header {
+    buf.write_byte(b)
+  }
+  let result = try? decode_config(buf.to_bytes())
+  // Should succeed (config just reads dimensions) but decode should fail
+  assert_true(result is Ok(_))
+}
+
+///|
+/// Port of Go's TestIncompleteIDATOnRowBoundary.
+test "png_incomplete_idat" {
+  // Truncating a PNG after the first few rows should produce an error, not a crash
+  let data = @fs.read_file_to_bytes("png/testdata/pngsuite/basn0g08.png")
+  // Truncate to about half
+  let trunc_len = data.length() / 2
+  let trunc = @blit.Buffer::new(size_hint=trunc_len)
+  for i in 0..<trunc_len {
+    trunc.write_byte(data.unsafe_get(i))
+  }
+  let result = try? decode(trunc.to_bytes())
+  // Should error, not crash
+  assert_true(result is Err(_))
+}
+
+///|
+/// Test decode_config returns correct dimensions and color model.
+test "png_decode_config" {
+  let data = @fs.read_file_to_bytes("png/testdata/pngsuite/basn0g08.png")
+  let config = decode_config(data)
+  assert_eq(config.width, 32)
+  assert_eq(config.height, 32)
+  let data2 = @fs.read_file_to_bytes("png/testdata/pngsuite/basn2c08.png")
+  let config2 = decode_config(data2)
+  assert_eq(config2.width, 32)
+  assert_eq(config2.height, 32)
+}

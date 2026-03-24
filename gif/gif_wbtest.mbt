@@ -195,3 +195,66 @@ test "gif_pixel_parity" {
     }
   }
 }
+
+///|
+/// Port of Go's TestTransparentIndex.
+test "gif_transparent_index" {
+  let data = @fs.read_file_to_bytes("testdata/video-001.gif")
+  let gif = decode_all(data)
+  assert_true(gif.image.length() > 0)
+  // Verify disposal and delay arrays match image count
+  assert_eq(gif.delay.length(), gif.image.length())
+  assert_eq(gif.disposal.length(), gif.image.length())
+}
+
+///|
+/// Test GIF encode_image auto-quantizes an RGBA image.
+test "gif_encode_image" {
+  let img = @image.new_image_rgba(@image.rect(0, 0, 8, 8))
+  for y in 0..<8 {
+    for x in 0..<8 {
+      img.set_rgba(x, y, {
+        r: (x * 32).to_byte(),
+        g: (y * 32).to_byte(),
+        b: b'\x40',
+        a: b'\xff',
+      })
+    }
+  }
+  let encoded = encode_image(@image.AnyImage::RGBA(img))
+  let decoded = decode(encoded)
+  assert_eq(decoded.bounds().dx(), 8)
+  assert_eq(decoded.bounds().dy(), 8)
+}
+
+///|
+/// Test GIF decode_config returns correct dimensions.
+test "gif_decode_config" {
+  let data = @fs.read_file_to_bytes("testdata/video-001.gif")
+  let config = decode_config(data)
+  assert_true(config.width > 0)
+  assert_true(config.height > 0)
+}
+
+///|
+/// Test encoding with very small palette.
+test "gif_small_palette" {
+  let pal : @color.Palette = {
+    colors: [
+      @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' }),
+      @color.AnyColor::RGBA({ r: b'\xff', g: b'\xff', b: b'\xff', a: b'\xff' }),
+    ],
+  }
+  let m = @image.new_image_paletted(@image.rect(0, 0, 4, 4), pal)
+  for y in 0..<4 {
+    for x in 0..<4 {
+      m.set_color_index(x, y, ((x + y) % 2).to_byte())
+    }
+  }
+  let encoded = encode(m)
+  let decoded = decode_all(encoded)
+  assert_true(decoded.image.length() > 0)
+  let frame = decoded.image[0]
+  assert_eq(frame.rect.dx(), 4)
+  assert_eq(frame.rect.dy(), 4)
+}

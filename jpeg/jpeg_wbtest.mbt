@@ -172,3 +172,56 @@ test "jpeg_truncated_sos" {
     }
   }
 }
+
+///|
+/// Test JPEG decode_config returns correct dimensions.
+test "jpeg_decode_config" {
+  let data = @fs.read_file_to_bytes("testdata/video-001.jpeg")
+  let config = decode_config(data)
+  assert_true(config.width > 0)
+  assert_true(config.height > 0)
+}
+
+///|
+/// Test JPEG encode with different quality levels.
+test "jpeg_quality_levels" {
+  let img = @image.new_image_rgba(@image.rect(0, 0, 16, 16))
+  for y in 0..<16 {
+    for x in 0..<16 {
+      img.set_rgba(x, y, {
+        r: (x * 16).to_byte(),
+        g: (y * 16).to_byte(),
+        b: b'\x80',
+        a: b'\xff',
+      })
+    }
+  }
+  let any_img = @image.AnyImage::RGBA(img)
+  // Low quality should produce smaller output
+  let low = encode(any_img, quality=10)
+  let high = encode(any_img, quality=95)
+  assert_true(low.length() < high.length())
+  // Both should decode without error
+  let dec_low = decode(low)
+  let dec_high = decode(high)
+  assert_eq(dec_low.bounds().dx(), 16)
+  assert_eq(dec_high.bounds().dx(), 16)
+}
+
+///|
+/// Test that JPEG extraneous data after EOI is handled.
+test "jpeg_extraneous_data" {
+  let data = @fs.read_file_to_bytes("testdata/video-001.jpeg")
+  // Append garbage after EOI marker
+  let extra = @blit.Buffer::new(size_hint=data.length() + 100)
+  for i in 0..<data.length() {
+    extra.write_byte(data.unsafe_get(i))
+  }
+  for i in 0..<100 {
+    ignore(i)
+    extra.write_byte(b'\xAB')
+  }
+  // Should still decode correctly (EOI marks end, extra data ignored)
+  let img = decode(extra.to_bytes())
+  assert_true(img.bounds().dx() > 0)
+}
