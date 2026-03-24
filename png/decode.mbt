@@ -111,7 +111,7 @@ pub fn decode(data : Bytes) -> @image.AnyImage raise Error {
   let decompressed = @zlib.decompress(compressed) 
   if interlace == b'\x00' {
     decode_image(
-      decompressed, width, height, bit_depth, color_type, palette, trns,
+      decompressed[:], width, height, bit_depth, color_type, palette, trns,
     )
   } else {
     decode_interlaced(
@@ -195,14 +195,10 @@ fn decode_interlaced(
     if offset + pass_data_len > data.length() {
       raise PngError::FormatError("not enough IDAT data for interlaced pass")
     }
-    // Decode the pass sub-image using a slice of the data
+    // Decode the pass sub-image using a BytesView slice (zero-copy)
     ignore(bpp)
-    let pass_bytes = @blit.Buffer::new(size_hint=pass_data_len)
-    for i in 0..<pass_data_len {
-      pass_bytes.write_byte(data.unsafe_get(offset + i))
-    }
     let pass_img = decode_image(
-      pass_bytes.to_bytes(),
+      data[offset:offset + pass_data_len],
       pass_w,
       pass_h,
       bit_depth,
@@ -259,7 +255,7 @@ fn decode_interlaced(
 
 ///|
 fn decode_image(
-  data : Bytes,
+  data : BytesView,
   width : Int,
   height : Int,
   bit_depth : Byte,
