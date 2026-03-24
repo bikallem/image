@@ -153,20 +153,6 @@ fn decode_interlaced(
     max_x: width,
     max_y: height,
   }
-  // Create the final image
-  let final_img = decode_image(
-    // Decode a dummy to get the right type, then overwrite
-    // Actually, let's just create the right type and fill it
-    Bytes::new(0), // placeholder
-    0,
-    0,
-    bit_depth,
-    color_type,
-    palette,
-    trns,
-  )
-  // That approach won't work. Let me create the image directly.
-  ignore(final_img)
   // Create target image based on color type
   let target = match color_type {
     t if t == ct_grayscale => @image.AnyImage::Gray(@image.new_image_gray(rect))
@@ -209,9 +195,14 @@ fn decode_interlaced(
     if offset + pass_data_len > data.length() {
       raise PngError::FormatError("not enough IDAT data for interlaced pass")
     }
-    // Decode the pass sub-image
+    // Decode the pass sub-image using a slice of the data
+    ignore(bpp)
+    let pass_bytes = @blit.Buffer::new(size_hint=pass_data_len)
+    for i in 0..<pass_data_len {
+      pass_bytes.write_byte(data.unsafe_get(offset + i))
+    }
     let pass_img = decode_image(
-      Bytes::makei(pass_data_len, fn(i) { data.unsafe_get(offset + i) }),
+      pass_bytes.to_bytes(),
       pass_w,
       pass_h,
       bit_depth,
@@ -219,7 +210,6 @@ fn decode_interlaced(
       palette,
       trns,
     )
-    ignore(bpp)
     offset += pass_data_len
     // Scatter pass pixels into the final image
     for py in 0..<pass_h {

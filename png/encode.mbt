@@ -99,8 +99,42 @@ pub fn encode(
           raw_buf.write_byte(c.b)
           raw_buf.write_byte(c.a)
         }
-      @image.AnyImage::RGBA(_)
-      | @image.AnyImage::RGBA64(_)
+      @image.AnyImage::RGBA(rgba) => {
+        // Fast path: read directly from pix array, avoiding per-pixel dispatch
+        let row_off = rgba.pix_offset +
+          (y - rgba.rect.min_y) * rgba.stride +
+          (bounds.min_x - rgba.rect.min_x) * 4
+        for x in 0..<width {
+          let si = row_off + x * 4
+          let r = rgba.pix.unsafe_get(si)
+          let g = rgba.pix.unsafe_get(si + 1)
+          let b = rgba.pix.unsafe_get(si + 2)
+          let a = rgba.pix.unsafe_get(si + 3)
+          if a == b'\xff' {
+            // Fully opaque: premultiplied == straight
+            raw_buf.write_byte(r)
+            raw_buf.write_byte(g)
+            raw_buf.write_byte(b)
+            raw_buf.write_byte(b'\xff')
+          } else if a == b'\x00' {
+            raw_buf.write_byte(b'\x00')
+            raw_buf.write_byte(b'\x00')
+            raw_buf.write_byte(b'\x00')
+            raw_buf.write_byte(b'\x00')
+          } else {
+            // Un-premultiply
+            let aa = a.to_uint()
+            let nr = r.to_uint() * 0xffU / aa
+            let ng = g.to_uint() * 0xffU / aa
+            let nb = b.to_uint() * 0xffU / aa
+            raw_buf.write_byte(nr.to_byte())
+            raw_buf.write_byte(ng.to_byte())
+            raw_buf.write_byte(nb.to_byte())
+            raw_buf.write_byte(a)
+          }
+        }
+      }
+      @image.AnyImage::RGBA64(_)
       | @image.AnyImage::NRGBA64(_)
       | @image.AnyImage::Alpha(_)
       | @image.AnyImage::Alpha16(_)
@@ -110,7 +144,6 @@ pub fn encode(
       | @image.AnyImage::Uniform(_) =>
         for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
           let (r, g, b, a) = img.at(x, y).rgba()
-          // Convert premultiplied to non-premultiplied for RGBA output
           if a == 0U {
             raw_buf.write_byte(b'\x00')
             raw_buf.write_byte(b'\x00')

@@ -8,14 +8,31 @@ fn quantize_image(
   let w = bounds.dx()
   let h = bounds.dy()
   let n = if n_colors < 2 { 2 } else if n_colors > 256 { 256 } else { n_colors }
-  // Collect pixel samples (sample if image is large)
+  // Collect pixel samples
   let pixels = Array::new(capacity=w * h)
-  for y = bounds.min_y; y < bounds.max_y; y = y + 1 {
-    for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
-      let (rv, gv, bv, _) = img.at(x, y).rgba()
-      pixels.push(
-        ((rv >> 8).to_byte(), (gv >> 8).to_byte(), (bv >> 8).to_byte()),
-      )
+  if img is @image.AnyImage::RGBA(rgba) {
+    for y in bounds.min_y..<bounds.max_y {
+      let row = rgba.pix_offset + (y - rgba.rect.min_y) * rgba.stride +
+        (bounds.min_x - rgba.rect.min_x) * 4
+      for x in 0..<w {
+        let si = row + x * 4
+        pixels.push(
+          (
+            rgba.pix.unsafe_get(si),
+            rgba.pix.unsafe_get(si + 1),
+            rgba.pix.unsafe_get(si + 2),
+          ),
+        )
+      }
+    }
+  } else {
+    for y = bounds.min_y; y < bounds.max_y; y = y + 1 {
+      for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
+        let (rv, gv, bv, _) = img.at(x, y).rgba()
+        pixels.push(
+          ((rv >> 8).to_byte(), (gv >> 8).to_byte(), (bv >> 8).to_byte()),
+        )
+      }
     }
   }
   // Median-cut to produce palette
@@ -24,11 +41,31 @@ fn quantize_image(
   let pal = @color.Palette::{ colors: palette }
   let result = @image.new_image_paletted(bounds, pal)
   // Map each pixel to nearest palette entry
-  for y = bounds.min_y; y < bounds.max_y; y = y + 1 {
-    for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
-      let c = img.at(x, y)
-      let idx = pal.index(c)
-      result.set_color_index(x, y, idx.to_byte())
+  if img is @image.AnyImage::RGBA(rgba) {
+    for y in bounds.min_y..<bounds.max_y {
+      let src_row = rgba.pix_offset + (y - rgba.rect.min_y) * rgba.stride +
+        (bounds.min_x - rgba.rect.min_x) * 4
+      let dst_row = result.pix_offset +
+        (y - result.rect.min_y) * result.stride +
+        (bounds.min_x - result.rect.min_x)
+      for x in 0..<w {
+        let si = src_row + x * 4
+        let c = @color.AnyColor::RGBA({
+          r: rgba.pix.unsafe_get(si),
+          g: rgba.pix.unsafe_get(si + 1),
+          b: rgba.pix.unsafe_get(si + 2),
+          a: rgba.pix.unsafe_get(si + 3),
+        })
+        result.pix.unsafe_set(dst_row + x, pal.index(c).to_byte())
+      }
+    }
+  } else {
+    for y = bounds.min_y; y < bounds.max_y; y = y + 1 {
+      for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
+        let c = img.at(x, y)
+        let idx = pal.index(c)
+        result.set_color_index(x, y, idx.to_byte())
+      }
     }
   }
   result
