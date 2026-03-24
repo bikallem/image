@@ -81,14 +81,14 @@ let chroma_ac_symbols : FixedArray[Int] = [
 ///|
 /// Encoder state for bit-level output.
 priv struct Encoder {
-  buf : @buffer.Buffer
+  buf : @blit.Buffer
   mut bit_buf : Int
   mut bit_count : Int
 }
 
 ///|
 fn Encoder::new() -> Encoder {
-  { buf: @buffer.new(), bit_buf: 0, bit_count: 0 }
+  { buf: @blit.Buffer::new(), bit_buf: 0, bit_count: 0 }
 }
 
 ///|

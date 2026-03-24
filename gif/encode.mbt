@@ -33,7 +33,7 @@ pub fn encode(img : @image.ImagePaletted) -> Bytes raise Error {
 ///|
 /// Encodes multiple frames as an animated GIF.
 pub fn encode_all(gif : GIF) -> Bytes raise Error {
-  let buf = @buffer.new()
+  let buf = @blit.Buffer::new()
   let width = gif.config.width
   let height = gif.config.height
   // Header
@@ -85,7 +85,7 @@ pub fn encode_all(gif : GIF) -> Bytes raise Error {
     buf.write_byte(lit_width.to_byte()) // LZW minimum code size
     // Get pixel data
     let pixel_count = img.rect.dx() * img.rect.dy()
-    let pixel_buf = @buffer.new(size_hint=pixel_count)
+    let pixel_buf = @blit.Buffer::new(size_hint=pixel_count)
     for j in 0..<pixel_count {
       pixel_buf.write_byte(img.pix.unsafe_get(img.pix_offset + j))
     }
@@ -118,7 +118,7 @@ fn color_table_size(n : Int) -> Int {
 
 ///|
 fn write_color_table(
-  buf : @buffer.Buffer,
+  buf : @blit.Buffer,
   palette : Array[@color.AnyColor],
   size : Int,
 ) -> Unit {
@@ -137,20 +137,20 @@ fn write_color_table(
 }
 
 ///|
-fn write_string(buf : @buffer.Buffer, s : String) -> Unit {
+fn write_string(buf : @blit.Buffer, s : String) -> Unit {
   for c in s {
     buf.write_byte(c.to_int().to_byte())
   }
 }
 
 ///|
-fn write_uint16_le(buf : @buffer.Buffer, v : UInt) -> Unit {
+fn write_uint16_le(buf : @blit.Buffer, v : UInt) -> Unit {
   buf.write_byte(v.to_byte())
   buf.write_byte((v >> 8).to_byte())
 }
 
 ///|
-fn write_sub_blocks(buf : @buffer.Buffer, data : Bytes) -> Unit {
+fn write_sub_blocks(buf : @blit.Buffer, data : Bytes) -> Unit {
   let mut pos = 0
   while pos < data.length() {
     let remaining = data.length() - pos

@@ -93,7 +93,7 @@ pub fn ByteReader::read_bytes(
   if self.pos + n > self.data.length() {
     raise UnexpectedEOF
   }
-  let buf = @buffer.new(size_hint=n)
+  let buf = @blit.Buffer::new(size_hint=n)
   for i in 0..<n {
     buf.write_byte(self.data.unsafe_get(self.pos + i))
   }

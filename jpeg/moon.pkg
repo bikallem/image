@@ -2,7 +2,6 @@ import {
   "bikallem/image/image",
   "bikallem/image/color",
   "bikallem/image/internal/binary",
-  "moonbitlang/core/buffer",
   "bikallem/blit",
 }
 

@@ -5,7 +5,6 @@ import {
   "bikallem/compress/zlib",
   "bikallem/compress/flate",
   "bikallem/compress/checksum",
-  "moonbitlang/core/buffer",
   "bikallem/blit",
 }
 

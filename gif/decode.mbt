@@ -191,7 +191,7 @@ fn skip_sub_blocks(r : GifByteReader) -> Unit raise GifError {
 
 ///|
 fn read_sub_blocks(r : GifByteReader) -> Bytes raise GifError {
-  let buf = @buffer.new()
+  let buf = @blit.Buffer::new()
   while true {
     let size = r.read_byte()
     if size == b'\x00' {

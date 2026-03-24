@@ -2,9 +2,11 @@
   "name": "bikallem/image",
   "version": "0.1.0",
   "deps": {
-    "bikallem/compress": "0.2.1",
+    "bikallem/compress": {
+      "path": "../compress"
+    },
     "moonbitlang/x": "0.4.41",
-    "bikallem/blit": "0.1.0"
+    "bikallem/blit": "0.2.2"
   },
   "source": ".",
   "exclude": [

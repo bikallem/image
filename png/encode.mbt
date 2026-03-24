@@ -13,7 +13,7 @@ pub fn encode(
   img : @image.AnyImage,
   compression? : CompressionLevel = DefaultCompression,
 ) -> Bytes {
-  let buf = @buffer.new()
+  let buf = @blit.Buffer::new()
   // Write PNG signature
   for i in 0..<8 {
     buf.write_byte(png_header.unsafe_get(i))
@@ -65,7 +65,7 @@ pub fn encode(
     _ => ()
   }
   // Build raw image data (filter byte + row data)
-  let raw_buf = @buffer.new()
+  let raw_buf = @blit.Buffer::new()
   for y = bounds.min_y; y < bounds.max_y; y = y + 1 {
     // Write filter byte (None for simplicity)
     raw_buf.write_byte(ft_none)
@@ -128,7 +128,7 @@ pub fn encode(
     BestCompression => @flate.BestCompression
   }
   let raw_bytes = raw_buf.to_bytes()
-  let idat_buf = @buffer.new(size_hint=raw_bytes.length())
+  let idat_buf = @blit.Buffer::new(size_hint=raw_bytes.length())
   // Zlib header (CMF=0x78, FLG depends on level)
   let cmf : Int = 0x78 // deflate, window=32K
   let flevel = match compression {
@@ -205,7 +205,7 @@ fn crc32_byte(crc : UInt, b : Byte) -> UInt {
 }
 
 ///|
-fn write_u32_be(buf : @buffer.Buffer, v : UInt) -> Unit {
+fn write_u32_be(buf : @blit.Buffer, v : UInt) -> Unit {
   buf.write_byte((v >> 24).to_byte())
   buf.write_byte((v >> 16).to_byte())
   buf.write_byte((v >> 8).to_byte())
@@ -214,7 +214,7 @@ fn write_u32_be(buf : @buffer.Buffer, v : UInt) -> Unit {
 
 ///|
 fn write_chunk(
-  buf : @buffer.Buffer,
+  buf : @blit.Buffer,
   chunk_type : UInt,
   data : FixedArray[Byte],
 ) -> Unit {

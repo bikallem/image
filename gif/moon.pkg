@@ -3,7 +3,7 @@ import {
   "bikallem/image/color",
   "bikallem/image/internal/binary",
   "bikallem/compress/lzw",
-  "moonbitlang/core/buffer",
+  "bikallem/blit",
 }
 
 import {

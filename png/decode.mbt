@@ -16,7 +16,7 @@ pub fn decode(data : Bytes) -> @image.AnyImage raise Error {
   let mut color_type : Byte = b'\x00'
   let mut palette : Array[@color.AnyColor] = []
   let mut trns : Bytes = Bytes::new(0)
-  let idat_buf = @buffer.new()
+  let idat_buf = @blit.Buffer::new()
   let mut interlace : Byte = b'\x00'
   let mut seen_ihdr = false
   let mut seen_iend = false
