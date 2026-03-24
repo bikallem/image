@@ -534,7 +534,7 @@ fn unfilter(
       }
     f if f == ft_average =>
       for i in 0..<n {
-        let a = if i >= bpp { cur[i - bpp].to_int() } else { 0 }
+        let a = if i >= bpp { cur.unsafe_get(i - bpp).to_int() } else { 0 }
         cur.unsafe_set(
           i,
           (cur.unsafe_get(i).to_int() + (a + prev.unsafe_get(i).to_int()) / 2).to_byte(),
@@ -542,13 +542,22 @@ fn unfilter(
       }
     f if f == ft_paeth =>
       for i in 0..<n {
-        let a = if i >= bpp { cur[i - bpp].to_int() } else { 0 }
+        let a = if i >= bpp { cur.unsafe_get(i - bpp).to_int() } else { 0 }
         let b = prev.unsafe_get(i).to_int()
-        let c = if i >= bpp { prev[i - bpp].to_int() } else { 0 }
-        cur.unsafe_set(
-          i,
-          (cur.unsafe_get(i).to_int() + paeth(a, b, c)).to_byte(),
-        )
+        let c = if i >= bpp { prev.unsafe_get(i - bpp).to_int() } else { 0 }
+        // Inline paeth predictor to avoid function call overhead
+        let p = a + b - c
+        let pa = if p >= a { p - a } else { a - p }
+        let pb = if p >= b { p - b } else { b - p }
+        let pc = if p >= c { p - c } else { c - p }
+        let pr = if pa <= pb && pa <= pc {
+          a
+        } else if pb <= pc {
+          b
+        } else {
+          c
+        }
+        cur.unsafe_set(i, (cur.unsafe_get(i).to_int() + pr).to_byte())
       }
     _ => raise PngError::FormatError("unknown filter type")
   }

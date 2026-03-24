@@ -94,8 +94,11 @@ pub fn draw_mask(
         draw_gray(dst0, r, src0, sp)
         return
       }
-      @image.AnyImage::RGBA64(_)
-      | @image.AnyImage::NRGBA64(_)
+      @image.AnyImage::RGBA64(src0) => {
+        draw_rgba64_to_rgba(dst0, r, src0, sp, op)
+        return
+      }
+      @image.AnyImage::NRGBA64(_)
       | @image.AnyImage::Alpha(_)
       | @image.AnyImage::Alpha16(_)
       | @image.AnyImage::Gray16(_)
@@ -104,6 +107,13 @@ pub fn draw_mask(
       | @image.AnyImage::CMYK(_) => ()
     }
     draw_rgba(dst0, r, src, sp, mask, op)
+    return
+  }
+  // RGBA destination + Uniform source + Alpha mask (glyph rendering)
+  if dst is @image.AnyImage::RGBA(dst0) &&
+    src is @image.AnyImage::Uniform(u) &&
+    mask is Some(@image.AnyImage::Alpha(mask_alpha)) {
+    draw_glyph_over(dst0, r, u.c, mask_alpha, mp)
     return
   }
   // Paletted destination, no mask
@@ -401,6 +411,118 @@ fn draw_rgba(
         dst.pix.unsafe_set(di + 2, (sb >> 8).to_byte())
         dst.pix.unsafe_set(di + 3, (sa >> 8).to_byte())
       }
+    }
+  }
+}
+
+///|
+/// Fast path for RGBA64 source → RGBA destination (no mask).
+/// Avoids per-pixel AnyImage dispatch and refcounting.
+fn draw_rgba64_to_rgba(
+  dst : @image.ImageRGBA,
+  r : @image.Rectangle,
+  src : @image.ImageRGBA64,
+  sp : @image.Point,
+  op : Op,
+) -> Unit {
+  let dx = r.dx()
+  let d_row0 = dst.pix_offset +
+    (r.min_y - dst.rect.min_y) * dst.stride +
+    (r.min_x - dst.rect.min_x) * 4
+  let s_row0 = src.pix_offset +
+    (sp.y - src.rect.min_y) * src.stride +
+    (sp.x - src.rect.min_x) * 8
+  for y in r.min_y..<r.max_y {
+    let dy = y - r.min_y
+    let d_row = d_row0 + dy * dst.stride
+    let s_row = s_row0 + dy * src.stride
+    for x in 0..<dx {
+      let di = d_row + x * 4
+      let si = s_row + x * 8
+      let sr = (src.pix.unsafe_get(si).to_uint() << 8) |
+        src.pix.unsafe_get(si + 1).to_uint()
+      let sg = (src.pix.unsafe_get(si + 2).to_uint() << 8) |
+        src.pix.unsafe_get(si + 3).to_uint()
+      let sb = (src.pix.unsafe_get(si + 4).to_uint() << 8) |
+        src.pix.unsafe_get(si + 5).to_uint()
+      let sa = (src.pix.unsafe_get(si + 6).to_uint() << 8) |
+        src.pix.unsafe_get(si + 7).to_uint()
+      if op == Over {
+        let a = max_color - sa
+        let dr = dst.pix.unsafe_get(di).to_uint()
+        let dg = dst.pix.unsafe_get(di + 1).to_uint()
+        let db = dst.pix.unsafe_get(di + 2).to_uint()
+        let da = dst.pix.unsafe_get(di + 3).to_uint()
+        let dr16 = dr | (dr << 8)
+        let dg16 = dg | (dg << 8)
+        let db16 = db | (db << 8)
+        let da16 = da | (da << 8)
+        dst.pix.unsafe_set(di, ((div65535(dr16 * a) + sr) >> 8).to_byte())
+        dst.pix.unsafe_set(
+          di + 1, ((div65535(dg16 * a) + sg) >> 8).to_byte(),
+        )
+        dst.pix.unsafe_set(
+          di + 2, ((div65535(db16 * a) + sb) >> 8).to_byte(),
+        )
+        dst.pix.unsafe_set(
+          di + 3, ((div65535(da16 * a) + sa) >> 8).to_byte(),
+        )
+      } else {
+        dst.pix.unsafe_set(di, (sr >> 8).to_byte())
+        dst.pix.unsafe_set(di + 1, (sg >> 8).to_byte())
+        dst.pix.unsafe_set(di + 2, (sb >> 8).to_byte())
+        dst.pix.unsafe_set(di + 3, (sa >> 8).to_byte())
+      }
+    }
+  }
+}
+
+///|
+/// Fast path for glyph rendering: RGBA dst + uniform color + Alpha mask.
+/// Avoids per-pixel AnyImage dispatch and refcounting.
+fn draw_glyph_over(
+  dst : @image.ImageRGBA,
+  r : @image.Rectangle,
+  src_color : @color.AnyColor,
+  mask : @image.ImageAlpha,
+  mp : @image.Point,
+) -> Unit {
+  let (sr, sg, sb, sa) = src_color.rgba()
+  let d_row0 = dst.pix_offset +
+    (r.min_y - dst.rect.min_y) * dst.stride +
+    (r.min_x - dst.rect.min_x) * 4
+  let m_row0 = mask.pix_offset +
+    (mp.y - mask.rect.min_y) * mask.stride +
+    (mp.x - mask.rect.min_x)
+  let dx = r.dx()
+  for y in r.min_y..<r.max_y {
+    let dy = y - r.min_y
+    let d_row = d_row0 + dy * dst.stride
+    let m_row = m_row0 + dy * mask.stride
+    for x in 0..<dx {
+      let ma8 = mask.pix.unsafe_get(m_row + x).to_uint()
+      if ma8 == 0U {
+        continue
+      }
+      let ma = ma8 | (ma8 << 8)
+      let di = d_row + x * 4
+      let sr1 = div65535(sr * ma)
+      let sg1 = div65535(sg * ma)
+      let sb1 = div65535(sb * ma)
+      let sa1 = div65535(sa * ma)
+      let a = max_color - sa1
+      let dr = dst.pix.unsafe_get(di).to_uint()
+      let dg = dst.pix.unsafe_get(di + 1).to_uint()
+      let db = dst.pix.unsafe_get(di + 2).to_uint()
+      let da = dst.pix.unsafe_get(di + 3).to_uint()
+      let dr16 = dr | (dr << 8)
+      let dg16 = dg | (dg << 8)
+      let db16 = db | (db << 8)
+      let da16 = da | (da << 8)
+      dst.pix.unsafe_set(di, ((div65535(dr16 * a) + sr1) >> 8).to_byte())
+      dst.pix.unsafe_set(di + 1, ((div65535(dg16 * a) + sg1) >> 8).to_byte())
+      dst.pix.unsafe_set(di + 2, ((div65535(db16 * a) + sb1) >> 8).to_byte())
+      dst.pix.unsafe_set(di + 3, ((div65535(da16 * a) + sa1) >> 8).to_byte())
     }
   }
 }
