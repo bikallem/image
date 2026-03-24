@@ -165,31 +165,7 @@ pub fn process_sos(d : Decoder) -> @image.AnyImage raise JpegError {
     }
     @image.AnyImage::Gray(img)
   } else {
-    // YCbCr -> RGBA
-    let img = @image.new_image_rgba(rect)
-    // Chroma subsampling ratios
-    let y_w = comp_width.unsafe_get(0)
-    let cb_w = comp_width.unsafe_get(1)
-    let cr_w = comp_width.unsafe_get(2)
-    let full_h = comp_height.unsafe_get(0)
-    let cb_h = comp_height.unsafe_get(1)
-    for y in 0..<d.height {
-      for x in 0..<d.width {
-        let yv = comp_data.unsafe_get(0)[y * y_w + x]
-        // Map pixel coordinates to chroma sample coordinates
-        let cx = if cb_w < y_w { x * cb_w / y_w } else { x }
-        let cy = if cb_h < full_h { y * cb_h / full_h } else { y }
-        let cbv = comp_data.unsafe_get(1)[cy * cb_w + cx]
-        let crv = comp_data.unsafe_get(2)[cy * cr_w + cx]
-        let (r, g, b) = @color.ycbcr_to_rgb(yv, cbv, crv)
-        let di = y * img.stride + x * 4
-        img.pix.unsafe_set(di, r)
-        img.pix.unsafe_set(di + 1, g)
-        img.pix.unsafe_set(di + 2, b)
-        img.pix.unsafe_set(di + 3, b'\xff')
-      }
-    }
-    @image.AnyImage::RGBA(img)
+    ycbcr_to_rgba(d, comp_data, comp_width, comp_height, rect)
   }
 }
 
@@ -565,33 +541,101 @@ fn reconstruct_progressive(d : Decoder) -> @image.AnyImage {
     }
     @image.AnyImage::Gray(img)
   } else {
-    let img = @image.new_image_rgba(rect)
-    let y_w = comp_width.unsafe_get(0)
-    let cb_w = comp_width.unsafe_get(1)
-    let cr_w = comp_width.unsafe_get(2)
-    let full_h = comp_height.unsafe_get(0)
-    let cb_h = comp_height.unsafe_get(1)
-    for y in 0..<d.height {
-      for x in 0..<d.width {
-        let yv = comp_data.unsafe_get(0)[y * y_w + x]
-        let cx = if cb_w < y_w { x * cb_w / y_w } else { x }
-        let cy = if cb_h < full_h { y * cb_h / full_h } else { y }
-        let cbv = comp_data.unsafe_get(1)[cy * cb_w + cx]
-        let crv = comp_data.unsafe_get(2)[cy * cr_w + cx]
-        let (r, g, b) = @color.ycbcr_to_rgb(yv, cbv, crv)
-        let di = y * img.stride + x * 4
-        img.pix.unsafe_set(di, r)
-        img.pix.unsafe_set(di + 1, g)
-        img.pix.unsafe_set(di + 2, b)
-        img.pix.unsafe_set(di + 3, b'\xff')
-      }
-    }
-    @image.AnyImage::RGBA(img)
+    ycbcr_to_rgba(d, comp_data, comp_width, comp_height, rect)
   }
 }
 
 ///|
 /// After a restart marker is expected, consume the RST marker bytes.
+/// Build RGBA image from YCbCr component planes with fancy chroma upsampling.
+/// Uses triangle filter (9:3:3:1 weights for 4:2:0, 3:1 for 4:2:2/4:4:0)
+/// matching libjpeg-turbo's default "fancy" upsampling for better visual quality.
+fn ycbcr_to_rgba(
+  d : Decoder,
+  comp_data : FixedArray[FixedArray[Byte]],
+  comp_width : FixedArray[Int],
+  comp_height : FixedArray[Int],
+  rect : @image.Rectangle,
+) -> @image.AnyImage {
+  let img = @image.new_image_rgba(rect)
+  let y_w = comp_width.unsafe_get(0)
+  let cb_w = comp_width.unsafe_get(1)
+  let cr_w = comp_width.unsafe_get(2)
+  let full_h = comp_height.unsafe_get(0)
+  let cb_h = comp_height.unsafe_get(1)
+  let y_data = comp_data.unsafe_get(0)
+  let cb_data = comp_data.unsafe_get(1)
+  let cr_data = comp_data.unsafe_get(2)
+  let h_sub = cb_w < y_w
+  let v_sub = cb_h < full_h
+  for y in 0..<d.height {
+    for x in 0..<d.width {
+      let yv = y_data.unsafe_get(y * y_w + x)
+      let (cbv, crv) = if h_sub || v_sub {
+        // Fancy (triangle filter) chroma upsampling matching libjpeg-turbo.
+        let cx = x / 2
+        let cy = if v_sub { y / 2 } else { y }
+        let max_cx = cb_w - 1
+        let max_cy = cb_h - 1
+        if h_sub && v_sub {
+          // 4:2:0 — bilinear from 4 neighbors with 9:3:3:1 weights
+          let cx0 = if cx > 0 && (x & 1) == 0 { cx - 1 } else { cx }
+          let cx1 = if cx < max_cx && (x & 1) != 0 { cx + 1 } else { cx }
+          let cy0 = if cy > 0 && (y & 1) == 0 { cy - 1 } else { cy }
+          let cy1 = if cy < max_cy && (y & 1) != 0 { cy + 1 } else { cy }
+          let cb00 = cb_data.unsafe_get(cy0 * cb_w + cx0).to_int()
+          let cb01 = cb_data.unsafe_get(cy0 * cb_w + cx1).to_int()
+          let cb10 = cb_data.unsafe_get(cy1 * cb_w + cx0).to_int()
+          let cb11 = cb_data.unsafe_get(cy1 * cb_w + cx1).to_int()
+          let cr00 = cr_data.unsafe_get(cy0 * cr_w + cx0).to_int()
+          let cr01 = cr_data.unsafe_get(cy0 * cr_w + cx1).to_int()
+          let cr10 = cr_data.unsafe_get(cy1 * cr_w + cx0).to_int()
+          let cr11 = cr_data.unsafe_get(cy1 * cr_w + cx1).to_int()
+          (
+            ((9 * cb00 + 3 * cb01 + 3 * cb10 + cb11 + 8) >> 4).to_byte(),
+            ((9 * cr00 + 3 * cr01 + 3 * cr10 + cr11 + 8) >> 4).to_byte(),
+          )
+        } else if h_sub {
+          // 4:2:2 — horizontal-only with 3:1 weights
+          let cx0 = if cx > 0 && (x & 1) == 0 { cx - 1 } else { cx }
+          let cx1 = if cx < max_cx && (x & 1) != 0 { cx + 1 } else { cx }
+          let cb0 = cb_data.unsafe_get(cy * cb_w + cx0).to_int()
+          let cb1 = cb_data.unsafe_get(cy * cb_w + cx1).to_int()
+          let cr0 = cr_data.unsafe_get(cy * cr_w + cx0).to_int()
+          let cr1 = cr_data.unsafe_get(cy * cr_w + cx1).to_int()
+          (
+            ((3 * cb0 + cb1 + 2) >> 2).to_byte(),
+            ((3 * cr0 + cr1 + 2) >> 2).to_byte(),
+          )
+        } else {
+          // 4:4:0 — vertical-only with 3:1 weights
+          let cy0 = if cy > 0 && (y & 1) == 0 { cy - 1 } else { cy }
+          let cy1 = if cy < max_cy && (y & 1) != 0 { cy + 1 } else { cy }
+          let cb0 = cb_data.unsafe_get(cy0 * cb_w + cx).to_int()
+          let cb1 = cb_data.unsafe_get(cy1 * cb_w + cx).to_int()
+          let cr0 = cr_data.unsafe_get(cy0 * cr_w + cx).to_int()
+          let cr1 = cr_data.unsafe_get(cy1 * cr_w + cx).to_int()
+          (
+            ((3 * cb0 + cb1 + 2) >> 2).to_byte(),
+            ((3 * cr0 + cr1 + 2) >> 2).to_byte(),
+          )
+        }
+      } else {
+        // 4:4:4 — no subsampling, direct lookup
+        (cb_data.unsafe_get(y * cb_w + x), cr_data.unsafe_get(y * cr_w + x))
+      }
+      let (r, g, b) = @color.ycbcr_to_rgb(yv, cbv, crv)
+      let di = y * img.stride + x * 4
+      img.pix.unsafe_set(di, r)
+      img.pix.unsafe_set(di + 1, g)
+      img.pix.unsafe_set(di + 2, b)
+      img.pix.unsafe_set(di + 3, b'\xff')
+    }
+  }
+  @image.AnyImage::RGBA(img)
+}
+
+///|
 fn consume_restart_marker(d : Decoder) -> Unit raise JpegError {
   // Try to read a restart marker (0xFF 0xD0..0xD7)
   // If bytes don't look like a marker, skip silently
