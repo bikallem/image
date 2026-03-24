@@ -57,7 +57,7 @@ pub fn ImageNRGBA::is_opaque(self : ImageNRGBA) -> Bool {
   }
   for y = self.rect.min_y; y < self.rect.max_y; y = y + 1 {
     let row_start = self.pix_offset + (y - self.rect.min_y) * self.stride
-    for x = 0; x < self.rect.dx(); x = x + 1 {
+    for x in 0..<self.rect.dx() {
       if self.pix.unsafe_get(row_start + x * 4 + 3) != b'\xff' {
         return false
       }
@@ -268,7 +268,7 @@ pub fn ImageAlpha::is_opaque(self : ImageAlpha) -> Bool {
   }
   for y = self.rect.min_y; y < self.rect.max_y; y = y + 1 {
     let row_start = self.pix_offset + (y - self.rect.min_y) * self.stride
-    for x = 0; x < self.rect.dx(); x = x + 1 {
+    for x in 0..<self.rect.dx() {
       if self.pix.unsafe_get(row_start + x) != b'\xff' {
         return false
       }

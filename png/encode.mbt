@@ -26,7 +26,16 @@ pub fn encode(
     @image.AnyImage::Gray(_) => (ct_grayscale, b'\x08')
     @image.AnyImage::Gray16(_) => (ct_grayscale, b'\x10')
     @image.AnyImage::Paletted(_) => (ct_paletted, b'\x08')
-    _ => (ct_true_color_alpha, b'\x08')
+    @image.AnyImage::RGBA(_)
+    | @image.AnyImage::RGBA64(_)
+    | @image.AnyImage::NRGBA(_)
+    | @image.AnyImage::NRGBA64(_)
+    | @image.AnyImage::Alpha(_)
+    | @image.AnyImage::Alpha16(_)
+    | @image.AnyImage::YCbCr(_)
+    | @image.AnyImage::NYCbCrA(_)
+    | @image.AnyImage::CMYK(_)
+    | @image.AnyImage::Uniform(_) => (ct_true_color_alpha, b'\x08')
   }
   // Write IHDR
   let ihdr = FixedArray::make(13, b'\x00')
@@ -39,30 +48,27 @@ pub fn encode(
   ihdr.unsafe_set(12, b'\x00') // interlace
   write_chunk(buf, ct_ihdr, ihdr)
   // Write PLTE if paletted
-  match img {
-    @image.AnyImage::Paletted(p) => {
-      let pal_data = FixedArray::make(p.palette.colors.length() * 3, b'\x00')
-      let mut has_alpha = false
-      for i, c in p.palette.colors {
-        let (r, g, b, a) = c.rgba()
-        pal_data.unsafe_set(i * 3, (r >> 8).to_byte())
-        pal_data.unsafe_set(i * 3 + 1, (g >> 8).to_byte())
-        pal_data.unsafe_set(i * 3 + 2, (b >> 8).to_byte())
-        if a != 0xffffU {
-          has_alpha = true
-        }
-      }
-      write_chunk(buf, ct_plte, pal_data)
-      if has_alpha {
-        let trns_data = FixedArray::make(p.palette.colors.length(), b'\xff')
-        for i, c in p.palette.colors {
-          let (_, _, _, a) = c.rgba()
-          trns_data.unsafe_set(i, (a >> 8).to_byte())
-        }
-        write_chunk(buf, ct_trns, trns_data)
+  if img is @image.AnyImage::Paletted(p) {
+    let pal_data = FixedArray::make(p.palette.colors.length() * 3, b'\x00')
+    let mut has_alpha = false
+    for i, c in p.palette.colors {
+      let (r, g, b, a) = c.rgba()
+      pal_data.unsafe_set(i * 3, (r >> 8).to_byte())
+      pal_data.unsafe_set(i * 3 + 1, (g >> 8).to_byte())
+      pal_data.unsafe_set(i * 3 + 2, (b >> 8).to_byte())
+      if a != 0xffffU {
+        has_alpha = true
       }
     }
-    _ => ()
+    write_chunk(buf, ct_plte, pal_data)
+    if has_alpha {
+      let trns_data = FixedArray::make(p.palette.colors.length(), b'\xff')
+      for i, c in p.palette.colors {
+        let (_, _, _, a) = c.rgba()
+        trns_data.unsafe_set(i, (a >> 8).to_byte())
+      }
+      write_chunk(buf, ct_trns, trns_data)
+    }
   }
   // Build raw image data (filter byte + row data)
   let raw_buf = @blit.Buffer::new()
@@ -93,7 +99,15 @@ pub fn encode(
           raw_buf.write_byte(c.b)
           raw_buf.write_byte(c.a)
         }
-      _ =>
+      @image.AnyImage::RGBA(_)
+      | @image.AnyImage::RGBA64(_)
+      | @image.AnyImage::NRGBA64(_)
+      | @image.AnyImage::Alpha(_)
+      | @image.AnyImage::Alpha16(_)
+      | @image.AnyImage::YCbCr(_)
+      | @image.AnyImage::NYCbCrA(_)
+      | @image.AnyImage::CMYK(_)
+      | @image.AnyImage::Uniform(_) =>
         for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
           let (r, g, b, a) = img.at(x, y).rgba()
           // Convert premultiplied to non-premultiplied for RGBA output
@@ -148,11 +162,13 @@ pub fn encode(
   let deflater = @flate.Deflater::new(level=flate_level)
   match deflater.encode(Some(raw_bytes[:])) {
     @flate.Data(chunk) => idat_buf.write_bytesview(chunk)
-    _ => ()
+    @flate.Ok | @flate.End => ()
+    @flate.Error(e) => abort("png: deflate error: " + e.to_string())
   }
   match deflater.encode(None) {
     @flate.Data(chunk) => idat_buf.write_bytesview(chunk)
-    _ => ()
+    @flate.Ok | @flate.End => ()
+    @flate.Error(e) => abort("png: deflate error: " + e.to_string())
   }
   // Adler-32 checksum of uncompressed data (big-endian)
   let adler = @checksum.adler32(raw_bytes[:])

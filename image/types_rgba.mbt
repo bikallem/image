@@ -89,7 +89,7 @@ pub fn ImageRGBA::is_opaque(self : ImageRGBA) -> Bool {
   }
   for y = self.rect.min_y; y < self.rect.max_y; y = y + 1 {
     let row_start = self.pix_offset + (y - self.rect.min_y) * self.stride
-    for x = 0; x < self.rect.dx(); x = x + 1 {
+    for x in 0..<self.rect.dx() {
       if self.pix.unsafe_get(row_start + x * 4 + 3) != b'\xff' {
         return false
       }
@@ -216,7 +216,7 @@ pub fn ImageRGBA64::is_opaque(self : ImageRGBA64) -> Bool {
   }
   for y = self.rect.min_y; y < self.rect.max_y; y = y + 1 {
     let row_start = self.pix_offset + (y - self.rect.min_y) * self.stride
-    for x = 0; x < self.rect.dx(); x = x + 1 {
+    for x in 0..<self.rect.dx() {
       let i = row_start + x * 8 + 6
       if self.pix.unsafe_get(i) != b'\xff' ||
         self.pix.unsafe_get(i + 1) != b'\xff' {

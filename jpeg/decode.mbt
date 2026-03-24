@@ -30,7 +30,7 @@ pub fn decode_config(data : Bytes) -> @image.Config raise Error {
       if seg_len < 6 {
         raise JpegError::FormatError("bad SOF segment")
       }
-      let _prec = d.r.read_byte()
+      d.r.skip(1) // precision
       h = d.r.read_uint16_be().reinterpret_as_int()
       w = d.r.read_uint16_be().reinterpret_as_int()
       nc = d.r.read_byte().to_int()

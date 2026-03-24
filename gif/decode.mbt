@@ -42,7 +42,7 @@ pub fn decode_all(data : Bytes) -> GIF raise Error {
   let height = r.read_uint16_le().reinterpret_as_int()
   let packed = r.read_byte()
   let bg_index = r.read_byte()
-  let _aspect_ratio = r.read_byte()
+  r.skip(1) // aspect ratio
   // Global color table
   let has_gct = (packed.to_int() & 0x80) != 0
   let gct_size = 1 << ((packed.to_int() & 0x07) + 1)
@@ -61,11 +61,11 @@ pub fn decode_all(data : Bytes) -> GIF raise Error {
         let label = r.read_byte()
         match label {
           l if l == ext_graphic_control => {
-            let _block_size = r.read_byte()
+            r.skip(1) // block size
             let gce_packed = r.read_byte()
             delay = r.read_uint16_le().reinterpret_as_int()
             let ti = r.read_byte()
-            let _terminator = r.read_byte()
+            r.skip(1) // terminator
             disposal = ((gce_packed.to_int() >> 2) & 0x07).to_byte()
             if (gce_packed.to_int() & 0x01) != 0 {
               transparent_index = ti.to_int()
@@ -82,8 +82,7 @@ pub fn decode_all(data : Bytes) -> GIF raise Error {
         }
       }
       b if b == image_descriptor => {
-        let _left = r.read_uint16_le().reinterpret_as_int()
-        let _top = r.read_uint16_le().reinterpret_as_int()
+        r.skip(4) // left, top
         let img_width = r.read_uint16_le().reinterpret_as_int()
         let img_height = r.read_uint16_le().reinterpret_as_int()
         let img_packed = r.read_byte()
@@ -159,7 +158,8 @@ fn read_color_table(
   size : Int,
 ) -> Array[@color.AnyColor] raise GifError {
   let palette : Array[@color.AnyColor] = Array::new(capacity=size)
-  for _i in 0..<size {
+  for count in 0..<size {
+    ignore(count)
     let cr = r.read_byte()
     let cg = r.read_byte()
     let cb = r.read_byte()

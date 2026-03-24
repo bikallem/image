@@ -59,7 +59,8 @@ pub fn decode(data : Bytes) -> @image.AnyImage raise Error {
         }
         let n = chunk_len.reinterpret_as_int() / 3
         palette = Array::new(capacity=n)
-        for _i in 0..<n {
+        for count in 0..<n {
+          ignore(count)
           let pr = r.read_byte()
           let pg = r.read_byte()
           let pb = r.read_byte()
@@ -483,7 +484,7 @@ fn bytes_per_pixel(bit_depth : Byte, color_type : Byte) -> Int {
     t if t == ct_paletted => 1
     t if t == ct_grayscale_alpha => bd / 8 * 2
     t if t == ct_true_color_alpha => bd / 8 * 4
-    _ => 1
+    _ => abort("png: unknown color type " + color_type.to_int().to_string())
   }
 }
 
@@ -501,7 +502,9 @@ fn bytes_per_row(width : Int, bit_depth : Byte, color_type : Byte) -> Int {
     t if t == ct_paletted => (width * bd + 7) / 8
     t if t == ct_grayscale_alpha => width * bd / 8 * 2
     t if t == ct_true_color_alpha => width * bd / 8 * 4
-    _ => width
+    _ => abort(
+      "png: unknown color type " + color_type.to_int().to_string(),
+    )
   }
 }
 
@@ -523,14 +526,14 @@ fn unfilter(
         )
       }
     f if f == ft_up =>
-      for i = 0; i < n; i = i + 1 {
+      for i in 0..<n {
         cur.unsafe_set(
           i,
           (cur.unsafe_get(i).to_int() + prev.unsafe_get(i).to_int()).to_byte(),
         )
       }
     f if f == ft_average =>
-      for i = 0; i < n; i = i + 1 {
+      for i in 0..<n {
         let a = if i >= bpp { cur[i - bpp].to_int() } else { 0 }
         cur.unsafe_set(
           i,
@@ -538,7 +541,7 @@ fn unfilter(
         )
       }
     f if f == ft_paeth =>
-      for i = 0; i < n; i = i + 1 {
+      for i in 0..<n {
         let a = if i >= bpp { cur[i - bpp].to_int() } else { 0 }
         let b = prev.unsafe_get(i).to_int()
         let c = if i >= bpp { prev[i - bpp].to_int() } else { 0 }
@@ -568,15 +571,12 @@ pub fn decode_config(data : Bytes) -> @image.Config raise Error {
   }
   let width = r.read_uint32_be().reinterpret_as_int()
   let height = r.read_uint32_be().reinterpret_as_int()
-  let _bit_depth = r.read_byte()
+  r.skip(1) // bit depth
   let color_type = r.read_byte()
-  let cm : @color.AnyModel = match color_type {
-    t if t == ct_grayscale => @color.AnyModel::GrayModel
-    t if t == ct_true_color => @color.AnyModel::NRGBAModel
-    t if t == ct_paletted => @color.AnyModel::NRGBAModel
-    t if t == ct_grayscale_alpha => @color.AnyModel::NRGBAModel
-    t if t == ct_true_color_alpha => @color.AnyModel::NRGBAModel
-    _ => @color.AnyModel::NRGBAModel
+  let cm : @color.AnyModel = if color_type == ct_grayscale {
+    @color.AnyModel::GrayModel
+  } else {
+    @color.AnyModel::NRGBAModel
   }
   { color_model: cm, width, height }
 }

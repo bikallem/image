@@ -39,7 +39,8 @@ pub fn ImageYCbCr::c_offset(self : ImageYCbCr, x : Int, y : Int) -> Int {
     Ratio410 =>
       (y / 2 - self.rect.min_y / 2) * self.c_stride +
       (x / 4 - self.rect.min_x / 4)
-    _ => (y - self.rect.min_y) * self.c_stride + (x - self.rect.min_x)
+    Ratio444 =>
+      (y - self.rect.min_y) * self.c_stride + (x - self.rect.min_x)
   }
 }
 
@@ -105,7 +106,7 @@ fn ycbcr_size(
     Ratio411 => ((r.max_x + 3) / 4 - r.min_x / 4, h)
     Ratio410 =>
       ((r.max_x + 3) / 4 - r.min_x / 4, (r.max_y + 1) / 2 - r.min_y / 2)
-    _ => (w, h)
+    Ratio444 => (w, h)
   }
   (w, h, cw, ch)
 }
@@ -206,7 +207,7 @@ pub fn ImageNYCbCrA::is_opaque(self : ImageNYCbCrA) -> Bool {
   }
   for y = self.ycbcr.rect.min_y; y < self.ycbcr.rect.max_y; y = y + 1 {
     let row_start = (y - self.ycbcr.rect.min_y) * self.a_stride
-    for x = 0; x < self.ycbcr.rect.dx(); x = x + 1 {
+    for x in 0..<self.ycbcr.rect.dx() {
       if self.a.unsafe_get(row_start + x) != b'\xff' {
         return false
       }

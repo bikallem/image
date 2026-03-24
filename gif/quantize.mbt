@@ -58,7 +58,8 @@ fn median_cut(
           let v = match ch {
             0 => p.0.to_int()
             1 => p.1.to_int()
-            _ => p.2.to_int()
+            2 => p.2.to_int()
+            _ => abort("invalid channel")
           }
           if v < lo {
             lo = v
@@ -83,12 +84,14 @@ fn median_cut(
       let va = match best_channel {
         0 => a.0.to_int()
         1 => a.1.to_int()
-        _ => a.2.to_int()
+        2 => a.2.to_int()
+        _ => abort("invalid channel")
       }
       let vb = match best_channel {
         0 => b.0.to_int()
         1 => b.1.to_int()
-        _ => b.2.to_int()
+        2 => b.2.to_int()
+        _ => abort("invalid channel")
       }
       va - vb
     })

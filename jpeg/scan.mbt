@@ -24,7 +24,7 @@ fn max_sampling(d : Decoder) -> (Int, Int) {
 /// Process a SOS segment and decode the scan data, returning the final image.
 pub fn process_sos(d : Decoder) -> @image.AnyImage raise JpegError {
   let length = d.r.read_uint16_be()
-  let _seg_len = length.reinterpret_as_int() - 2
+  ignore(length)
   let ns = d.r.read_byte().to_int() // number of components in scan
   if ns != d.num_components {
     raise JpegError::UnsupportedError(
@@ -57,10 +57,8 @@ pub fn process_sos(d : Decoder) -> @image.AnyImage raise JpegError {
       }
     }
   }
-  // Skip Ss, Se, Ah, Al
-  let _ss = d.r.read_byte()
-  let _se = d.r.read_byte()
-  let _ah_al = d.r.read_byte()
+  // Skip Ss, Se, Ah|Al
+  d.r.skip(3)
   reset_dc_preds(d)
   // Flush bit buffer
   flush_bits(d)
@@ -244,8 +242,7 @@ fn decode_block(
 /// Process a SOS segment for progressive JPEG.
 /// Stores coefficients into d.prog_coeffs instead of IDCT-ing.
 fn process_sos_progressive(d : Decoder) -> Unit raise JpegError {
-  let length = d.r.read_uint16_be()
-  let _seg_len = length.reinterpret_as_int() - 2
+  ignore(d.r.read_uint16_be()) // segment length
   let ns = d.r.read_byte().to_int()
   // Read scan component selectors
   let scan_comp = FixedArray::make(ns, 0) // component index for each scan component
@@ -317,7 +314,7 @@ fn process_sos_progressive(d : Decoder) -> Unit raise JpegError {
         let hi = d.comp.unsafe_get(ci).h
         let vi = d.comp.unsafe_get(ci).v
         let n_blocks = hi * vi
-        for j = 0; j < n_blocks; j = j + 1 {
+        for j in 0..<n_blocks {
           let (bx, by) = if ns != 1 {
             (hi * mx + j % hi, vi * my + j / hi)
           } else {

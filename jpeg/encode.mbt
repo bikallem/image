@@ -263,7 +263,7 @@ fn encode_block(
   enc_dc_coeff(e, dc_codes, dc_lengths, dc - dc_pred)
   // AC coefficients in zig-zag order
   let mut run = 0
-  for zig = 1; zig < 64; zig = zig + 1 {
+  for zig in 1..<64 {
     let ac = jpeg_div(
       block.unsafe_get(unzig.unsafe_get(zig)),
       8 * quant.unsafe_get(zig),
@@ -379,10 +379,8 @@ pub fn encode(img : @image.AnyImage, quality? : Int = 75) -> Bytes {
     chroma_ac_counts, chroma_ac_symbols,
   )
   // Determine if grayscale
-  let is_gray = match img {
-    @image.AnyImage::Gray(_) | @image.AnyImage::Gray16(_) => true
-    _ => false
-  }
+  let is_gray = img is @image.AnyImage::Gray(_) ||
+    img is @image.AnyImage::Gray16(_)
   let num_components = if is_gray { 1 } else { 3 }
   // Convert image to component planes
   let y_plane = FixedArray::make(width * height, b'\x00')
