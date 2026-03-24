@@ -124,7 +124,7 @@ pub fn process_sos(d : Decoder) -> @image.AnyImage raise JpegError {
               )
             }
             // IDCT
-            idct(nat, idct_out)
+            idct_islow(nat, idct_out)
             // Write to comp_data
             let block_x = mcu_x * h + hx
             let block_y = mcu_y * v + vy
@@ -506,7 +506,7 @@ fn reconstruct_progressive(d : Decoder) -> @image.AnyImage {
       }
       // Note: b[k] is stored at zig-zag position k, quant is also zig-zag
       // nat[unzig.unsafe_get(k)] places into natural order for IDCT
-      idct(nat, idct_out)
+      idct_islow(nat, idct_out)
       // Write to comp_data
       let cw = comp_width.unsafe_get(ci)
       for py in 0..<8 {

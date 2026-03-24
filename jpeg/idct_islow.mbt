@@ -1,6 +1,6 @@
 ///|
 /// ISLOW IDCT — port of libjpeg-turbo's jidctint.c (jpeg_idct_islow).
-/// Produces output bit-identical to libjpeg-turbo for 8-bit JPEG.
+/// Produces output matching libjpeg-turbo for 8-bit JPEG.
 /// Input: block[64] of dequantized coefficients in natural (row-major) order.
 /// Output: dst[64] of pixel bytes [0,255] after +128 level shift.
 
@@ -54,9 +54,8 @@ fn descale(x : Int, n : Int) -> Int {
 ///|
 /// ISLOW IDCT matching libjpeg-turbo's jpeg_idct_islow.
 pub fn idct_islow(block : FixedArray[Int], dst : FixedArray[Byte]) -> Unit {
-  // Use block as workspace for pass 1 output
   let ws = FixedArray::make(64, 0)
-  // Pass 1: process rows from block[], store into ws[].
+  // Pass 1: process rows. Input: dequantized coefficients. Output: workspace.
   for row in 0..<8 {
     let base = row * 8
     let d0 = block.unsafe_get(base)
@@ -67,7 +66,6 @@ pub fn idct_islow(block : FixedArray[Int], dst : FixedArray[Byte]) -> Unit {
     let d5 = block.unsafe_get(base + 5)
     let d6 = block.unsafe_get(base + 6)
     let d7 = block.unsafe_get(base + 7)
-    // Shortcut: if all AC terms are zero, just propagate DC
     if d1 == 0 && d2 == 0 && d3 == 0 && d4 == 0 && d5 == 0 && d6 == 0 &&
       d7 == 0 {
       let dcval = d0 << islow_pass1_bits
@@ -81,36 +79,26 @@ pub fn idct_islow(block : FixedArray[Int], dst : FixedArray[Byte]) -> Unit {
       ws.unsafe_set(base + 7, dcval)
       continue
     }
-    // Even part
-    let tmp0 = d0 << (islow_const_bits + 1)
-    let tmp1 = d2 << (islow_const_bits + 1)
-    let tmp2 = d4 << (islow_const_bits + 1)
-    let tmp3 = d6 << (islow_const_bits + 1)
-    // phase 3
-    let tmp10 = tmp0 + tmp2
-    let tmp11 = tmp0 - tmp2
-    // phase 2 (stages 5-3 combined)
-    let z1 = (tmp1 + tmp3) * fix_0_541196100
-    let tmp12 = z1 + tmp3 * (0 - fix_1_847759065)
-    let tmp13 = z1 + tmp1 * fix_0_765366865
+    // Even part: d0, d2, d4, d6
+    let tmp10 = (d0 + d4) << islow_const_bits
+    let tmp11 = (d0 - d4) << islow_const_bits
+    let z1 = (d2 + d6) * fix_0_541196100
+    let tmp12 = z1 - d6 * fix_1_847759065
+    let tmp13 = z1 + d2 * fix_0_765366865
     let tmp0 = tmp10 + tmp13
     let tmp3 = tmp10 - tmp13
     let tmp1 = tmp11 + tmp12
     let tmp2 = tmp11 - tmp12
-    // Odd part
-    let tmp4 = d1
-    let tmp5 = d3
-    let tmp6 = d5
-    let tmp7 = d7
-    let z1 = tmp4 + tmp7
-    let z2 = tmp5 + tmp6
-    let z3 = tmp4 + tmp6
-    let z4 = tmp5 + tmp7
+    // Odd part: d1, d3, d5, d7
+    let z1 = d1 + d7
+    let z2 = d3 + d5
+    let z3 = d1 + d5
+    let z4 = d3 + d7
     let z5 = (z3 + z4) * fix_1_175875602
-    let tmp4 = tmp4 * fix_0_298631336
-    let tmp5 = tmp5 * fix_2_053119869
-    let tmp6 = tmp6 * fix_3_072711026
-    let tmp7 = tmp7 * fix_1_501321110
+    let tmp4 = d1 * fix_0_298631336
+    let tmp5 = d3 * fix_2_053119869
+    let tmp6 = d5 * fix_3_072711026
+    let tmp7 = d7 * fix_1_501321110
     let z1 = z1 * (0 - fix_0_899976223)
     let z2 = z2 * (0 - fix_2_562915447)
     let z3 = z3 * (0 - fix_1_961570560) + z5
@@ -119,35 +107,18 @@ pub fn idct_islow(block : FixedArray[Int], dst : FixedArray[Byte]) -> Unit {
     let tmp5 = tmp5 + z2 + z4
     let tmp6 = tmp6 + z2 + z3
     let tmp7 = tmp7 + z1 + z4
-    // Final output with descaling
-    ws.unsafe_set(
-      base, descale(tmp0 + tmp7, islow_const_bits + 1 - islow_pass1_bits),
-    )
-    ws.unsafe_set(
-      base + 7, descale(tmp0 - tmp7, islow_const_bits + 1 - islow_pass1_bits),
-    )
-    ws.unsafe_set(
-      base + 1, descale(tmp1 + tmp6, islow_const_bits + 1 - islow_pass1_bits),
-    )
-    ws.unsafe_set(
-      base + 6, descale(tmp1 - tmp6, islow_const_bits + 1 - islow_pass1_bits),
-    )
-    ws.unsafe_set(
-      base + 2, descale(tmp2 + tmp5, islow_const_bits + 1 - islow_pass1_bits),
-    )
-    ws.unsafe_set(
-      base + 5, descale(tmp2 - tmp5, islow_const_bits + 1 - islow_pass1_bits),
-    )
-    ws.unsafe_set(
-      base + 3, descale(tmp3 + tmp4, islow_const_bits + 1 - islow_pass1_bits),
-    )
-    ws.unsafe_set(
-      base + 4, descale(tmp3 - tmp4, islow_const_bits + 1 - islow_pass1_bits),
-    )
+    // Combine and descale
+    ws.unsafe_set(base, descale(tmp0 + tmp7, islow_const_bits - islow_pass1_bits))
+    ws.unsafe_set(base + 7, descale(tmp0 - tmp7, islow_const_bits - islow_pass1_bits))
+    ws.unsafe_set(base + 1, descale(tmp1 + tmp6, islow_const_bits - islow_pass1_bits))
+    ws.unsafe_set(base + 6, descale(tmp1 - tmp6, islow_const_bits - islow_pass1_bits))
+    ws.unsafe_set(base + 2, descale(tmp2 + tmp5, islow_const_bits - islow_pass1_bits))
+    ws.unsafe_set(base + 5, descale(tmp2 - tmp5, islow_const_bits - islow_pass1_bits))
+    ws.unsafe_set(base + 3, descale(tmp3 + tmp4, islow_const_bits - islow_pass1_bits))
+    ws.unsafe_set(base + 4, descale(tmp3 - tmp4, islow_const_bits - islow_pass1_bits))
   }
-  // Pass 2: process columns from ws[], output to dst[].
+  // Pass 2: process columns. Input: workspace. Output: clamped bytes.
   let range_center = 128
-  let pass2_bits = islow_const_bits + islow_pass1_bits + 3
   for col in 0..<8 {
     let d0 = ws.unsafe_get(0 * 8 + col)
     let d1 = ws.unsafe_get(1 * 8 + col)
@@ -157,11 +128,10 @@ pub fn idct_islow(block : FixedArray[Int], dst : FixedArray[Byte]) -> Unit {
     let d5 = ws.unsafe_get(5 * 8 + col)
     let d6 = ws.unsafe_get(6 * 8 + col)
     let d7 = ws.unsafe_get(7 * 8 + col)
-    // Shortcut for all-zero AC
     if d1 == 0 && d2 == 0 && d3 == 0 && d4 == 0 && d5 == 0 && d6 == 0 &&
       d7 == 0 {
       let dcval = idct_clamp_byte(
-        descale(d0, pass2_bits - islow_const_bits - 1) + range_center,
+        descale(d0, islow_pass1_bits + 3) + range_center,
       )
       dst.unsafe_set(0 * 8 + col, dcval)
       dst.unsafe_set(1 * 8 + col, dcval)
@@ -174,17 +144,13 @@ pub fn idct_islow(block : FixedArray[Int], dst : FixedArray[Byte]) -> Unit {
       continue
     }
     // Even part
-    let tmp0 = d0 << (islow_const_bits + 1)
-    let tmp1 = d2 << (islow_const_bits + 1)
-    let tmp2 = d4 << (islow_const_bits + 1)
-    let tmp3 = d6 << (islow_const_bits + 1)
-    // Add rounding bias for final shift
-    let tmp0 = tmp0 + (1 << (pass2_bits - 1))
-    let tmp10 = tmp0 + tmp2
-    let tmp11 = tmp0 - tmp2
-    let z1 = (tmp1 + tmp3) * fix_0_541196100
-    let tmp12 = z1 + tmp3 * (0 - fix_1_847759065)
-    let tmp13 = z1 + tmp1 * fix_0_765366865
+    let tmp10 = (d0 + d4) << islow_const_bits
+    let tmp11 = (d0 - d4) << islow_const_bits
+    let z1 = (d2 + d6) * fix_0_541196100
+    let tmp12 = z1 - d6 * fix_1_847759065
+    let tmp13 = z1 + d2 * fix_0_765366865
+    // Add rounding bias
+    let tmp10 = tmp10 + (1 << (islow_const_bits + islow_pass1_bits + 3 - 1))
     let tmp0 = tmp10 + tmp13
     let tmp3 = tmp10 - tmp13
     let tmp1 = tmp11 + tmp12
@@ -207,30 +173,31 @@ pub fn idct_islow(block : FixedArray[Int], dst : FixedArray[Byte]) -> Unit {
     let tmp5 = tmp5 + z2 + z4
     let tmp6 = tmp6 + z2 + z3
     let tmp7 = tmp7 + z1 + z4
-    // Final output
+    // Combine, descale, level-shift, clamp
+    let shift = islow_const_bits + islow_pass1_bits + 3
     dst.unsafe_set(
-      0 * 8 + col, idct_clamp_byte(((tmp0 + tmp7) >> pass2_bits) + range_center),
+      0 * 8 + col, idct_clamp_byte(((tmp0 + tmp7) >> shift) + range_center),
     )
     dst.unsafe_set(
-      7 * 8 + col, idct_clamp_byte(((tmp0 - tmp7) >> pass2_bits) + range_center),
+      7 * 8 + col, idct_clamp_byte(((tmp0 - tmp7) >> shift) + range_center),
     )
     dst.unsafe_set(
-      1 * 8 + col, idct_clamp_byte(((tmp1 + tmp6) >> pass2_bits) + range_center),
+      1 * 8 + col, idct_clamp_byte(((tmp1 + tmp6) >> shift) + range_center),
     )
     dst.unsafe_set(
-      6 * 8 + col, idct_clamp_byte(((tmp1 - tmp6) >> pass2_bits) + range_center),
+      6 * 8 + col, idct_clamp_byte(((tmp1 - tmp6) >> shift) + range_center),
     )
     dst.unsafe_set(
-      2 * 8 + col, idct_clamp_byte(((tmp2 + tmp5) >> pass2_bits) + range_center),
+      2 * 8 + col, idct_clamp_byte(((tmp2 + tmp5) >> shift) + range_center),
     )
     dst.unsafe_set(
-      5 * 8 + col, idct_clamp_byte(((tmp2 - tmp5) >> pass2_bits) + range_center),
+      5 * 8 + col, idct_clamp_byte(((tmp2 - tmp5) >> shift) + range_center),
     )
     dst.unsafe_set(
-      3 * 8 + col, idct_clamp_byte(((tmp3 + tmp4) >> pass2_bits) + range_center),
+      3 * 8 + col, idct_clamp_byte(((tmp3 + tmp4) >> shift) + range_center),
     )
     dst.unsafe_set(
-      4 * 8 + col, idct_clamp_byte(((tmp3 - tmp4) >> pass2_bits) + range_center),
+      4 * 8 + col, idct_clamp_byte(((tmp3 - tmp4) >> shift) + range_center),
     )
   }
 }
