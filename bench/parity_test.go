@@ -21,7 +21,6 @@ func TestParity(t *testing.T) {
 		t.Fatal(err)
 	}
 	b := pngImg.Bounds()
-	fmt.Printf("PNG: %dx%d\n", b.Dx(), b.Dy())
 	var sum int64
 	for y := b.Min.Y; y < b.Max.Y; y++ {
 		for x := b.Min.X; x < b.Max.X; x++ {
@@ -29,11 +28,10 @@ func TestParity(t *testing.T) {
 			sum += int64(r) + int64(g) + int64(bv) + int64(a)
 		}
 	}
-	fmt.Printf("PNG pixel checksum: %d\n", sum)
 	r, g, bv, a := pngImg.At(0, 0).RGBA()
-	fmt.Printf("PNG[0,0]: %d %d %d %d\n", r, g, bv, a)
-	r, g, bv, a = pngImg.At(100, 75).RGBA()
-	fmt.Printf("PNG[100,75]: %d %d %d %d\n", r, g, bv, a)
+	r2, g2, bv2, a2 := pngImg.At(100, 75).RGBA()
+	fmt.Printf("PNG %dx%d checksum=%d [0,0]=%d,%d,%d,%d [100,75]=%d,%d,%d,%d\n",
+		b.Dx(), b.Dy(), sum, r, g, bv, a, r2, g2, bv2, a2)
 
 	// JPEG
 	f2, _ := os.Open("../testdata/video-001.jpeg")
@@ -43,7 +41,6 @@ func TestParity(t *testing.T) {
 		t.Fatal(err)
 	}
 	jb := jpegImg.Bounds()
-	fmt.Printf("JPEG: %dx%d\n", jb.Dx(), jb.Dy())
 	var jsum int64
 	for y := jb.Min.Y; y < jb.Max.Y; y++ {
 		for x := jb.Min.X; x < jb.Max.X; x++ {
@@ -51,11 +48,10 @@ func TestParity(t *testing.T) {
 			jsum += int64(r) + int64(g) + int64(bv) + int64(a)
 		}
 	}
-	fmt.Printf("JPEG pixel checksum: %d\n", jsum)
 	r, g, bv, a = jpegImg.At(0, 0).RGBA()
-	fmt.Printf("JPEG[0,0]: %d %d %d %d\n", r, g, bv, a)
-	r, g, bv, a = jpegImg.At(100, 75).RGBA()
-	fmt.Printf("JPEG[100,75]: %d %d %d %d\n", r, g, bv, a)
+	r2, g2, bv2, a2 = jpegImg.At(100, 75).RGBA()
+	fmt.Printf("JPEG %dx%d checksum=%d [0,0]=%d,%d,%d,%d [100,75]=%d,%d,%d,%d\n",
+		jb.Dx(), jb.Dy(), jsum, r, g, bv, a, r2, g2, bv2, a2)
 
 	// GIF
 	f3, _ := os.Open("../testdata/video-001.gif")
@@ -65,9 +61,8 @@ func TestParity(t *testing.T) {
 		t.Fatal(err)
 	}
 	gb := gifImg.Bounds()
-	fmt.Printf("GIF: %dx%d\n", gb.Dx(), gb.Dy())
 	r, g, bv, a = gifImg.At(0, 0).RGBA()
-	fmt.Printf("GIF[0,0]: %d %d %d %d\n", r, g, bv, a)
-	r, g, bv, a = gifImg.At(100, 75).RGBA()
-	fmt.Printf("GIF[100,75]: %d %d %d %d\n", r, g, bv, a)
+	r2, g2, bv2, a2 = gifImg.At(100, 75).RGBA()
+	fmt.Printf("GIF %dx%d [0,0]=%d,%d,%d,%d [100,75]=%d,%d,%d,%d\n",
+		gb.Dx(), gb.Dy(), r, g, bv, a, r2, g2, bv2, a2)
 }
