@@ -12,36 +12,31 @@ pub fn decode(data : Bytes) -> @image.AnyImage raise Error {
 /// Decodes the configuration of a GIF image.
 pub fn decode_config(data : Bytes) -> @image.Config raise Error {
   let r = GifByteReader::new(data)
-  // Read header
-  let sig = r.read_bytes(6)
-  let sig_str = bytes_to_string(sig)
-  if sig_str != gif87a && sig_str != gif89a {
-    raise GifError::FormatError("not a GIF file")
-  }
+  validate_gif_header(r)
   let width = r.read_uint16_le().reinterpret_as_int()
   let height = r.read_uint16_le().reinterpret_as_int()
   { color_model: @color.AnyModel::RGBAModel, width, height }
 }
 
 ///|
-fn bytes_to_string(b : Bytes) -> String {
-  let buf = StringBuilder::new()
-  for i in 0..<b.length() {
-    buf.write_char(b.unsafe_get(i).to_int().unsafe_to_char())
+fn validate_gif_header(r : GifByteReader) -> Unit raise GifError {
+  let sig = r.read_bytes(6)
+  if sig.length() != 6 ||
+    sig.unsafe_get(0) != b'\x47' ||
+    sig.unsafe_get(1) != b'\x49' ||
+    sig.unsafe_get(2) != b'\x46' ||
+    sig.unsafe_get(3) != b'\x38' ||
+    (sig.unsafe_get(4) != b'\x37' && sig.unsafe_get(4) != b'\x39') ||
+    sig.unsafe_get(5) != b'\x61' {
+    raise GifError::FormatError("not a GIF file")
   }
-  buf.to_string()
 }
 
 ///|
 /// Decodes all frames of a GIF image.
 pub fn decode_all(data : Bytes) -> GIF raise Error {
   let r = GifByteReader::new(data)
-  // Read header
-  let sig = r.read_bytes(6)
-  let sig_str = bytes_to_string(sig)
-  if sig_str != gif87a && sig_str != gif89a {
-    raise GifError::FormatError("not a GIF file")
-  }
+  validate_gif_header(r)
   // Logical screen descriptor
   let width = r.read_uint16_le().reinterpret_as_int()
   let height = r.read_uint16_le().reinterpret_as_int()
@@ -118,7 +113,7 @@ pub fn decode_all(data : Bytes) -> GIF raise Error {
             @lzw.BitOrder::LSB,
             lzw_min.to_int(),
           )
-          |> or_gif_error()
+          
         // Build paletted image
         let rect : @image.Rectangle = {
           min_x: 0,
@@ -156,11 +151,6 @@ pub fn decode_all(data : Bytes) -> GIF raise Error {
     background_index: bg_index,
     config: { color_model: @color.AnyModel::RGBAModel, width, height },
   }
-}
-
-///|
-fn[T] or_gif_error(result : T) -> T {
-  result
 }
 
 ///|

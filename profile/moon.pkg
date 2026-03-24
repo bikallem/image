@@ -1,7 +1,6 @@
 import {
   "bikallem/image/image",
   "bikallem/image/color",
-  "bikallem/image/draw",
   "bikallem/image/png",
   "bikallem/image/jpeg",
   "bikallem/image/gif",

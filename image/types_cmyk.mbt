@@ -1,5 +1,4 @@
 ///|
-// #valtype
 pub(all) struct ImageCMYK {
   pix : FixedArray[Byte]
   pix_offset : Int

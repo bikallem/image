@@ -1,4 +1,26 @@
 ///|
+fn clamp16(v : Int) -> UInt {
+  if v < 0 { 0U } else if v > 0xffff { 0xffffU } else { v.reinterpret_as_uint() }
+}
+
+///|
+/// Accumulates weighted RGBA error at offset `base` in `arr`.
+fn diffuse(
+  arr : FixedArray[Int],
+  base : Int,
+  dr : Int,
+  dg : Int,
+  db : Int,
+  da : Int,
+  num : Int,
+) -> Unit {
+  arr.unsafe_set(base, arr.unsafe_get(base) + dr * num / 16)
+  arr.unsafe_set(base + 1, arr.unsafe_get(base + 1) + dg * num / 16)
+  arr.unsafe_set(base + 2, arr.unsafe_get(base + 2) + db * num / 16)
+  arr.unsafe_set(base + 3, arr.unsafe_get(base + 3) + da * num / 16)
+}
+
+///|
 /// Floyd-Steinberg error diffusion dithering for paletted images.
 pub fn floyd_steinberg_draw(
   dst : @image.ImagePaletted,
@@ -10,12 +32,9 @@ pub fn floyd_steinberg_draw(
     return
   }
   let w = r.dx()
-  // quantError is the accumulated Floyd-Steinberg error for each pixel.
-  // We use two rows: current and next.
   let quant_err_cur = FixedArray::make(w * 4, 0)
   let quant_err_next = FixedArray::make(w * 4, 0)
   for y = r.min_y; y < r.max_y; y = y + 1 {
-    // Clear next row
     for i in 0..<(w * 4) {
       quant_err_next.unsafe_set(i, 0)
     }
@@ -24,125 +43,37 @@ pub fn floyd_steinberg_draw(
       let sx = sp.x + x - r.min_x
       let (sr, sg, sb, sa) = src.at(sx, sy).rgba()
       let ei = (x - r.min_x) * 4
-      // Add quantization error from previous pixels.
-      let er = sr.reinterpret_as_int() + quant_err_cur.unsafe_get(ei)
-      let eg = sg.reinterpret_as_int() + quant_err_cur.unsafe_get(ei + 1)
-      let eb = sb.reinterpret_as_int() + quant_err_cur.unsafe_get(ei + 2)
-      let ea = sa.reinterpret_as_int() + quant_err_cur.unsafe_get(ei + 3)
-      // Clamp to [0, 0xffff].
-      let er = if er < 0 {
-        0U
-      } else if er > 0xffff {
-        0xffffU
-      } else {
-        er.reinterpret_as_uint()
-      }
-      let eg = if eg < 0 {
-        0U
-      } else if eg > 0xffff {
-        0xffffU
-      } else {
-        eg.reinterpret_as_uint()
-      }
-      let eb = if eb < 0 {
-        0U
-      } else if eb > 0xffff {
-        0xffffU
-      } else {
-        eb.reinterpret_as_uint()
-      }
-      let ea = if ea < 0 {
-        0U
-      } else if ea > 0xffff {
-        0xffffU
-      } else {
-        ea.reinterpret_as_uint()
-      }
+      let er = clamp16(sr.reinterpret_as_int() + quant_err_cur.unsafe_get(ei))
+      let eg = clamp16(
+        sg.reinterpret_as_int() + quant_err_cur.unsafe_get(ei + 1),
+      )
+      let eb = clamp16(
+        sb.reinterpret_as_int() + quant_err_cur.unsafe_get(ei + 2),
+      )
+      let ea = clamp16(
+        sa.reinterpret_as_int() + quant_err_cur.unsafe_get(ei + 3),
+      )
       let wanted = @color.AnyColor::RGBA64({ r: er, g: eg, b: eb, a: ea })
       let idx = dst.palette.index(wanted)
       dst.set_color_index(x, y, idx.to_byte())
-      // Compute the error.
       let (pr, pg, pb, pa) = dst.palette.colors.unsafe_get(idx).rgba()
-      let diff_r = er.reinterpret_as_int() - pr.reinterpret_as_int()
-      let diff_g = eg.reinterpret_as_int() - pg.reinterpret_as_int()
-      let diff_b = eb.reinterpret_as_int() - pb.reinterpret_as_int()
-      let diff_a = ea.reinterpret_as_int() - pa.reinterpret_as_int()
-      // Distribute error to neighbors using Floyd-Steinberg coefficients:
-      //   _ X 7/16
-      // 3/16 5/16 1/16
+      let dr = er.reinterpret_as_int() - pr.reinterpret_as_int()
+      let dg = eg.reinterpret_as_int() - pg.reinterpret_as_int()
+      let db = eb.reinterpret_as_int() - pb.reinterpret_as_int()
+      let da = ea.reinterpret_as_int() - pa.reinterpret_as_int()
+      // Floyd-Steinberg coefficients:  _ X 7/16  /  3/16 5/16 1/16
       let xi = x - r.min_x
       if xi + 1 < w {
-        quant_err_cur.unsafe_set(
-          (xi + 1) * 4,
-          quant_err_cur.unsafe_get((xi + 1) * 4) + diff_r * 7 / 16,
-        )
-        quant_err_cur.unsafe_set(
-          (xi + 1) * 4 + 1,
-          quant_err_cur.unsafe_get((xi + 1) * 4 + 1) + diff_g * 7 / 16,
-        )
-        quant_err_cur.unsafe_set(
-          (xi + 1) * 4 + 2,
-          quant_err_cur.unsafe_get((xi + 1) * 4 + 2) + diff_b * 7 / 16,
-        )
-        quant_err_cur.unsafe_set(
-          (xi + 1) * 4 + 3,
-          quant_err_cur.unsafe_get((xi + 1) * 4 + 3) + diff_a * 7 / 16,
-        )
+        diffuse(quant_err_cur, (xi + 1) * 4, dr, dg, db, da, 7)
       }
       if xi > 0 {
-        quant_err_next.unsafe_set(
-          (xi - 1) * 4,
-          quant_err_next.unsafe_get((xi - 1) * 4) + diff_r * 3 / 16,
-        )
-        quant_err_next.unsafe_set(
-          (xi - 1) * 4 + 1,
-          quant_err_next.unsafe_get((xi - 1) * 4 + 1) + diff_g * 3 / 16,
-        )
-        quant_err_next.unsafe_set(
-          (xi - 1) * 4 + 2,
-          quant_err_next.unsafe_get((xi - 1) * 4 + 2) + diff_b * 3 / 16,
-        )
-        quant_err_next.unsafe_set(
-          (xi - 1) * 4 + 3,
-          quant_err_next.unsafe_get((xi - 1) * 4 + 3) + diff_a * 3 / 16,
-        )
+        diffuse(quant_err_next, (xi - 1) * 4, dr, dg, db, da, 3)
       }
-      quant_err_next.unsafe_set(
-        xi * 4,
-        quant_err_next.unsafe_get(xi * 4) + diff_r * 5 / 16,
-      )
-      quant_err_next.unsafe_set(
-        xi * 4 + 1,
-        quant_err_next.unsafe_get(xi * 4 + 1) + diff_g * 5 / 16,
-      )
-      quant_err_next.unsafe_set(
-        xi * 4 + 2,
-        quant_err_next.unsafe_get(xi * 4 + 2) + diff_b * 5 / 16,
-      )
-      quant_err_next.unsafe_set(
-        xi * 4 + 3,
-        quant_err_next.unsafe_get(xi * 4 + 3) + diff_a * 5 / 16,
-      )
+      diffuse(quant_err_next, xi * 4, dr, dg, db, da, 5)
       if xi + 1 < w {
-        quant_err_next.unsafe_set(
-          (xi + 1) * 4,
-          quant_err_next.unsafe_get((xi + 1) * 4) + diff_r / 16,
-        )
-        quant_err_next.unsafe_set(
-          (xi + 1) * 4 + 1,
-          quant_err_next.unsafe_get((xi + 1) * 4 + 1) + diff_g / 16,
-        )
-        quant_err_next.unsafe_set(
-          (xi + 1) * 4 + 2,
-          quant_err_next.unsafe_get((xi + 1) * 4 + 2) + diff_b / 16,
-        )
-        quant_err_next.unsafe_set(
-          (xi + 1) * 4 + 3,
-          quant_err_next.unsafe_get((xi + 1) * 4 + 3) + diff_a / 16,
-        )
+        diffuse(quant_err_next, (xi + 1) * 4, dr, dg, db, da, 1)
       }
     }
-    // Swap rows
     FixedArray::unsafe_blit(quant_err_cur, 0, quant_err_next, 0, w * 4)
   }
 }

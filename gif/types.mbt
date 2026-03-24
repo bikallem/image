@@ -17,14 +17,9 @@ pub(all) struct GIF {
 }
 
 ///|
-// GIF signature
-let gif87a : String = "GIF87a"
-
-///|
 let gif89a : String = "GIF89a"
 
 ///|
-// Block types
 let ext_introducer : Byte = b'\x21'
 
 ///|

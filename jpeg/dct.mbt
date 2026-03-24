@@ -35,10 +35,6 @@ let w3pw5 : Int = w3 + w5
 let w3mw5 : Int = w3 - w5
 
 ///|
-// r2 = 181 (approximation of 128*sqrt(2))
-let r2 : Int = 181
-
-///|
 /// Performs a 1D IDCT on an 8-element row of the block (in-place).
 /// Input values are scaled by 8 (i.e., left-shifted by 3 relative to spec).
 /// Output is 64 Int DCT coefficients (natural order), level-shifted by -128.

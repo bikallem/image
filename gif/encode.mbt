@@ -92,7 +92,6 @@ pub fn encode_all(gif : GIF) -> Bytes raise Error {
     let pixels = pixel_buf.to_bytes()
     // Compress with LZW
     let compressed = @lzw.compress(pixels, @lzw.BitOrder::LSB, lit_width)
-      |> or_gif_error()
     // Write as sub-blocks
     write_sub_blocks(buf, compressed)
   }
@@ -105,15 +104,9 @@ pub fn encode_all(gif : GIF) -> Bytes raise Error {
 fn color_table_size(n : Int) -> Int {
   let mut size = 1
   while 1 << size < n {
-    size = size + 1
+    size += 1
   }
-  if size < 1 {
-    1
-  } else if size > 8 {
-    8
-  } else {
-    size
-  }
+  if size < 1 { 1 } else if size > 8 { 8 } else { size }
 }
 
 ///|

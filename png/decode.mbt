@@ -107,7 +107,7 @@ pub fn decode(data : Bytes) -> @image.AnyImage raise Error {
   }
   // Decompress IDAT
   let compressed = idat_buf.to_bytes()
-  let decompressed = @zlib.decompress(compressed) |> or_png_error()
+  let decompressed = @zlib.decompress(compressed) 
   if interlace == b'\x00' {
     decode_image(
       decompressed, width, height, bit_depth, color_type, palette, trns,
@@ -264,11 +264,6 @@ fn decode_interlaced(
     }
   }
   target
-}
-
-///|
-fn[T] or_png_error(result : T) -> T {
-  result
 }
 
 ///|
