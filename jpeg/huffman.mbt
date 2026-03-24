@@ -104,7 +104,9 @@ pub fn decode_huffman(d : Decoder, table : HuffmanTable) -> Int raise JpegError 
     code = (code << 1) | ((peek >> (7 - i)) & 1)
     if table.max_code.unsafe_get(i) >= 0 && code <= table.max_code.unsafe_get(i) {
       consume_bits(d, i + 1)
-      let idx = table.val_ptr.unsafe_get(i) + code - table.min_code.unsafe_get(i)
+      let idx = table.val_ptr.unsafe_get(i) +
+        code -
+        table.min_code.unsafe_get(i)
       return table.symbols.unsafe_get(idx)
     }
   }
@@ -114,7 +116,9 @@ pub fn decode_huffman(d : Decoder, table : HuffmanTable) -> Int raise JpegError 
     let bit = read_bits(d, 1)
     code = (code << 1) | bit
     if table.max_code.unsafe_get(i) >= 0 && code <= table.max_code.unsafe_get(i) {
-      let idx = table.val_ptr.unsafe_get(i) + code - table.min_code.unsafe_get(i)
+      let idx = table.val_ptr.unsafe_get(i) +
+        code -
+        table.min_code.unsafe_get(i)
       return table.symbols.unsafe_get(idx)
     }
   }

@@ -435,7 +435,10 @@ fn draw_paletted(
       let c = src.at(sx, sy)
       let (cr, cg, cb, ca) = c.rgba()
       let key = (cr.reinterpret_as_int() << 16) | cg.reinterpret_as_int()
-      let slot = (key.lxor(cb.reinterpret_as_int() << 8).lxor(ca.reinterpret_as_int())).land(0xFF)
+      let slot = key
+        .lxor(cb.reinterpret_as_int() << 8)
+        .lxor(ca.reinterpret_as_int())
+        .land(0xFF)
       if cache_keys.unsafe_get(slot) == key {
         dst.pix.unsafe_set(d_row + _x, cache_vals.unsafe_get(slot).to_byte())
       } else {

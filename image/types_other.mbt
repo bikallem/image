@@ -255,7 +255,10 @@ pub fn ImageAlpha::set_alpha(
   if x < r.min_x || x >= r.max_x || y < r.min_y || y >= r.max_y {
     return
   }
-  self.pix.unsafe_set(self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x), c.a)
+  self.pix.unsafe_set(
+    self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x),
+    c.a,
+  )
 }
 
 ///|
@@ -287,7 +290,10 @@ pub fn ImageAlpha::set(
   }
   let c1 = @color.AnyModel::AlphaModel.convert(c)
   guard c1 is @color.AnyColor::Alpha(ac) else { return }
-  self.pix.unsafe_set(self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x), ac.a)
+  self.pix.unsafe_set(
+    self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x),
+    ac.a,
+  )
 }
 
 ///|
@@ -443,7 +449,10 @@ pub fn ImageGray::set_gray(
   if x < r.min_x || x >= r.max_x || y < r.min_y || y >= r.max_y {
     return
   }
-  self.pix.unsafe_set(self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x), c.y)
+  self.pix.unsafe_set(
+    self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x),
+    c.y,
+  )
 }
 
 ///|
@@ -459,7 +468,10 @@ pub fn ImageGray::set(
   }
   let c1 = @color.AnyModel::GrayModel.convert(c)
   guard c1 is @color.AnyColor::Gray(gc) else { return }
-  self.pix.unsafe_set(self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x), gc.y)
+  self.pix.unsafe_set(
+    self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x),
+    gc.y,
+  )
 }
 
 ///|
@@ -610,7 +622,9 @@ pub fn ImagePaletted::at(
   if x < r.min_x || x >= r.max_x || y < r.min_y || y >= r.max_y {
     return self.palette.colors.unsafe_get(0)
   }
-  let idx = self.pix.unsafe_get(self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x)).to_int()
+  let idx = self.pix
+    .unsafe_get(self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x))
+    .to_int()
   self.palette.colors.unsafe_get(idx)
 }
 
@@ -624,7 +638,9 @@ pub fn ImagePaletted::color_index_at(
   if x < r.min_x || x >= r.max_x || y < r.min_y || y >= r.max_y {
     return b'\x00'
   }
-  self.pix.unsafe_get(self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x))
+  self.pix.unsafe_get(
+    self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x),
+  )
 }
 
 ///|
@@ -638,7 +654,10 @@ pub fn ImagePaletted::set_color_index(
   if x < r.min_x || x >= r.max_x || y < r.min_y || y >= r.max_y {
     return
   }
-  self.pix.unsafe_set(self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x), index)
+  self.pix.unsafe_set(
+    self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x),
+    index,
+  )
 }
 
 ///|
@@ -653,7 +672,10 @@ pub fn ImagePaletted::set(
     return
   }
   let idx = self.palette.index(c)
-  self.pix.unsafe_set(self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x), idx.to_byte())
+  self.pix.unsafe_set(
+    self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x),
+    idx.to_byte(),
+  )
 }
 
 ///|
