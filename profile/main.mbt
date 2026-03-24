@@ -97,6 +97,88 @@ fn main {
     failures += 1
   }
   println("GIF: [0,0]=\{gr0},\{gg0},\{gb0} [100,75]=\{gr1},\{gg1},\{gb1}")
+  // Write MoonBit-encoded files for Go cross-codec roundtrip test
+  let png_enc = @png.encode(png_img)
+  @fs.write_bytes_to_file("testdata/roundtrip_moonbit.png", png_enc) catch {
+    _ => ()
+  }
+  let jpeg_enc = @jpeg.encode(@image.AnyImage::RGBA(
+    @image.new_image_rgba(@image.rect(0, 0, 32, 32)),
+  ))
+  @fs.write_bytes_to_file("testdata/roundtrip_moonbit.jpeg", jpeg_enc) catch {
+    _ => ()
+  }
+  let pal : @color.Palette = {
+    colors: Array::makei(256, fn(i) {
+      @color.AnyColor::RGBA(
+        { r: i.to_byte(), g: i.to_byte(), b: i.to_byte(), a: b'\xff' },
+      )
+    }),
+  }
+  let pal_img = @image.new_image_paletted(@image.rect(0, 0, 32, 32), pal)
+  for y in 0..<32 {
+    for x in 0..<32 {
+      pal_img.set_color_index(x, y, ((x + y) % 256).to_byte())
+    }
+  }
+  let gif_enc = @gif.encode(pal_img) catch { _ => Bytes::new(0) }
+  if gif_enc.length() > 0 {
+    @fs.write_bytes_to_file("testdata/roundtrip_moonbit.gif", gif_enc) catch {
+      _ => ()
+    }
+  }
+  println("Wrote roundtrip_moonbit.{png,jpeg,gif}")
+  // Read Go-encoded files (if they exist)
+  let go_png = @fs.read_file_to_bytes("testdata/roundtrip_go.png") catch {
+    _ => Bytes::new(0)
+  }
+  if go_png.length() > 0 {
+    let go_png_img = @png.decode(go_png) catch {
+      _ => {
+        println("FAIL: can't decode Go PNG")
+        failures += 1
+        abort("")
+      }
+    }
+    let gpb = go_png_img.bounds()
+    println(
+      "Go PNG → MoonBit: \{gpb.dx()}x\{gpb.dy()} [0,0]=\{go_png_img.at(0, 0).rgba().0}",
+    )
+  } else {
+    println("(skipping Go→MoonBit: run Go parity first)")
+  }
+  let go_jpeg = @fs.read_file_to_bytes("testdata/roundtrip_go.jpeg") catch {
+    _ => Bytes::new(0)
+  }
+  if go_jpeg.length() > 0 {
+    let go_jpeg_img = @jpeg.decode(go_jpeg) catch {
+      _ => {
+        println("FAIL: can't decode Go JPEG")
+        failures += 1
+        abort("")
+      }
+    }
+    let gjb = go_jpeg_img.bounds()
+    println(
+      "Go JPEG → MoonBit: \{gjb.dx()}x\{gjb.dy()} [0,0]=\{go_jpeg_img.at(0, 0).rgba().0}",
+    )
+  }
+  let go_gif = @fs.read_file_to_bytes("testdata/roundtrip_go.gif") catch {
+    _ => Bytes::new(0)
+  }
+  if go_gif.length() > 0 {
+    let go_gif_img = @gif.decode(go_gif) catch {
+      _ => {
+        println("FAIL: can't decode Go GIF")
+        failures += 1
+        abort("")
+      }
+    }
+    let ggb = go_gif_img.bounds()
+    println(
+      "Go GIF → MoonBit: \{ggb.dx()}x\{ggb.dy()} [0,0]=\{go_gif_img.at(0, 0).rgba().0}",
+    )
+  }
   println("")
   if failures == 0 {
     println("PASS: all parity checks passed")

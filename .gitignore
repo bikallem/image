@@ -1,4 +1,4 @@
 vendor
 _build
 .mooncakes
-.direnv
+.direnvtestdata/roundtrip_*
