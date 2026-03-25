@@ -190,13 +190,10 @@ fn decode_interlaced(
     }
     // Decode this pass as a sub-image
     let pass_stride = bytes_per_row(pass_w, bit_depth, color_type)
-    let bpp = bytes_per_pixel(bit_depth, color_type)
     let pass_data_len = pass_h * (pass_stride + 1)
     if offset + pass_data_len > data.length() {
       raise PngError::FormatError("not enough IDAT data for interlaced pass")
     }
-    // Decode the pass sub-image using a BytesView slice (zero-copy)
-    ignore(bpp)
     let pass_img = decode_image(
       data[offset:offset + pass_data_len],
       pass_w,

@@ -10,7 +10,7 @@ test (b : @bench.T) {
   }
   fdct(pixels, block)
   b.bench(name="fdct", fn() { fdct(pixels, block) })
-  b.bench(name="idct", fn() { idct(block, dst) })
+  b.bench(name="idct", fn() { idct_islow(block, dst) })
   // Decode benchmarks
   let baseline = @fs.read_file_to_bytes("testdata/video-001.jpeg")
   b.bench(name="decode_baseline", fn() { b.keep(try? decode(baseline)) })

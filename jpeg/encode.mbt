@@ -396,14 +396,14 @@ pub fn encode(img : @image.AnyImage, quality? : Int = 75) -> Bytes {
         @image.AnyImage::Gray16(g) =>
           y_plane.unsafe_set(idx, (g.gray16_at(ax, ay).y >> 8).to_byte())
         @image.AnyImage::RGBA(rgba) => {
-          // Fast path: read directly from pix array
           let si = rgba.pix_offset +
             (ay - rgba.rect.min_y) * rgba.stride +
             (ax - rgba.rect.min_x) * 4
-          let r8 = rgba.pix.unsafe_get(si)
-          let g8 = rgba.pix.unsafe_get(si + 1)
-          let b8 = rgba.pix.unsafe_get(si + 2)
-          let (yv, cbv, crv) = @color.rgb_to_ycbcr(r8, g8, b8)
+          let (yv, cbv, crv) = @color.rgb_to_ycbcr(
+            rgba.pix.unsafe_get(si),
+            rgba.pix.unsafe_get(si + 1),
+            rgba.pix.unsafe_get(si + 2),
+          )
           y_plane.unsafe_set(idx, yv)
           cb_plane.unsafe_set(idx, cbv)
           cr_plane.unsafe_set(idx, crv)
@@ -412,10 +412,11 @@ pub fn encode(img : @image.AnyImage, quality? : Int = 75) -> Bytes {
           let si = nrgba.pix_offset +
             (ay - nrgba.rect.min_y) * nrgba.stride +
             (ax - nrgba.rect.min_x) * 4
-          let r8 = nrgba.pix.unsafe_get(si)
-          let g8 = nrgba.pix.unsafe_get(si + 1)
-          let b8 = nrgba.pix.unsafe_get(si + 2)
-          let (yv, cbv, crv) = @color.rgb_to_ycbcr(r8, g8, b8)
+          let (yv, cbv, crv) = @color.rgb_to_ycbcr(
+            nrgba.pix.unsafe_get(si),
+            nrgba.pix.unsafe_get(si + 1),
+            nrgba.pix.unsafe_get(si + 2),
+          )
           y_plane.unsafe_set(idx, yv)
           cb_plane.unsafe_set(idx, cbv)
           cr_plane.unsafe_set(idx, crv)
