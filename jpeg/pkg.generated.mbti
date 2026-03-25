@@ -18,7 +18,7 @@ pub fn encode(@image.AnyImage, quality? : Int) -> Bytes
 
 pub fn fdct(FixedArray[Byte], FixedArray[Int]) -> Unit
 
-pub fn idct(FixedArray[Int], FixedArray[Byte]) -> Unit
+pub fn idct_islow(FixedArray[Int], FixedArray[Byte], FixedArray[Int]) -> Unit
 
 pub fn process_sos(Decoder) -> @image.AnyImage raise JpegError
 

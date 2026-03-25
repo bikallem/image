@@ -38,8 +38,6 @@ pub fn new_image_rgba64(Rectangle) -> ImageRGBA64
 
 pub fn new_image_ycbcr(Rectangle, YCbCrSubsampleRatio) -> ImageYCbCr
 
-pub fn new_image_ycbcr_separate(Rectangle, YCbCrSubsampleRatio) -> ImageYCbCr
-
 pub fn pixel_buffer_length(Int, Rectangle, String) -> Int
 
 pub fn pt(Int, Int) -> Point
