@@ -53,8 +53,11 @@ fn descale(x : Int, n : Int) -> Int {
 
 ///|
 /// ISLOW IDCT matching libjpeg-turbo's jpeg_idct_islow.
-pub fn idct_islow(block : FixedArray[Int], dst : FixedArray[Byte]) -> Unit {
-  let ws = FixedArray::make(64, 0)
+pub fn idct_islow(
+  block : FixedArray[Int],
+  dst : FixedArray[Byte],
+  ws : FixedArray[Int],
+) -> Unit {
   // Pass 1: process rows. Input: dequantized coefficients. Output: workspace.
   for row in 0..<8 {
     let base = row * 8

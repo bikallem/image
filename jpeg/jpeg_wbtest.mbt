@@ -15,7 +15,7 @@ test "dct" {
     let block = FixedArray::make(64, 0)
     let dst = FixedArray::make(64, b'\x00')
     fdct(pixels, block)
-    idct_islow(block, dst)
+    idct_islow(block, dst, FixedArray::make(64, 0))
     // All output values should be in valid byte range (0-255) after clamping
     for i in 0..<64 {
       assert_true(dst[i].to_int() >= 0 && dst[i].to_int() <= 255)

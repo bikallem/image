@@ -87,6 +87,7 @@ pub fn process_sos(d : Decoder) -> @image.AnyImage raise JpegError {
   let block = @blit.make_uninit_int(64)
   let nat = @blit.make_uninit_int(64)
   let idct_out = @blit.make_uninit(64)
+  let idct_ws = FixedArray::make(64, 0)
   let mut mcu_count = 0
   // Decode MCUs
   for mcu_y in 0..<mcu_rows {
@@ -124,7 +125,7 @@ pub fn process_sos(d : Decoder) -> @image.AnyImage raise JpegError {
               )
             }
             // IDCT
-            idct_islow(nat, idct_out)
+            idct_islow(nat, idct_out, idct_ws)
             // Write to comp_data
             let block_x = mcu_x * h + hx
             let block_y = mcu_y * v + vy
@@ -484,6 +485,7 @@ fn reconstruct_progressive(d : Decoder) -> @image.AnyImage {
   }
   let nat = @blit.make_uninit_int(64)
   let idct_out = @blit.make_uninit(64)
+  let idct_ws = FixedArray::make(64, 0)
   // For each component, dequantize and IDCT all blocks
   for ci in 0..<d.num_components {
     if d.prog_coeffs.unsafe_get(ci).length() == 0 {
@@ -506,7 +508,7 @@ fn reconstruct_progressive(d : Decoder) -> @image.AnyImage {
       }
       // Note: b[k] is stored at zig-zag position k, quant is also zig-zag
       // nat[unzig.unsafe_get(k)] places into natural order for IDCT
-      idct_islow(nat, idct_out)
+      idct_islow(nat, idct_out, idct_ws)
       // Write to comp_data
       let cw = comp_width.unsafe_get(ci)
       for py in 0..<8 {
@@ -573,26 +575,32 @@ fn ycbcr_to_rgba(
   if h_sub && v_sub {
     // 4:2:0 — bilinear from 4 neighbors with 9:3:3:1 weights
     for y in 0..<d.height {
+      let y_row = y * y_w
+      let di_row = y * img.stride
+      let cy = y / 2
+      let cy0 = if cy > 0 && (y & 1) == 0 { cy - 1 } else { cy }
+      let cy1 = if cy < max_cy && (y & 1) != 0 { cy + 1 } else { cy }
+      let cb_row0 = cy0 * cb_w
+      let cb_row1 = cy1 * cb_w
+      let cr_row0 = cy0 * cr_w
+      let cr_row1 = cy1 * cr_w
       for x in 0..<d.width {
-        let yv = y_data.unsafe_get(y * y_w + x)
+        let yv = y_data.unsafe_get(y_row + x)
         let cx = x / 2
-        let cy = y / 2
         let cx0 = if cx > 0 && (x & 1) == 0 { cx - 1 } else { cx }
         let cx1 = if cx < max_cx && (x & 1) != 0 { cx + 1 } else { cx }
-        let cy0 = if cy > 0 && (y & 1) == 0 { cy - 1 } else { cy }
-        let cy1 = if cy < max_cy && (y & 1) != 0 { cy + 1 } else { cy }
-        let cb00 = cb_data.unsafe_get(cy0 * cb_w + cx0).to_int()
-        let cb01 = cb_data.unsafe_get(cy0 * cb_w + cx1).to_int()
-        let cb10 = cb_data.unsafe_get(cy1 * cb_w + cx0).to_int()
-        let cb11 = cb_data.unsafe_get(cy1 * cb_w + cx1).to_int()
-        let cr00 = cr_data.unsafe_get(cy0 * cr_w + cx0).to_int()
-        let cr01 = cr_data.unsafe_get(cy0 * cr_w + cx1).to_int()
-        let cr10 = cr_data.unsafe_get(cy1 * cr_w + cx0).to_int()
-        let cr11 = cr_data.unsafe_get(cy1 * cr_w + cx1).to_int()
+        let cb00 = cb_data.unsafe_get(cb_row0 + cx0).to_int()
+        let cb01 = cb_data.unsafe_get(cb_row0 + cx1).to_int()
+        let cb10 = cb_data.unsafe_get(cb_row1 + cx0).to_int()
+        let cb11 = cb_data.unsafe_get(cb_row1 + cx1).to_int()
+        let cr00 = cr_data.unsafe_get(cr_row0 + cx0).to_int()
+        let cr01 = cr_data.unsafe_get(cr_row0 + cx1).to_int()
+        let cr10 = cr_data.unsafe_get(cr_row1 + cx0).to_int()
+        let cr11 = cr_data.unsafe_get(cr_row1 + cx1).to_int()
         let cbv = ((9 * cb00 + 3 * cb01 + 3 * cb10 + cb11 + 8) >> 4).to_byte()
         let crv = ((9 * cr00 + 3 * cr01 + 3 * cr10 + cr11 + 8) >> 4).to_byte()
         let (r, g, b) = @color.ycbcr_to_rgb(yv, cbv, crv)
-        let di = y * img.stride + x * 4
+        let di = di_row + x * 4
         img.pix.unsafe_set(di, r)
         img.pix.unsafe_set(di + 1, g)
         img.pix.unsafe_set(di + 2, b)
@@ -602,19 +610,23 @@ fn ycbcr_to_rgba(
   } else if h_sub {
     // 4:2:2 — horizontal-only with 3:1 weights
     for y in 0..<d.height {
+      let y_row = y * y_w
+      let di_row = y * img.stride
+      let cb_row = y * cb_w
+      let cr_row = y * cr_w
       for x in 0..<d.width {
-        let yv = y_data.unsafe_get(y * y_w + x)
+        let yv = y_data.unsafe_get(y_row + x)
         let cx = x / 2
         let cx0 = if cx > 0 && (x & 1) == 0 { cx - 1 } else { cx }
         let cx1 = if cx < max_cx && (x & 1) != 0 { cx + 1 } else { cx }
-        let cb0 = cb_data.unsafe_get(y * cb_w + cx0).to_int()
-        let cb1 = cb_data.unsafe_get(y * cb_w + cx1).to_int()
-        let cr0 = cr_data.unsafe_get(y * cr_w + cx0).to_int()
-        let cr1 = cr_data.unsafe_get(y * cr_w + cx1).to_int()
+        let cb0 = cb_data.unsafe_get(cb_row + cx0).to_int()
+        let cb1 = cb_data.unsafe_get(cb_row + cx1).to_int()
+        let cr0 = cr_data.unsafe_get(cr_row + cx0).to_int()
+        let cr1 = cr_data.unsafe_get(cr_row + cx1).to_int()
         let cbv = ((3 * cb0 + cb1 + 2) >> 2).to_byte()
         let crv = ((3 * cr0 + cr1 + 2) >> 2).to_byte()
         let (r, g, b) = @color.ycbcr_to_rgb(yv, cbv, crv)
-        let di = y * img.stride + x * 4
+        let di = di_row + x * 4
         img.pix.unsafe_set(di, r)
         img.pix.unsafe_set(di + 1, g)
         img.pix.unsafe_set(di + 2, b)
@@ -624,19 +636,25 @@ fn ycbcr_to_rgba(
   } else if v_sub {
     // 4:4:0 — vertical-only with 3:1 weights
     for y in 0..<d.height {
+      let y_row = y * y_w
+      let di_row = y * img.stride
+      let cy = y / 2
+      let cy0 = if cy > 0 && (y & 1) == 0 { cy - 1 } else { cy }
+      let cy1 = if cy < max_cy && (y & 1) != 0 { cy + 1 } else { cy }
+      let cb_row0 = cy0 * cb_w
+      let cb_row1 = cy1 * cb_w
+      let cr_row0 = cy0 * cr_w
+      let cr_row1 = cy1 * cr_w
       for x in 0..<d.width {
-        let yv = y_data.unsafe_get(y * y_w + x)
-        let cy = y / 2
-        let cy0 = if cy > 0 && (y & 1) == 0 { cy - 1 } else { cy }
-        let cy1 = if cy < max_cy && (y & 1) != 0 { cy + 1 } else { cy }
-        let cb0 = cb_data.unsafe_get(cy0 * cb_w + x).to_int()
-        let cb1 = cb_data.unsafe_get(cy1 * cb_w + x).to_int()
-        let cr0 = cr_data.unsafe_get(cy0 * cr_w + x).to_int()
-        let cr1 = cr_data.unsafe_get(cy1 * cr_w + x).to_int()
+        let yv = y_data.unsafe_get(y_row + x)
+        let cb0 = cb_data.unsafe_get(cb_row0 + x).to_int()
+        let cb1 = cb_data.unsafe_get(cb_row1 + x).to_int()
+        let cr0 = cr_data.unsafe_get(cr_row0 + x).to_int()
+        let cr1 = cr_data.unsafe_get(cr_row1 + x).to_int()
         let cbv = ((3 * cb0 + cb1 + 2) >> 2).to_byte()
         let crv = ((3 * cr0 + cr1 + 2) >> 2).to_byte()
         let (r, g, b) = @color.ycbcr_to_rgb(yv, cbv, crv)
-        let di = y * img.stride + x * 4
+        let di = di_row + x * 4
         img.pix.unsafe_set(di, r)
         img.pix.unsafe_set(di + 1, g)
         img.pix.unsafe_set(di + 2, b)
@@ -646,12 +664,14 @@ fn ycbcr_to_rgba(
   } else {
     // 4:4:4 — no subsampling
     for y in 0..<d.height {
+      let y_row = y * y_w
+      let di_row = y * img.stride
       for x in 0..<d.width {
-        let yv = y_data.unsafe_get(y * y_w + x)
-        let cbv = cb_data.unsafe_get(y * cb_w + x)
-        let crv = cr_data.unsafe_get(y * cr_w + x)
+        let yv = y_data.unsafe_get(y_row + x)
+        let cbv = cb_data.unsafe_get(y_row + x)
+        let crv = cr_data.unsafe_get(y_row + x)
         let (r, g, b) = @color.ycbcr_to_rgb(yv, cbv, crv)
-        let di = y * img.stride + x * 4
+        let di = di_row + x * 4
         img.pix.unsafe_set(di, r)
         img.pix.unsafe_set(di + 1, g)
         img.pix.unsafe_set(di + 2, b)
