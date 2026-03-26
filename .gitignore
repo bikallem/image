@@ -3,3 +3,8 @@ _build
 .mooncakes
 .direnv
 testdata/roundtrip_*
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
