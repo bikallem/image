@@ -472,13 +472,12 @@ fn build_output_image(
   comp_height : FixedArray[Int],
   rect : @image.Rectangle,
 ) -> @image.AnyImage raise JpegError {
-  ignore(comp_height)
   if d.num_components == 4 {
     components_to_cmyk(d, comp_data, comp_width, rect)
   } else if is_rgb_jpeg(d) {
     rgb_to_rgba(d, comp_data, comp_width, rect)
   } else {
-    ycbcr_to_rgba(d, comp_data, comp_width, comp_height, rect)
+    components_to_ycbcr(d, comp_data, comp_width, comp_height, rect)
   }
 }
 
@@ -494,6 +493,48 @@ fn is_rgb_jpeg(d : Decoder) -> Bool {
   d.comp.unsafe_get(0).id == b'R'.to_int() &&
   d.comp.unsafe_get(1).id == b'G'.to_int() &&
   d.comp.unsafe_get(2).id == b'B'.to_int()
+}
+
+///|
+fn ycbcr_subsample_ratio(
+  d : Decoder,
+) -> @image.YCbCrSubsampleRatio raise JpegError {
+  let h_ratio = d.comp.unsafe_get(0).h / d.comp.unsafe_get(1).h
+  let v_ratio = d.comp.unsafe_get(0).v / d.comp.unsafe_get(1).v
+  match (h_ratio << 4) | v_ratio {
+    0x11 => @image.Ratio444
+    0x12 => @image.Ratio440
+    0x21 => @image.Ratio422
+    0x22 => @image.Ratio420
+    0x41 => @image.Ratio411
+    0x42 => @image.Ratio410
+    _ => raise JpegError::UnsupportedError("unsupported subsampling ratio")
+  }
+}
+
+///|
+fn components_to_ycbcr(
+  d : Decoder,
+  comp_data : FixedArray[FixedArray[Byte]],
+  comp_width : FixedArray[Int],
+  comp_height : FixedArray[Int],
+  rect : @image.Rectangle,
+) -> @image.AnyImage raise JpegError {
+  let full = @image.new_image_ycbcr(
+    @image.rect(0, 0, comp_width.unsafe_get(0), comp_height.unsafe_get(0)),
+    ycbcr_subsample_ratio(d),
+  )
+  let y_plane = comp_data.unsafe_get(0)
+  let cb_plane = comp_data.unsafe_get(1)
+  let cr_plane = comp_data.unsafe_get(2)
+  for i in 0..<y_plane.length() {
+    full.y_.unsafe_set(i, y_plane.unsafe_get(i))
+  }
+  for i in 0..<cb_plane.length() {
+    full.cb.unsafe_set(i, cb_plane.unsafe_get(i))
+    full.cr.unsafe_set(i, cr_plane.unsafe_get(i))
+  }
+  @image.AnyImage::YCbCr(full.sub_image(rect))
 }
 
 ///|
@@ -582,164 +623,46 @@ fn components_to_cmyk(
 }
 
 ///|
-/// Build RGBA image from YCbCr component planes with fancy chroma upsampling.
-/// Uses triangle filter (9:3:3:1 weights for 4:2:0, 3:1 for 4:2:2/4:4:0)
-/// matching libjpeg-turbo's default "fancy" upsampling for better visual quality.
-fn ycbcr_to_rgba(
-  d : Decoder,
-  comp_data : FixedArray[FixedArray[Byte]],
-  comp_width : FixedArray[Int],
-  comp_height : FixedArray[Int],
-  rect : @image.Rectangle,
-) -> @image.AnyImage {
-  let img = @image.new_image_rgba(rect)
-  let y_w = comp_width.unsafe_get(0)
-  let cb_w = comp_width.unsafe_get(1)
-  let cr_w = comp_width.unsafe_get(2)
-  let cb_h = comp_height.unsafe_get(1)
-  let y_data = comp_data.unsafe_get(0)
-  let cb_data = comp_data.unsafe_get(1)
-  let cr_data = comp_data.unsafe_get(2)
-  let h_ratio = d.comp.unsafe_get(0).h / d.comp.unsafe_get(1).h
-  let v_ratio = d.comp.unsafe_get(0).v / d.comp.unsafe_get(1).v
-  let max_cx = cb_w - 1
-  let max_cy = cb_h - 1
-  // Hoist common subsampling branches outside pixel loops.
-  if h_ratio == 2 && v_ratio == 2 {
-    // 4:2:0 — bilinear from 4 neighbors with 9:3:3:1 weights
-    for y in 0..<d.height {
-      let y_row = y * y_w
-      let di_row = y * img.stride
-      let cy = y / 2
-      let cy0 = if cy > 0 && (y & 1) == 0 { cy - 1 } else { cy }
-      let cy1 = if cy < max_cy && (y & 1) != 0 { cy + 1 } else { cy }
-      let cb_row0 = cy0 * cb_w
-      let cb_row1 = cy1 * cb_w
-      let cr_row0 = cy0 * cr_w
-      let cr_row1 = cy1 * cr_w
-      for x in 0..<d.width {
-        let yv = y_data.unsafe_get(y_row + x)
-        let cx = x / 2
-        let cx0 = if cx > 0 && (x & 1) == 0 { cx - 1 } else { cx }
-        let cx1 = if cx < max_cx && (x & 1) != 0 { cx + 1 } else { cx }
-        let cb00 = cb_data.unsafe_get(cb_row0 + cx0).to_int()
-        let cb01 = cb_data.unsafe_get(cb_row0 + cx1).to_int()
-        let cb10 = cb_data.unsafe_get(cb_row1 + cx0).to_int()
-        let cb11 = cb_data.unsafe_get(cb_row1 + cx1).to_int()
-        let cr00 = cr_data.unsafe_get(cr_row0 + cx0).to_int()
-        let cr01 = cr_data.unsafe_get(cr_row0 + cx1).to_int()
-        let cr10 = cr_data.unsafe_get(cr_row1 + cx0).to_int()
-        let cr11 = cr_data.unsafe_get(cr_row1 + cx1).to_int()
-        let cbv = ((9 * cb00 + 3 * cb01 + 3 * cb10 + cb11 + 8) >> 4).to_byte()
-        let crv = ((9 * cr00 + 3 * cr01 + 3 * cr10 + cr11 + 8) >> 4).to_byte()
-        let (r, g, b) = @color.ycbcr_to_rgb(yv, cbv, crv)
-        let di = di_row + x * 4
-        img.pix.unsafe_set(di, r)
-        img.pix.unsafe_set(di + 1, g)
-        img.pix.unsafe_set(di + 2, b)
-        img.pix.unsafe_set(di + 3, b'\xff')
-      }
-    }
-  } else if h_ratio == 2 && v_ratio == 1 {
-    // 4:2:2 — horizontal-only with 3:1 weights
-    for y in 0..<d.height {
-      let y_row = y * y_w
-      let di_row = y * img.stride
-      let cb_row = y * cb_w
-      let cr_row = y * cr_w
-      for x in 0..<d.width {
-        let yv = y_data.unsafe_get(y_row + x)
-        let cx = x / 2
-        let cx0 = if cx > 0 && (x & 1) == 0 { cx - 1 } else { cx }
-        let cx1 = if cx < max_cx && (x & 1) != 0 { cx + 1 } else { cx }
-        let cb0 = cb_data.unsafe_get(cb_row + cx0).to_int()
-        let cb1 = cb_data.unsafe_get(cb_row + cx1).to_int()
-        let cr0 = cr_data.unsafe_get(cr_row + cx0).to_int()
-        let cr1 = cr_data.unsafe_get(cr_row + cx1).to_int()
-        let cbv = ((3 * cb0 + cb1 + 2) >> 2).to_byte()
-        let crv = ((3 * cr0 + cr1 + 2) >> 2).to_byte()
-        let (r, g, b) = @color.ycbcr_to_rgb(yv, cbv, crv)
-        let di = di_row + x * 4
-        img.pix.unsafe_set(di, r)
-        img.pix.unsafe_set(di + 1, g)
-        img.pix.unsafe_set(di + 2, b)
-        img.pix.unsafe_set(di + 3, b'\xff')
-      }
-    }
-  } else if h_ratio == 1 && v_ratio == 2 {
-    // 4:4:0 — vertical-only with 3:1 weights
-    for y in 0..<d.height {
-      let y_row = y * y_w
-      let di_row = y * img.stride
-      let cy = y / 2
-      let cy0 = if cy > 0 && (y & 1) == 0 { cy - 1 } else { cy }
-      let cy1 = if cy < max_cy && (y & 1) != 0 { cy + 1 } else { cy }
-      let cb_row0 = cy0 * cb_w
-      let cb_row1 = cy1 * cb_w
-      let cr_row0 = cy0 * cr_w
-      let cr_row1 = cy1 * cr_w
-      for x in 0..<d.width {
-        let yv = y_data.unsafe_get(y_row + x)
-        let cb0 = cb_data.unsafe_get(cb_row0 + x).to_int()
-        let cb1 = cb_data.unsafe_get(cb_row1 + x).to_int()
-        let cr0 = cr_data.unsafe_get(cr_row0 + x).to_int()
-        let cr1 = cr_data.unsafe_get(cr_row1 + x).to_int()
-        let cbv = ((3 * cb0 + cb1 + 2) >> 2).to_byte()
-        let crv = ((3 * cr0 + cr1 + 2) >> 2).to_byte()
-        let (r, g, b) = @color.ycbcr_to_rgb(yv, cbv, crv)
-        let di = di_row + x * 4
-        img.pix.unsafe_set(di, r)
-        img.pix.unsafe_set(di + 1, g)
-        img.pix.unsafe_set(di + 2, b)
-        img.pix.unsafe_set(di + 3, b'\xff')
-      }
-    }
-  } else if h_ratio == 1 && v_ratio == 1 {
-    // 4:4:4 — no subsampling
-    for y in 0..<d.height {
-      let y_row = y * y_w
-      let di_row = y * img.stride
-      for x in 0..<d.width {
-        let yv = y_data.unsafe_get(y_row + x)
-        let cbv = cb_data.unsafe_get(y_row + x)
-        let crv = cr_data.unsafe_get(y_row + x)
-        let (r, g, b) = @color.ycbcr_to_rgb(yv, cbv, crv)
-        let di = di_row + x * 4
-        img.pix.unsafe_set(di, r)
-        img.pix.unsafe_set(di + 1, g)
-        img.pix.unsafe_set(di + 2, b)
-        img.pix.unsafe_set(di + 3, b'\xff')
-      }
-    }
-  } else {
-    // 4:1:1 / 4:1:0 and similar supported ratios fall back to direct sampling.
-    for y in 0..<d.height {
-      let di_row = y * img.stride
-      for x in 0..<d.width {
-        let yv = sample_component(d, comp_data, comp_width, 0, x, y)
-        let cbv = sample_component(d, comp_data, comp_width, 1, x, y)
-        let crv = sample_component(d, comp_data, comp_width, 2, x, y)
-        let (r, g, b) = @color.ycbcr_to_rgb(yv, cbv, crv)
-        let di = di_row + x * 4
-        img.pix.unsafe_set(di, r)
-        img.pix.unsafe_set(di + 1, g)
-        img.pix.unsafe_set(di + 2, b)
-        img.pix.unsafe_set(di + 3, b'\xff')
-      }
-    }
-  }
-  @image.AnyImage::RGBA(img)
-}
-
-///|
 fn consume_restart_marker(
   d : Decoder,
   expected_rst : UInt,
 ) -> Unit raise JpegError {
   let b0 = d.r.read_byte()
   let b1 = d.r.read_byte()
-  let marker = 0xFF00U | b1.to_uint()
-  if b0 != b'\xFF' || marker != expected_rst {
-    raise JpegError::FormatError("bad RST marker")
+  if b0 != b'\xFF' || (0xFF00U | b1.to_uint()) != expected_rst {
+    find_restart_marker(d, b0, b1, expected_rst)
+  }
+}
+
+///|
+fn find_restart_marker(
+  d : Decoder,
+  b0 : Byte,
+  b1 : Byte,
+  expected_rst : UInt,
+) -> Unit raise JpegError {
+  let mut b0 = b0
+  let mut b1 = b1
+  while true {
+    let mut shift_by_one = false
+    if b0 == b'\xFF' {
+      if (0xFF00U | b1.to_uint()) == expected_rst {
+        return
+      }
+      if b1 == b'\xFF' {
+        shift_by_one = true
+      } else if b1 != b'\x00' {
+        raise JpegError::FormatError("bad RST marker")
+      }
+    } else if b1 == b'\xFF' {
+      b0 = b'\xFF'
+      shift_by_one = true
+    }
+    if shift_by_one {
+      b1 = d.r.read_byte()
+    } else {
+      b0 = d.r.read_byte()
+      b1 = d.r.read_byte()
+    }
   }
 }

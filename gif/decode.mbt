@@ -1,7 +1,7 @@
 ///|
 /// Decodes a GIF image from bytes.
 pub fn decode(data : Bytes) -> @image.AnyImage raise Error {
-  let gif = decode_all(data)
+  let gif = decode_gif(data, false)
   if gif.image.is_empty() {
     raise GifError::FormatError("no image data")
   }
@@ -51,6 +51,37 @@ fn validate_gif_header(r : GifByteReader) -> Unit raise GifError {
 ///|
 /// Decodes all frames of a GIF image.
 pub fn decode_all(data : Bytes) -> GIF raise Error {
+  decode_gif(data, true)
+}
+
+///|
+fn finish_gif(
+  global_palette : Array[@color.AnyColor],
+  images : Array[@image.ImagePaletted],
+  delays : Array[Int],
+  loop_count : Int,
+  disposals : Array[Byte],
+  bg_index : Byte,
+  width : Int,
+  height : Int,
+) -> GIF {
+  let color_model = if !global_palette.is_empty() {
+    @color.AnyModel::PaletteModel(@color.Palette::{ colors: global_palette })
+  } else {
+    empty_palette_model()
+  }
+  {
+    image: images,
+    delay: delays,
+    loop_count,
+    disposal: disposals,
+    background_index: bg_index,
+    config: { color_model, width, height },
+  }
+}
+
+///|
+fn decode_gif(data : Bytes, keep_all_frames : Bool) -> GIF raise Error {
   let r = GifByteReader::new(data)
   validate_gif_header(r)
   let width = r.read_uint16_le().reinterpret_as_int()
@@ -159,6 +190,12 @@ pub fn decode_all(data : Bytes) -> GIF raise Error {
         delay = 0
         disposal = b'\x00'
         transparent_index = -1
+        if !keep_all_frames {
+          return finish_gif(
+            global_palette, images, delays, loop_count, disposals, bg_index, width,
+            height,
+          )
+        }
       }
       b if b == trailer => done = true
       _ => raise GifError::FormatError("unknown block type")
@@ -167,19 +204,9 @@ pub fn decode_all(data : Bytes) -> GIF raise Error {
   if images.is_empty() {
     raise GifError::FormatError("no image data")
   }
-  let color_model = if !global_palette.is_empty() {
-    @color.AnyModel::PaletteModel(@color.Palette::{ colors: global_palette })
-  } else {
-    empty_palette_model()
-  }
-  {
-    image: images,
-    delay: delays,
-    loop_count,
-    disposal: disposals,
-    background_index: bg_index,
-    config: { color_model, width, height },
-  }
+  finish_gif(
+    global_palette, images, delays, loop_count, disposals, bg_index, width, height,
+  )
 }
 
 ///|

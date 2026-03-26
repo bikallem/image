@@ -119,6 +119,21 @@ fn insert_restart_before_eoi(data : Bytes) -> Bytes raise Error {
 }
 
 ///|
+fn assert_ycbcr_decode(
+  path : String,
+  ratio : @image.YCbCrSubsampleRatio,
+) -> Unit raise Error {
+  let img = decode(@fs.read_file_to_bytes(path))
+  match img {
+    @image.AnyImage::YCbCr(ycbcr) => {
+      assert_eq(ycbcr.subsample_ratio, ratio)
+      assert_true(img.color_model() is @color.AnyModel::YCbCrModel)
+    }
+    _ => fail("expected YCbCr image")
+  }
+}
+
+///|
 /// Port of Go's TestWriter from writer_test.go.
 /// JPEG encode -> decode roundtrip with delta check.
 test "jpeg_writer" {
@@ -275,6 +290,20 @@ test "jpeg_trailing_restart_marker" {
   let reference = decode(data)
   let img = decode(insert_restart_before_eoi(data))
   assert_samples_close(img, reference, 1U)
+}
+
+///|
+test "jpeg_restart_marker_resync" {
+  let d = Decoder::new(Bytes::from_array([b'\x12', b'\x34', b'\xff', b'\xd0']))
+  consume_restart_marker(d, marker_rst0)
+  assert_eq(d.r.pos, 4)
+}
+
+///|
+test "jpeg_ycbcr_decode_type_and_ratio" {
+  assert_ycbcr_decode("testdata/video-001.q50.411.jpeg", @image.Ratio411)
+  assert_ycbcr_decode("testdata/video-001.q50.420.jpeg", @image.Ratio420)
+  assert_ycbcr_decode("testdata/video-001.q50.444.jpeg", @image.Ratio444)
 }
 
 ///|
