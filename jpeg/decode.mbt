@@ -19,12 +19,20 @@ pub fn decode_config(data : Bytes) -> @image.Config raise Error {
     let marker = read_marker(d)
     match marker {
       m if m == marker_eoi => done = true
-      m if m == marker_sof0 || m == marker_sof1 => {
+      m if m == marker_sof0 => {
+        d.baseline = true
+        d.progressive = false
+        process_sof(d)
+        seen_sof = true
+      }
+      m if m == marker_sof1 => {
+        d.baseline = false
         d.progressive = false
         process_sof(d)
         seen_sof = true
       }
       m if m == marker_sof2 => {
+        d.baseline = false
         d.progressive = true
         process_sof(d)
         seen_sof = true
@@ -38,9 +46,14 @@ pub fn decode_config(data : Bytes) -> @image.Config raise Error {
         d.r.skip(seg_len)
         done = true
       }
+      m if m == marker_dht || m == marker_dqt || m == marker_dri =>
+        skip_segment(d)
       m if m == marker_app0 => process_app0_marker(d)
       m if m == marker_app14 => process_app14_marker(d)
-      _ => skip_segment(d)
+      m if (m >= marker_app0 && m <= marker_app15) || m == marker_com =>
+        skip_segment(d)
+      m if is_restart_marker(m) => ()
+      _ => reject_unknown_marker(marker)
     }
   }
   if !seen_sof {
@@ -53,13 +66,32 @@ pub fn decode_config(data : Bytes) -> @image.Config raise Error {
 /// Read a 2-byte JPEG marker (0xFF followed by marker byte).
 fn read_marker(d : Decoder) -> UInt raise JpegError {
   let mut b = d.r.read_byte()
-  while b != b'\xFF' {
+  while true {
+    while b != b'\xFF' {
+      b = d.r.read_byte()
+    }
+    while b == b'\xFF' {
+      b = d.r.read_byte()
+    }
+    if b != b'\x00' {
+      return 0xFF00U | b.to_uint()
+    }
     b = d.r.read_byte()
   }
-  while b == b'\xFF' {
-    b = d.r.read_byte()
+  raise JpegError::UnexpectedEOF
+}
+
+///|
+fn is_restart_marker(marker : UInt) -> Bool {
+  marker >= marker_rst0 && marker <= marker_rst7
+}
+
+///|
+fn reject_unknown_marker(marker : UInt) -> Unit raise JpegError {
+  if marker < marker_sof0 {
+    raise JpegError::FormatError("unknown marker")
   }
-  0xFF00U | b.to_uint()
+  raise JpegError::UnsupportedError("unknown marker")
 }
 
 ///|
@@ -144,42 +176,45 @@ fn decode_jpeg(d : Decoder) -> @image.AnyImage raise JpegError {
     raise JpegError::FormatError("missing SOI marker")
   }
   let mut done = false
-  let mut img : @image.AnyImage = @image.AnyImage::Gray(
-    @image.new_image_gray({ min_x: 0, min_y: 0, max_x: 0, max_y: 0 }),
-  )
+  let mut saw_scan = false
   while !done && d.r.remaining() > 0 {
     let marker = read_marker(d)
     match marker {
       m if m == marker_eoi => done = true
-      m if m == marker_sof0 || m == marker_sof1 => {
+      m if m == marker_sof0 => {
+        d.baseline = true
+        d.progressive = false
+        process_sof(d)
+      }
+      m if m == marker_sof1 => {
+        d.baseline = false
         d.progressive = false
         process_sof(d)
       }
       m if m == marker_sof2 => {
+        d.baseline = false
         d.progressive = true
         process_sof(d)
       }
       m if m == marker_dht => process_dht(d)
       m if m == marker_dqt => process_dqt(d)
       m if m == marker_dri => process_dri(d)
-      m if m == marker_sos =>
-        if d.progressive {
-          process_sos_progressive(d)
-        } else {
-          img = process_sos(d)
-          done = true
-        }
+      m if m == marker_sos => {
+        process_sos(d)
+        saw_scan = true
+      }
       m if m == marker_app0 => process_app0_marker(d)
       m if m == marker_app14 => process_app14_marker(d)
       m if (m >= marker_app0 && m <= marker_app15) || m == marker_com =>
         skip_segment(d)
-      _ => skip_segment(d)
+      m if is_restart_marker(m) => ()
+      _ => reject_unknown_marker(marker)
     }
   }
-  if d.progressive {
-    img = reconstruct_progressive(d)
+  if !saw_scan {
+    raise JpegError::FormatError("missing SOS marker")
   }
-  img
+  reconstruct_coefficients(d)
 }
 
 ///|
@@ -213,16 +248,58 @@ fn process_sof(d : Decoder) -> Unit raise JpegError {
     let comp_id = d.r.read_byte().to_int()
     let sampling = d.r.read_byte().to_int()
     let qt_idx = d.r.read_byte().to_int()
+    let mut h = (sampling >> 4) & 0x0F
+    let mut v = sampling & 0x0F
     d.comp.unsafe_get(i).id = comp_id
-    d.comp.unsafe_get(i).h = (sampling >> 4) & 0x0F
-    d.comp.unsafe_get(i).v = sampling & 0x0F
     d.comp.unsafe_get(i).qt = qt_idx
-    if d.comp.unsafe_get(i).h < 1 ||
-      d.comp.unsafe_get(i).h > 4 ||
-      d.comp.unsafe_get(i).v < 1 ||
-      d.comp.unsafe_get(i).v > 4 {
+    if h < 1 || h > 4 || v < 1 || v > 4 {
       raise JpegError::FormatError("bad sampling factor")
     }
+    if h == 3 || v == 3 {
+      raise JpegError::UnsupportedError("unsupported subsampling ratio")
+    }
+    match d.num_components {
+      1 => {
+        h = 1
+        v = 1
+      }
+      3 =>
+        match i {
+          0 =>
+            if v == 4 {
+              raise JpegError::UnsupportedError("unsupported subsampling ratio")
+            }
+          1 =>
+            if d.comp.unsafe_get(0).h % h != 0 ||
+              d.comp.unsafe_get(0).v % v != 0 {
+              raise JpegError::UnsupportedError("unsupported subsampling ratio")
+            }
+          2 =>
+            if d.comp.unsafe_get(1).h != h || d.comp.unsafe_get(1).v != v {
+              raise JpegError::UnsupportedError("unsupported subsampling ratio")
+            }
+          _ => ()
+        }
+      4 =>
+        match i {
+          0 =>
+            if !((h == 1 && v == 1) || (h == 2 && v == 2)) {
+              raise JpegError::UnsupportedError("unsupported subsampling ratio")
+            }
+          1 | 2 =>
+            if h != 1 || v != 1 {
+              raise JpegError::UnsupportedError("unsupported subsampling ratio")
+            }
+          3 =>
+            if d.comp.unsafe_get(0).h != h || d.comp.unsafe_get(0).v != v {
+              raise JpegError::UnsupportedError("unsupported subsampling ratio")
+            }
+          _ => ()
+        }
+      _ => ()
+    }
+    d.comp.unsafe_get(i).h = h
+    d.comp.unsafe_get(i).v = v
     if qt_idx >= 4 {
       raise JpegError::FormatError("quantization table index out of range")
     }

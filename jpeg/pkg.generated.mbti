@@ -20,7 +20,7 @@ pub fn fdct(FixedArray[Byte], FixedArray[Int]) -> Unit
 
 pub fn idct_islow(FixedArray[Int], FixedArray[Byte], FixedArray[Int]) -> Unit
 
-pub fn process_sos(Decoder) -> @image.AnyImage raise JpegError
+pub fn process_sos(Decoder) -> Unit raise JpegError
 
 // Errors
 pub(all) suberror JpegError {
@@ -73,6 +73,7 @@ pub(all) struct Decoder {
   mut adobe_transform_valid : Bool
   mut adobe_transform : Int
   bits : BitReader
+  mut baseline : Bool
   mut progressive : Bool
   mut eob_run : Int
   prog_coeffs : FixedArray[Array[FixedArray[Int]]]

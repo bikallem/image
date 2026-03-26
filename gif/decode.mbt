@@ -9,6 +9,11 @@ pub fn decode(data : Bytes) -> @image.AnyImage raise Error {
 }
 
 ///|
+fn empty_palette_model() -> @color.AnyModel {
+  @color.AnyModel::PaletteModel(@color.Palette::{ colors: [] })
+}
+
+///|
 /// Decodes the configuration of a GIF image.
 pub fn decode_config(data : Bytes) -> @image.Config raise Error {
   let r = GifByteReader::new(data)
@@ -24,7 +29,7 @@ pub fn decode_config(data : Bytes) -> @image.Config raise Error {
     let palette = read_color_table(r, gct_size)
     @color.AnyModel::PaletteModel(@color.Palette::{ colors: palette })
   } else {
-    @color.AnyModel::RGBAModel
+    empty_palette_model()
   }
   { color_model, width, height }
 }
@@ -99,6 +104,9 @@ pub fn decode_all(data : Bytes) -> GIF raise Error {
         let top = r.read_uint16_le().reinterpret_as_int()
         let img_width = r.read_uint16_le().reinterpret_as_int()
         let img_height = r.read_uint16_le().reinterpret_as_int()
+        if left + img_width > width || top + img_height > height {
+          raise GifError::FormatError("frame bounds larger than image bounds")
+        }
         let img_packed = r.read_byte()
         let has_lct = (img_packed.to_int() & 0x80) != 0
         let interlaced = (img_packed.to_int() & 0x40) != 0
@@ -114,6 +122,11 @@ pub fn decode_all(data : Bytes) -> GIF raise Error {
           palette = apply_transparent_index(palette, transparent_index)
         }
         let lzw_min = r.read_byte()
+        if lzw_min.to_int() < 2 || lzw_min.to_int() > 8 {
+          raise GifError::FormatError(
+            "pixel size in decode out of range: " + lzw_min.to_int().to_string(),
+          )
+        }
         let lzw_data = read_sub_blocks(r)
         let decompressed = @lzw.decompress(
           lzw_data,
@@ -129,18 +142,17 @@ pub fn decode_all(data : Bytes) -> GIF raise Error {
         let pal = @color.Palette::{ colors: palette }
         let img = @image.new_image_paletted(rect, pal)
         let pixel_count = img_width * img_height
+        if decompressed.length() != pixel_count {
+          raise GifError::FormatError("invalid pixel data length")
+        }
         if interlaced {
           write_interlaced_pixels(img, decompressed, pixel_count)
         } else {
-          let copy_count = if decompressed.length() < pixel_count {
-            decompressed.length()
-          } else {
-            pixel_count
-          }
-          for i in 0..<copy_count {
+          for i in 0..<pixel_count {
             img.pix.unsafe_set(i, decompressed[i])
           }
         }
+        validate_palette_indices(img, palette.length())
         images.push(img)
         delays.push(delay)
         disposals.push(disposal)
@@ -158,7 +170,7 @@ pub fn decode_all(data : Bytes) -> GIF raise Error {
   let color_model = if !global_palette.is_empty() {
     @color.AnyModel::PaletteModel(@color.Palette::{ colors: global_palette })
   } else {
-    @color.AnyModel::RGBAModel
+    empty_palette_model()
   }
   {
     image: images,
@@ -240,6 +252,21 @@ fn write_interlaced_pixels(
         src += 1
       }
       y += step_y
+    }
+  }
+}
+
+///|
+fn validate_palette_indices(
+  img : @image.ImagePaletted,
+  palette_len : Int,
+) -> Unit raise GifError {
+  if palette_len >= 256 {
+    return
+  }
+  for pixel in img.pix {
+    if pixel.to_int() >= palette_len {
+      raise GifError::FormatError("bad pixel")
     }
   }
 }

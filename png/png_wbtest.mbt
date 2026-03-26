@@ -199,6 +199,65 @@ test "png_decode_config_models" {
 }
 
 ///|
+test "png_decode_config_header_only" {
+  let buf = @blit.Buffer::new()
+  for b in png_header {
+    buf.write_byte(b)
+  }
+  let ihdr = FixedArray::make(13, b'\x00')
+  @binary.write_uint32_be(ihdr, 0, 7U)
+  @binary.write_uint32_be(ihdr, 4, 5U)
+  ihdr[8] = b'\x08'
+  ihdr[9] = b'\x02'
+  ihdr[10] = b'\x00'
+  ihdr[11] = b'\x00'
+  ihdr[12] = b'\x00'
+  write_chunk(buf, ct_ihdr, ihdr)
+  let config = decode_config(buf.to_bytes())
+  assert_eq(config.width, 7)
+  assert_eq(config.height, 5)
+  assert_true(config.color_model is @color.AnyModel::RGBAModel)
+}
+
+///|
+test "png_decode_config_paletted_transparency" {
+  let config = decode_config(
+    @fs.read_file_to_bytes("png/testdata/pngsuite/basn3p08-trns.png"),
+  )
+  match config.color_model {
+    @color.AnyModel::PaletteModel(p) => {
+      let mut has_transparency = false
+      for c in p.colors {
+        let (_, _, _, a) = c.rgba()
+        if a != 0xffffU {
+          has_transparency = true
+        }
+      }
+      assert_true(has_transparency)
+    }
+    _ => fail("expected palette model")
+  }
+}
+
+///|
+test "png_decode_paletted_transparency" {
+  let img = decode(
+    @fs.read_file_to_bytes("png/testdata/pngsuite/basn3p08-trns.png"),
+  )
+  let b = img.bounds()
+  let mut has_transparency = false
+  for y in 0..<b.dy() {
+    for x in 0..<b.dx() {
+      let (_, _, _, a) = img.at(x, y).rgba()
+      if a != 0xffffU {
+        has_transparency = true
+      }
+    }
+  }
+  assert_true(has_transparency)
+}
+
+///|
 test "png_write_rgba64" {
   let img = @image.new_image_rgba64(@image.rect(0, 0, 2, 2))
   img.set_rgba64(0, 0, { r: 0x1234U, g: 0x5678U, b: 0x9abCU, a: 0xffffU })
@@ -409,4 +468,67 @@ test "png_decode_config" {
   let config2 = decode_config(data2)
   assert_eq(config2.width, 32)
   assert_eq(config2.height, 32)
+}
+
+///|
+fn split_idat_with_text_chunk(data : Bytes) -> Bytes raise Error {
+  let mut pos = 8
+  let mut idat_pos = -1
+  let mut idat_len = 0
+  while pos + 12 <= data.length() {
+    let chunk_len = @binary.read_uint32_be_bytes(data, pos).reinterpret_as_int()
+    let chunk_type = @binary.read_uint32_be_bytes(data, pos + 4)
+    if chunk_type == ct_idat {
+      idat_pos = pos
+      idat_len = chunk_len
+      break
+    }
+    pos += 12 + chunk_len
+  }
+  assert_true(idat_pos >= 0)
+  let idat_data_start = idat_pos + 8
+  let idat_end = idat_data_start + idat_len + 4
+  let first_len = idat_len / 2
+  let second_len = idat_len - first_len
+  let first = FixedArray::make(first_len, b'\x00')
+  for i in 0..<first_len {
+    first[i] = data.unsafe_get(idat_data_start + i)
+  }
+  let second = FixedArray::make(second_len, b'\x00')
+  for i in 0..<second_len {
+    second[i] = data.unsafe_get(idat_data_start + first_len + i)
+  }
+  let text = FixedArray::make(3, b'\x00')
+  text[0] = b'k'
+  text[1] = b'\x00'
+  text[2] = b'v'
+  let buf = @blit.Buffer::new(size_hint=data.length() + 32)
+  for i in 0..<idat_pos {
+    buf.write_byte(data.unsafe_get(i))
+  }
+  write_chunk(buf, ct_idat, first)
+  write_chunk(buf, 0x74455874U, text)
+  write_chunk(buf, ct_idat, second)
+  for i in idat_end..<data.length() {
+    buf.write_byte(data.unsafe_get(i))
+  }
+  buf.to_bytes()
+}
+
+///|
+test "png_nonconsecutive_idat" {
+  let img = @image.new_image_rgba(@image.rect(0, 0, 4, 4))
+  for y in 0..<4 {
+    for x in 0..<4 {
+      img.set_rgba(x, y, {
+        r: (x * 32).to_byte(),
+        g: (y * 32).to_byte(),
+        b: b'\x80',
+        a: b'\xff',
+      })
+    }
+  }
+  let malformed = split_idat_with_text_chunk(encode(@image.AnyImage::RGBA(img)))
+  let result = try? decode(malformed)
+  assert_true(result is Err(_))
 }

@@ -58,6 +58,67 @@ test "zig_unzig" {
 }
 
 ///|
+fn assert_samples_close(
+  img : @image.AnyImage,
+  reference : @image.AnyImage,
+  tolerance : UInt,
+) -> Unit raise Error {
+  let b = img.bounds()
+  assert_eq(b.dx(), reference.bounds().dx())
+  assert_eq(b.dy(), reference.bounds().dy())
+  let samples = [
+    (0, 0),
+    (b.dx() / 2, b.dy() / 2),
+    (b.dx() - 1, b.dy() - 1),
+    (b.dx() / 3, b.dy() / 3),
+    (b.dx() * 2 / 3, b.dy() * 2 / 3),
+  ]
+  for sample in samples {
+    let (x, y) = sample
+    let (r1, g1, b1, _) = img.at(x, y).rgba()
+    let (r2, g2, b2, _) = reference.at(x, y).rgba()
+    let dr = if r1 >= r2 { r1 - r2 } else { r2 - r1 }
+    let dg = if g1 >= g2 { g1 - g2 } else { g2 - g1 }
+    let db = if b1 >= b2 { b1 - b2 } else { b2 - b1 }
+    assert_true(dr >> 8 < tolerance)
+    assert_true(dg >> 8 < tolerance)
+    assert_true(db >> 8 < tolerance)
+  }
+}
+
+///|
+fn make_sequential_zero_scan(selector : Int) -> Bytes {
+  let buf = @blit.Buffer::new(size_hint=10)
+  buf.write_byte(b'\x00')
+  buf.write_byte(b'\x08')
+  buf.write_byte(b'\x01')
+  buf.write_byte(selector.to_byte())
+  buf.write_byte(b'\x00')
+  buf.write_byte(b'\x00')
+  buf.write_byte(b'\x3f')
+  buf.write_byte(b'\x00')
+  buf.write_byte(b'\x00')
+  buf.write_byte(b'\x00')
+  buf.to_bytes()
+}
+
+///|
+fn insert_restart_before_eoi(data : Bytes) -> Bytes raise Error {
+  assert_true(data.length() >= 2)
+  assert_eq(data.unsafe_get(data.length() - 2), b'\xff')
+  assert_eq(data.unsafe_get(data.length() - 1), b'\xd9')
+  let buf = @blit.Buffer::new(size_hint=data.length() + 2)
+  for i in 0..<(data.length() - 2) {
+    buf.write_byte(data.unsafe_get(i))
+  }
+  buf.write_byte(b'\xff')
+  buf.write_byte(b'\xd0')
+  buf.write_byte(b'\xff')
+  buf.write_byte(b'\xd9')
+  buf.to_bytes()
+}
+
+///|
 /// Port of Go's TestWriter from writer_test.go.
 /// JPEG encode -> decode roundtrip with delta check.
 test "jpeg_writer" {
@@ -145,17 +206,92 @@ test "jpeg_progressive" {
 }
 
 ///|
+test "jpeg_progressive_sample_parity" {
+  let reference = @png.decode(@fs.read_file_to_bytes("testdata/video-001.png"))
+  let files = [
+    "testdata/video-001.progressive.jpeg", "testdata/video-001.separate.dc.progression.jpeg",
+    "testdata/video-001.separate.dc.progression.progressive.jpeg",
+  ]
+  for path in files {
+    let img = decode(@fs.read_file_to_bytes(path))
+    assert_samples_close(img, reference, 128U)
+  }
+}
+
+///|
+test "jpeg_multiscan_sequential" {
+  let scan_bytes = @blit.Buffer::new(size_hint=30)
+  for selector in [1, 2, 3] {
+    scan_bytes.write_bytes(make_sequential_zero_scan(selector))
+  }
+  let d = Decoder::new(scan_bytes.to_bytes())
+  d.baseline = false
+  d.progressive = false
+  d.num_components = 3
+  d.width = 8
+  d.height = 8
+  for i in 0..<3 {
+    d.comp.unsafe_get(i).id = i + 1
+    d.comp.unsafe_get(i).h = 1
+    d.comp.unsafe_get(i).v = 1
+    d.comp.unsafe_get(i).qt = 0
+  }
+  let counts = FixedArray::make(16, 0)
+  counts[0] = 1
+  let symbols = FixedArray::make(256, 0)
+  build_huffman_table(d.huff.unsafe_get(0)[0], counts, symbols)
+  build_huffman_table(d.huff.unsafe_get(1)[0], counts, symbols)
+  process_sos(d)
+  process_sos(d)
+  process_sos(d)
+  let img = reconstruct_coefficients(d)
+  assert_eq(img.bounds().dx(), 8)
+  assert_eq(img.bounds().dy(), 8)
+  let (r, g, b, a) = img.at(0, 0).rgba()
+  assert_eq(r, 0x8080U)
+  assert_eq(g, 0x8080U)
+  assert_eq(b, 0x8080U)
+  assert_eq(a, 0xffffU)
+}
+
+///|
+test "jpeg_rejects_excessive_dc_component" {
+  let d = Decoder::new(Bytes::makei(1, fn(_) { b'\x00' }))
+  d.num_components = 1
+  d.comp.unsafe_get(0).dc_huff_idx = 0
+  let counts = FixedArray::make(16, 0)
+  counts[0] = 1
+  let symbols = FixedArray::make(256, 0)
+  symbols[0] = 17
+  build_huffman_table(d.huff.unsafe_get(0)[0], counts, symbols)
+  let block = FixedArray::make(64, 0)
+  let result = try? decode_block(d, 0, block)
+  assert_true(result is Err(_))
+}
+
+///|
+test "jpeg_trailing_restart_marker" {
+  let data = @fs.read_file_to_bytes("testdata/video-001.jpeg")
+  let reference = decode(data)
+  let img = decode(insert_restart_before_eoi(data))
+  assert_samples_close(img, reference, 1U)
+}
+
+///|
 /// Test decoding various JPEG subsampling modes.
 test "jpeg_subsampling" {
   let files = [
-    "testdata/video-001.q50.420.jpeg", "testdata/video-001.q50.422.jpeg", "testdata/video-001.q50.444.jpeg",
+    "testdata/video-001.q50.410.jpeg", "testdata/video-001.q50.411.jpeg", "testdata/video-001.q50.420.jpeg",
+    "testdata/video-001.q50.422.jpeg", "testdata/video-001.q50.440.jpeg", "testdata/video-001.q50.444.jpeg",
   ]
+  let reference = @png.decode(@fs.read_file_to_bytes("testdata/video-001.png"))
   for path in files {
     let data = @fs.read_file_to_bytes(path)
     let img = decode(data)
     let b = img.bounds()
     assert_true(b.dx() > 0)
     assert_true(b.dy() > 0)
+    assert_samples_close(img, reference, 144U)
   }
 }
 

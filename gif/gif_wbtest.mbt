@@ -103,6 +103,92 @@ test "gif_unexpected_eof" {
 }
 
 ///|
+fn make_test_gif(
+  logical_width : Int,
+  logical_height : Int,
+  left : Int,
+  top : Int,
+  image_width : Int,
+  image_height : Int,
+  pixels : Bytes,
+) -> Bytes raise Error {
+  let buf = @blit.Buffer::new()
+  for b in [b'G', b'I', b'F', b'8', b'9', b'a'] {
+    buf.write_byte(b)
+  }
+  write_uint16_le(buf, logical_width.reinterpret_as_uint())
+  write_uint16_le(buf, logical_height.reinterpret_as_uint())
+  buf.write_byte(b'\x80')
+  buf.write_byte(b'\x00')
+  buf.write_byte(b'\x00')
+  buf.write_byte(b'\x00')
+  buf.write_byte(b'\x00')
+  buf.write_byte(b'\x00')
+  buf.write_byte(b'\xff')
+  buf.write_byte(b'\xff')
+  buf.write_byte(b'\xff')
+  buf.write_byte(image_descriptor)
+  write_uint16_le(buf, left.reinterpret_as_uint())
+  write_uint16_le(buf, top.reinterpret_as_uint())
+  write_uint16_le(buf, image_width.reinterpret_as_uint())
+  write_uint16_le(buf, image_height.reinterpret_as_uint())
+  buf.write_byte(b'\x00')
+  buf.write_byte(b'\x02')
+  let compressed = @lzw.compress(pixels, @lzw.BitOrder::LSB, 2)
+  write_sub_blocks(buf, compressed)
+  buf.write_byte(trailer)
+  buf.to_bytes()
+}
+
+///|
+fn assert_empty_palette_model(
+  color_model : @color.AnyModel,
+) -> Unit raise Error {
+  match color_model {
+    @color.AnyModel::PaletteModel(p) => assert_eq(p.colors.length(), 0)
+    _ => fail("expected empty palette model")
+  }
+}
+
+///|
+test "gif_rejects_frame_bounds_outside_screen" {
+  let result = try? decode(
+    make_test_gif(1, 1, 1, 0, 1, 1, Bytes::makei(1, fn(_) { b'\x00' })),
+  )
+  assert_true(result is Err(_))
+}
+
+///|
+test "gif_rejects_short_image_data" {
+  let result = try? decode(
+    make_test_gif(2, 1, 0, 0, 2, 1, Bytes::makei(1, fn(_) { b'\x00' })),
+  )
+  assert_true(result is Err(_))
+}
+
+///|
+test "gif_rejects_bad_palette_index" {
+  let result = try? decode(
+    make_test_gif(1, 1, 0, 0, 1, 1, Bytes::makei(1, fn(_) { b'\x02' })),
+  )
+  assert_true(result is Err(_))
+}
+
+///|
+test "gif_rejects_bad_lzw_min" {
+  let data = make_test_gif(1, 1, 0, 0, 1, 1, Bytes::makei(1, fn(_) { b'\x00' }))
+  let bad = Bytes::makei(data.length(), fn(i) {
+    if i == 29 {
+      b'\x01'
+    } else {
+      data[i]
+    }
+  })
+  let result = try? decode(bad)
+  assert_true(result is Err(_))
+}
+
+///|
 /// Port of Go's TestLoopCount from reader_test.go.
 test "gif_loop_count" {
   let pal : @color.Palette = {
@@ -163,7 +249,7 @@ test "gif_roundtrip_frame_metadata" {
     image: [frame1, frame2],
     delay: [7, 11],
     loop_count: 5,
-    disposal: [b'\x01', b'\x02'],
+    disposal: [disposal_none, disposal_background],
     background_index: b'\x00',
     config: {
       color_model: @color.AnyModel::PaletteModel(pal1),
@@ -174,7 +260,7 @@ test "gif_roundtrip_frame_metadata" {
   let decoded = decode_all(encode_all(gif))
   assert_eq(decoded.loop_count, 5)
   assert_eq(decoded.delay, [7, 11])
-  assert_eq(decoded.disposal, [b'\x01', b'\x02'])
+  assert_eq(decoded.disposal, [disposal_none, disposal_background])
   assert_eq(decoded.image.length(), 2)
   assert_eq(decoded.image[0].rect, @image.rect(0, 0, 4, 4))
   assert_eq(decoded.image[1].rect, @image.rect(1, 1, 3, 3))
@@ -327,6 +413,80 @@ test "gif_decode_config" {
   let config = decode_config(data)
   assert_true(config.width > 0)
   assert_true(config.height > 0)
+}
+
+///|
+test "gif_decode_config_local_palette_model" {
+  let pal : @color.Palette = {
+    colors: [
+      @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' }),
+      @color.AnyColor::RGBA({ r: b'\xff', g: b'\xff', b: b'\xff', a: b'\xff' }),
+    ],
+  }
+  let frame = @image.new_image_paletted(@image.rect(0, 0, 1, 1), pal)
+  frame.set_color_index(0, 0, b'\x01')
+  let encoded = encode_all({
+    image: [frame],
+    delay: [0],
+    loop_count: -1,
+    disposal: [b'\x00'],
+    background_index: b'\x00',
+    config: { color_model: @color.AnyModel::RGBAModel, width: 1, height: 1 },
+  })
+  let config = decode_config(encoded)
+  assert_empty_palette_model(config.color_model)
+  let decoded = decode_all(encoded)
+  assert_empty_palette_model(decoded.config.color_model)
+}
+
+///|
+test "gif_encode_rejects_oversize_canvas" {
+  let pal : @color.Palette = {
+    colors: [
+      @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' }),
+      @color.AnyColor::RGBA({ r: b'\xff', g: b'\xff', b: b'\xff', a: b'\xff' }),
+    ],
+  }
+  let frame = @image.new_image_paletted(@image.rect(0, 0, 1, 1), pal)
+  frame.set_color_index(0, 0, b'\x00')
+  let result = try? encode_all({
+    image: [frame],
+    delay: [0],
+    loop_count: -1,
+    disposal: [b'\x00'],
+    background_index: b'\x00',
+    config: {
+      color_model: @color.AnyModel::PaletteModel(pal),
+      width: 1 << 16,
+      height: 1,
+    },
+  })
+  assert_true(result is Err(_))
+}
+
+///|
+test "gif_encode_rejects_oversize_block" {
+  let pal : @color.Palette = {
+    colors: [
+      @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' }),
+      @color.AnyColor::RGBA({ r: b'\xff', g: b'\xff', b: b'\xff', a: b'\xff' }),
+    ],
+  }
+  let frame = @image.new_image_paletted(@image.rect(65535, 0, 65536, 1), pal)
+  frame.set_color_index(65535, 0, b'\x01')
+  let result = try? encode_all({
+    image: [frame],
+    delay: [0],
+    loop_count: -1,
+    disposal: [b'\x00'],
+    background_index: b'\x00',
+    config: {
+      color_model: @color.AnyModel::PaletteModel(pal),
+      width: 65535,
+      height: 1,
+    },
+  })
+  assert_true(result is Err(_))
 }
 
 ///|

@@ -37,13 +37,13 @@ let ext_application : Byte = b'\xff'
 
 ///|
 /// Disposal methods
-pub let disposal_none : Byte = b'\x00'
+pub let disposal_none : Byte = b'\x01'
 
 ///|
-pub let disposal_background : Byte = b'\x01'
+pub let disposal_background : Byte = b'\x02'
 
 ///|
-pub let disposal_previous : Byte = b'\x02'
+pub let disposal_previous : Byte = b'\x03'
 
 ///|
 priv struct GifByteReader {

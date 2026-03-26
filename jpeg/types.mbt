@@ -180,6 +180,7 @@ pub(all) struct Decoder {
   mut adobe_transform_valid : Bool
   mut adobe_transform : Int
   bits : BitReader
+  mut baseline : Bool
   // Progressive JPEG state
   mut progressive : Bool
   mut eob_run : Int
@@ -250,6 +251,7 @@ pub fn Decoder::new(data : Bytes) -> Decoder {
     adobe_transform_valid: false,
     adobe_transform: 0,
     bits: BitReader::new(),
+    baseline: false,
     progressive: false,
     eob_run: 0,
     prog_coeffs,

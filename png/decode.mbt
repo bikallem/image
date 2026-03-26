@@ -11,6 +11,15 @@ priv struct ParsedPNG {
 }
 
 ///|
+priv struct ParsedPNGConfig {
+  width : Int
+  height : Int
+  bit_depth : Byte
+  color_type : Byte
+  palette : Array[@color.AnyColor]
+}
+
+///|
 let png_stage_start = 0
 
 ///|
@@ -26,7 +35,10 @@ let png_stage_seen_trns = 3
 let png_stage_seen_idat = 4
 
 ///|
-let png_stage_seen_iend = 5
+let png_stage_after_idat = 5
+
+///|
+let png_stage_seen_iend = 6
 
 ///|
 /// Decodes a PNG image from raw bytes.
@@ -57,14 +69,19 @@ pub fn decode(data : Bytes) -> @image.AnyImage raise Error {
 }
 
 ///|
-fn parse_png(data : Bytes) -> ParsedPNG raise PngError {
-  let r = ByteReader::new(data)
+fn check_png_header(r : ByteReader) -> Unit raise PngError {
   for i in 0..<8 {
     let b = r.read_byte()
     if b != png_header.unsafe_get(i) {
       raise PngError::FormatError("not a PNG file")
     }
   }
+}
+
+///|
+fn parse_png(data : Bytes) -> ParsedPNG raise PngError {
+  let r = ByteReader::new(data)
+  check_png_header(r)
   let mut width = 0
   let mut height = 0
   let mut bit_depth : Byte = b'\x00'
@@ -166,6 +183,9 @@ fn parse_png(data : Bytes) -> ParsedPNG raise PngError {
         stage = png_stage_seen_trns
         let raw = r.read_bytes(chunk_len_i)
         trns = normalize_trns(raw, bit_depth, color_type, palette.length())
+        if color_type == ct_paletted {
+          apply_palette_trns(palette, trns)
+        }
       }
       t if t == ct_idat => {
         if stage < png_stage_seen_ihdr ||
@@ -178,7 +198,7 @@ fn parse_png(data : Bytes) -> ParsedPNG raise PngError {
         idat_buf.write_bytes(chunk_data)
       }
       t if t == ct_iend => {
-        if stage != png_stage_seen_idat {
+        if stage != png_stage_seen_idat && stage != png_stage_after_idat {
           raise PngError::FormatError("chunk out of order")
         }
         if chunk_len != 0U {
@@ -187,18 +207,20 @@ fn parse_png(data : Bytes) -> ParsedPNG raise PngError {
         stage = png_stage_seen_iend
         seen_iend = true
       }
-      _ => r.skip(chunk_len_i)
+      _ => {
+        if stage == png_stage_seen_idat {
+          stage = png_stage_after_idat
+        }
+        r.skip(chunk_len_i)
+      }
     }
-    let actual_crc = chunk_crc32(
+    verify_chunk_crc(
       r.data,
       chunk_type,
       chunk_data_start,
       chunk_len_i,
+      chunk_crc_pos,
     )
-    let expected_crc = @binary.read_uint32_be_bytes(r.data, chunk_crc_pos)
-    if actual_crc != expected_crc {
-      raise PngError::FormatError("invalid checksum")
-    }
     r.pos = chunk_crc_pos + 4
   }
   if stage == png_stage_start {
@@ -217,6 +239,138 @@ fn parse_png(data : Bytes) -> ParsedPNG raise PngError {
     idat: idat_buf.to_bytes(),
     interlace,
   }
+}
+
+///|
+fn parse_png_config(data : Bytes) -> ParsedPNGConfig raise PngError {
+  let r = ByteReader::new(data)
+  check_png_header(r)
+  let mut width = 0
+  let mut height = 0
+  let mut bit_depth : Byte = b'\x00'
+  let mut color_type : Byte = b'\x00'
+  let mut palette : Array[@color.AnyColor] = []
+  let mut stage = png_stage_start
+  while true {
+    if r.remaining() < 12 {
+      raise PngError::UnexpectedEOF
+    }
+    let chunk_len = r.read_uint32_be()
+    if chunk_len > 0x7fffffffU {
+      raise PngError::FormatError("bad chunk length")
+    }
+    let chunk_type = r.read_uint32_be()
+    let chunk_len_i = chunk_len.reinterpret_as_int()
+    if r.remaining() < chunk_len_i + 4 {
+      raise PngError::UnexpectedEOF
+    }
+    let chunk_data_start = r.pos
+    let chunk_crc_pos = chunk_data_start + chunk_len_i
+    match chunk_type {
+      t if t == ct_ihdr => {
+        if stage != png_stage_start {
+          raise PngError::FormatError("chunk out of order")
+        }
+        stage = png_stage_seen_ihdr
+        if chunk_len != 13U {
+          raise PngError::FormatError("bad IHDR length")
+        }
+        width = @binary.read_uint32_be_bytes(r.data, chunk_data_start).reinterpret_as_int()
+        height = @binary.read_uint32_be_bytes(r.data, chunk_data_start + 4).reinterpret_as_int()
+        bit_depth = r.data.unsafe_get(chunk_data_start + 8)
+        color_type = r.data.unsafe_get(chunk_data_start + 9)
+        let compression = r.data.unsafe_get(chunk_data_start + 10)
+        let filter = r.data.unsafe_get(chunk_data_start + 11)
+        let interlace = r.data.unsafe_get(chunk_data_start + 12)
+        if width <= 0 || height <= 0 {
+          raise PngError::FormatError("bad IHDR width or height")
+        }
+        if !valid_color_type_bit_depth(bit_depth, color_type) {
+          raise PngError::UnsupportedError(
+            "bit depth " +
+            bit_depth.to_int().to_string() +
+            ", color type " +
+            color_type.to_int().to_string(),
+          )
+        }
+        if compression != b'\x00' {
+          raise PngError::UnsupportedError("compression method")
+        }
+        if filter != b'\x00' {
+          raise PngError::UnsupportedError("filter method")
+        }
+        if interlace != b'\x00' && interlace != b'\x01' {
+          raise PngError::UnsupportedError("unknown interlace method")
+        }
+        ()
+      }
+      t if t == ct_plte => {
+        if stage != png_stage_seen_ihdr {
+          raise PngError::FormatError("chunk out of order")
+        }
+        let np = chunk_len_i / 3
+        if chunk_len % 3U != 0U ||
+          np <= 0 ||
+          np > 256 ||
+          (color_type == ct_paletted && np > 1 << bit_depth.to_int()) {
+          raise PngError::FormatError("bad PLTE length")
+        }
+        match color_type {
+          c if c == ct_paletted ||
+            c == ct_true_color ||
+            c == ct_true_color_alpha => ()
+          _ => raise PngError::FormatError("PLTE, color type mismatch")
+        }
+        stage = png_stage_seen_plte
+        palette = Array::new(capacity=np)
+        for i in 0..<np {
+          let off = chunk_data_start + i * 3
+          palette.push(
+            @color.AnyColor::RGBA({
+              r: r.data.unsafe_get(off),
+              g: r.data.unsafe_get(off + 1),
+              b: r.data.unsafe_get(off + 2),
+              a: b'\xff',
+            }),
+          )
+        }
+      }
+      t if t == ct_trns => {
+        validate_trns_stage(stage, color_type)
+        stage = png_stage_seen_trns
+        let raw = r.read_bytes(chunk_len_i)
+        let trns = normalize_trns(raw, bit_depth, color_type, palette.length())
+        if color_type == ct_paletted {
+          apply_palette_trns(palette, trns)
+        }
+        ()
+      }
+      t if t == ct_idat => {
+        if stage < png_stage_seen_ihdr ||
+          stage > png_stage_seen_idat ||
+          (stage == png_stage_seen_ihdr && color_type == ct_paletted) {
+          raise PngError::FormatError("chunk out of order")
+        }
+        return { width, height, bit_depth, color_type, palette }
+      }
+      _ => r.skip(chunk_len_i)
+    }
+    verify_chunk_crc(
+      r.data,
+      chunk_type,
+      chunk_data_start,
+      chunk_len_i,
+      chunk_crc_pos,
+    )
+    r.pos = chunk_crc_pos + 4
+    if chunk_type == ct_ihdr && color_type != ct_paletted {
+      return { width, height, bit_depth, color_type, palette }
+    }
+    if chunk_type == ct_trns && color_type == ct_paletted {
+      return { width, height, bit_depth, color_type, palette }
+    }
+  }
+  raise PngError::UnexpectedEOF
 }
 
 ///|
@@ -297,6 +451,22 @@ fn normalize_trns(
 }
 
 ///|
+fn apply_palette_trns(palette : Array[@color.AnyColor], trns : Bytes) -> Unit {
+  for i in 0..<trns.length() {
+    let (r, g, b, _) = palette.unsafe_get(i).rgba()
+    palette.unsafe_set(
+      i,
+      @color.AnyColor::RGBA({
+        r: (r >> 8).to_byte(),
+        g: (g >> 8).to_byte(),
+        b: (b >> 8).to_byte(),
+        a: trns.unsafe_get(i),
+      }),
+    )
+  }
+}
+
+///|
 fn chunk_crc32(data : Bytes, chunk_type : UInt, start : Int, len : Int) -> UInt {
   let mut crc = 0xFFFFFFFFU
   crc = crc32_byte(crc, (chunk_type >> 24).to_byte())
@@ -307,6 +477,21 @@ fn chunk_crc32(data : Bytes, chunk_type : UInt, start : Int, len : Int) -> UInt 
     crc = crc32_byte(crc, data.unsafe_get(start + i))
   }
   crc.lxor(0xFFFFFFFFU)
+}
+
+///|
+fn verify_chunk_crc(
+  data : Bytes,
+  chunk_type : UInt,
+  chunk_data_start : Int,
+  chunk_len : Int,
+  chunk_crc_pos : Int,
+) -> Unit raise PngError {
+  let actual_crc = chunk_crc32(data, chunk_type, chunk_data_start, chunk_len)
+  let expected_crc = @binary.read_uint32_be_bytes(data, chunk_crc_pos)
+  if actual_crc != expected_crc {
+    raise PngError::FormatError("invalid checksum")
+  }
 }
 
 ///|
@@ -993,7 +1178,7 @@ fn unfilter(
 ///|
 /// Decodes just the configuration (color model and dimensions) of a PNG.
 pub fn decode_config(data : Bytes) -> @image.Config raise Error {
-  let parsed = parse_png(data)
+  let parsed = parse_png_config(data)
   let cm = png_color_model(parsed.bit_depth, parsed.color_type, parsed.palette)
   { color_model: cm, width: parsed.width, height: parsed.height }
 }

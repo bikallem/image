@@ -36,6 +36,9 @@ pub fn encode_all(gif : GIF) -> Bytes raise Error {
   let buf = @blit.Buffer::new()
   let width = gif.config.width
   let height = gif.config.height
+  if width < 0 || width >= 1 << 16 || height < 0 || height >= 1 << 16 {
+    raise GifError::FormatError("image is too large to encode")
+  }
   write_string(buf, gif89a)
   write_uint16_le(buf, width.reinterpret_as_uint())
   write_uint16_le(buf, height.reinterpret_as_uint())
@@ -98,8 +101,11 @@ pub fn encode_all(gif : GIF) -> Bytes raise Error {
     let rect = img.rect
     if rect.min_x < 0 ||
       rect.min_y < 0 ||
-      rect.max_x > width ||
-      rect.max_y > height {
+      rect.max_x >= 1 << 16 ||
+      rect.max_y >= 1 << 16 {
+      raise GifError::FormatError("image block is too large to encode")
+    }
+    if rect.max_x > width || rect.max_y > height {
       raise GifError::FormatError("image block is out of bounds")
     }
     buf.write_byte(image_descriptor)
