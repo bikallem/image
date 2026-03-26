@@ -39,7 +39,7 @@ fn main {
     println("FAIL PNG checksum: \{psum} != 2241542178")
     failures += 1
   }
-  let re = @png.encode(png_img)
+  let re = @png.encode(png_img) catch { _ => abort("re-encode") }
   let rd = @png.decode(re) catch { _ => abort("re-decode") }
   let mut mm = 0
   for y = b.min_y; y < b.max_y; y = y + 1 {
@@ -108,7 +108,7 @@ fn main {
   }
   println("GIF: [0,0]=\{gr0},\{gg0},\{gb0} [100,75]=\{gr1},\{gg1},\{gb1}")
   // Write MoonBit-encoded files for Go cross-codec roundtrip test
-  let png_enc = @png.encode(png_img)
+  let png_enc = @png.encode(png_img) catch { _ => abort("png encode") }
   @fs.write_bytes_to_file("testdata/roundtrip_moonbit.png", png_enc) catch {
     _ => ()
   }

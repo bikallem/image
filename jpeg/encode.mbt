@@ -307,6 +307,34 @@ fn extract_block(
 }
 
 ///|
+fn extract_scaled_block_420(
+  plane : FixedArray[Byte],
+  plane_w : Int,
+  plane_h : Int,
+  mcu_x : Int,
+  mcu_y : Int,
+  dst : FixedArray[Byte],
+) -> Unit {
+  for py in 0..<8 {
+    for px in 0..<8 {
+      let src_x = mcu_x * 16 + px * 2
+      let src_y = mcu_y * 16 + py * 2
+      let mut sum = 0
+      for oy in 0..<2 {
+        for ox in 0..<2 {
+          let sx = src_x + ox
+          let sy = src_y + oy
+          let csx = if sx >= plane_w { plane_w - 1 } else { sx }
+          let csy = if sy >= plane_h { plane_h - 1 } else { sy }
+          sum += plane[csy * plane_w + csx].to_int()
+        }
+      }
+      dst.unsafe_set(py * 8 + px, ((sum + 2) / 4).to_byte())
+    }
+  }
+}
+
+///|
 /// Write a DHT (Define Huffman Table) segment.
 fn write_dht(
   e : Encoder,
@@ -395,6 +423,12 @@ pub fn encode(img : @image.AnyImage, quality? : Int = 75) -> Bytes {
         @image.AnyImage::Gray(g) => y_plane.unsafe_set(idx, g.gray_at(ax, ay).y)
         @image.AnyImage::Gray16(g) =>
           y_plane.unsafe_set(idx, (g.gray16_at(ax, ay).y >> 8).to_byte())
+        @image.AnyImage::YCbCr(ycbcr) => {
+          let c = ycbcr.ycbcr_at(ax, ay)
+          y_plane.unsafe_set(idx, c.y)
+          cb_plane.unsafe_set(idx, c.cb)
+          cr_plane.unsafe_set(idx, c.cr)
+        }
         @image.AnyImage::RGBA(rgba) => {
           let si = rgba.pix_offset +
             (ay - rgba.rect.min_y) * rgba.stride +
@@ -476,7 +510,7 @@ pub fn encode(img : @image.AnyImage, quality? : Int = 75) -> Bytes {
     enc_write_raw(e, b'\x00')
   } else {
     enc_write_raw(e, b'\x01')
-    enc_write_raw(e, b'\x11')
+    enc_write_raw(e, b'\x22')
     enc_write_raw(e, b'\x00')
     enc_write_raw(e, b'\x02')
     enc_write_raw(e, b'\x11')
@@ -512,9 +546,8 @@ pub fn encode(img : @image.AnyImage, quality? : Int = 75) -> Bytes {
   enc_write_raw(e, b'\x3f') // Se
   enc_write_raw(e, b'\x00') // Ah=0, Al=0
   // Encode scan data
-  let block_w = (width + 7) / 8
-  let block_h = (height + 7) / 8
   let pixels = FixedArray::make(64, b'\x00')
+  let chroma_pixels = FixedArray::make(64, b'\x00')
   let block = FixedArray::make(64, 0)
   let mut y_dc_pred = 0
   let mut cb_dc_pred = 0
@@ -522,23 +555,42 @@ pub fn encode(img : @image.AnyImage, quality? : Int = 75) -> Bytes {
   // quant tables as Int arrays for encode_block
   let luma_qi = FixedArray::makei(64, fn(i) { luma_q[i].to_int() })
   let chroma_qi = FixedArray::makei(64, fn(i) { chroma_q[i].to_int() })
-  for by in 0..<block_h {
-    for bx in 0..<block_w {
-      extract_block(y_plane, width, height, bx, by, pixels)
-      fdct(pixels, block)
-      y_dc_pred = encode_block(
-        e, block, luma_qi, y_dc_pred, luma_dc_codes, luma_dc_lens, luma_ac_codes,
-        luma_ac_lens,
-      )
-      if !is_gray {
-        extract_block(cb_plane, width, height, bx, by, pixels)
+  if is_gray {
+    let block_w = (width + 7) / 8
+    let block_h = (height + 7) / 8
+    for by in 0..<block_h {
+      for bx in 0..<block_w {
+        extract_block(y_plane, width, height, bx, by, pixels)
         fdct(pixels, block)
+        y_dc_pred = encode_block(
+          e, block, luma_qi, y_dc_pred, luma_dc_codes, luma_dc_lens, luma_ac_codes,
+          luma_ac_lens,
+        )
+      }
+    }
+  } else {
+    let mcu_w = (width + 15) / 16
+    let mcu_h = (height + 15) / 16
+    for my in 0..<mcu_h {
+      for mx in 0..<mcu_w {
+        for i in 0..<4 {
+          let bx = mx * 2 + (i & 1)
+          let by = my * 2 + (i >> 1)
+          extract_block(y_plane, width, height, bx, by, pixels)
+          fdct(pixels, block)
+          y_dc_pred = encode_block(
+            e, block, luma_qi, y_dc_pred, luma_dc_codes, luma_dc_lens, luma_ac_codes,
+            luma_ac_lens,
+          )
+        }
+        extract_scaled_block_420(cb_plane, width, height, mx, my, chroma_pixels)
+        fdct(chroma_pixels, block)
         cb_dc_pred = encode_block(
           e, block, chroma_qi, cb_dc_pred, chroma_dc_codes, chroma_dc_lens, chroma_ac_codes,
           chroma_ac_lens,
         )
-        extract_block(cr_plane, width, height, bx, by, pixels)
-        fdct(pixels, block)
+        extract_scaled_block_420(cr_plane, width, height, mx, my, chroma_pixels)
+        fdct(chroma_pixels, block)
         cr_dc_pred = encode_block(
           e, block, chroma_qi, cr_dc_pred, chroma_dc_codes, chroma_dc_lens, chroma_ac_codes,
           chroma_ac_lens,

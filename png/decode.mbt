@@ -44,7 +44,7 @@ let png_stage_seen_iend = 6
 /// Decodes a PNG image from raw bytes.
 pub fn decode(data : Bytes) -> @image.AnyImage raise Error {
   let parsed = parse_png(data)
-  let decompressed = @zlib.decompress(parsed.idat)
+  let decompressed = decompress_png_idat(parsed.idat)
   if parsed.interlace == b'\x00' {
     decode_image(
       decompressed[:],
@@ -66,6 +66,50 @@ pub fn decode(data : Bytes) -> @image.AnyImage raise Error {
       parsed.trns,
     )
   }
+}
+
+///|
+fn decompress_png_idat(data : Bytes) -> Bytes raise PngError {
+  let inflater = @zlib.Inflater::new()
+  let out = @blit.Buffer::new()
+  let mut fed = false
+  while true {
+    match inflater.decode() {
+      @zlib.Decode::Await =>
+        if fed {
+          raise PngError::FormatError("not enough pixel data")
+        } else {
+          inflater.src(data[:])
+          fed = true
+        }
+      @zlib.Decode::Data(chunk) => out.write_bytesview(chunk)
+      @zlib.Decode::End => return out.to_bytes()
+      @zlib.Decode::Error(_) =>
+        raise PngError::FormatError("invalid zlib-compressed data")
+    }
+  }
+  raise PngError::UnexpectedEOF
+}
+
+///|
+fn png_idat_stream_complete(data : Bytes) -> Bool {
+  let inflater = @zlib.Inflater::new()
+  let mut fed = false
+  while true {
+    match inflater.decode() {
+      @zlib.Decode::Await =>
+        if fed {
+          return false
+        } else {
+          inflater.src(data[:])
+          fed = true
+        }
+      @zlib.Decode::Data(_) => ()
+      @zlib.Decode::End => return true
+      @zlib.Decode::Error(_) => return false
+    }
+  }
+  false
 }
 
 ///|
@@ -214,13 +258,20 @@ fn parse_png(data : Bytes) -> ParsedPNG raise PngError {
       }
       t if t == ct_idat => {
         if stage < png_stage_seen_ihdr ||
-          stage > png_stage_seen_idat ||
+          stage > png_stage_after_idat ||
           (stage == png_stage_seen_ihdr && color_type == ct_paletted) {
           raise PngError::FormatError("chunk out of order")
         }
-        stage = png_stage_seen_idat
-        let chunk_data = r.read_bytes(chunk_len_i)
-        idat_buf.write_bytes(chunk_data)
+        if stage == png_stage_after_idat {
+          if !png_idat_stream_complete(idat_buf.to_bytes()) {
+            raise PngError::FormatError("chunk out of order")
+          }
+          r.skip(chunk_len_i)
+        } else {
+          stage = png_stage_seen_idat
+          let chunk_data = r.read_bytes(chunk_len_i)
+          idat_buf.write_bytes(chunk_data)
+        }
       }
       t if t == ct_iend => {
         if stage != png_stage_seen_idat && stage != png_stage_after_idat {

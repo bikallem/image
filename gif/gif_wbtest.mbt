@@ -298,7 +298,11 @@ test "gif_loop_count" {
     loop_count: 0,
     disposal: [b'\x00', b'\x00'],
     background_index: b'\x00',
-    config: { color_model: @color.AnyModel::RGBAModel, width: 1, height: 1 },
+    config: {
+      color_model: @color.AnyModel::PaletteModel(pal),
+      width: 1,
+      height: 1,
+    },
   }
   let encoded = encode_all(gif)
   let decoded_gif = decode_all(encoded)
@@ -370,7 +374,7 @@ test "gif_roundtrip_frame_metadata" {
 
 ///|
 /// Port of Go's TestEncodeZeroGIF from writer_test.go.
-/// Encoding a GIF with no frames produces output that may or may not be valid.
+/// Encoding a GIF with no frames should fail.
 test "gif_encode_zero" {
   let gif : GIF = {
     image: [],
@@ -378,10 +382,13 @@ test "gif_encode_zero" {
     loop_count: 0,
     disposal: [],
     background_index: b'\x00',
-    config: { color_model: @color.AnyModel::RGBAModel, width: 1, height: 1 },
+    config: {
+      color_model: @color.AnyModel::PaletteModel({ colors: [] }),
+      width: 1,
+      height: 1,
+    },
   }
-  // Just verify it doesn't crash; the result may be an error or empty GIF
-  ignore(try? encode_all(gif))
+  assert_true((try? encode_all(gif)) is Err(_))
 }
 
 ///|
@@ -524,12 +531,124 @@ test "gif_decode_config_local_palette_model" {
     loop_count: -1,
     disposal: [b'\x00'],
     background_index: b'\x00',
-    config: { color_model: @color.AnyModel::RGBAModel, width: 1, height: 1 },
+    config: {
+      color_model: @color.AnyModel::PaletteModel({ colors: [] }),
+      width: 1,
+      height: 1,
+    },
   })
   let config = decode_config(encoded)
   assert_empty_palette_model(config.color_model)
   let decoded = decode_all(encoded)
   assert_empty_palette_model(decoded.config.color_model)
+}
+
+///|
+test "gif_encode_defaults_zero_config_from_first_frame" {
+  let pal : @color.Palette = {
+    colors: [
+      @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' }),
+      @color.AnyColor::RGBA({ r: b'\xff', g: b'\xff', b: b'\xff', a: b'\xff' }),
+    ],
+  }
+  let frame = @image.new_image_paletted(@image.rect(2, 3, 5, 7), pal)
+  let encoded = encode_all({
+    image: [frame],
+    delay: [0],
+    loop_count: -1,
+    disposal: [],
+    background_index: b'\x00',
+    config: { color_model: @color.AnyModel::RGBAModel, width: 0, height: 0 },
+  })
+  let decoded = decode_all(encoded)
+  assert_eq(decoded.config.width, 5)
+  assert_eq(decoded.config.height, 7)
+}
+
+///|
+test "gif_encode_rejects_mismatched_delay_length" {
+  let pal : @color.Palette = {
+    colors: [
+      @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' }),
+      @color.AnyColor::RGBA({ r: b'\xff', g: b'\xff', b: b'\xff', a: b'\xff' }),
+    ],
+  }
+  let frame = @image.new_image_paletted(@image.rect(0, 0, 1, 1), pal)
+  let result = try? encode_all({
+    image: [frame],
+    delay: [],
+    loop_count: -1,
+    disposal: [],
+    background_index: b'\x00',
+    config: {
+      color_model: @color.AnyModel::PaletteModel(pal),
+      width: 1,
+      height: 1,
+    },
+  })
+  assert_true(result is Err(_))
+}
+
+///|
+test "gif_encode_rejects_mismatched_disposal_length" {
+  let pal : @color.Palette = {
+    colors: [
+      @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' }),
+      @color.AnyColor::RGBA({ r: b'\xff', g: b'\xff', b: b'\xff', a: b'\xff' }),
+    ],
+  }
+  let frame = @image.new_image_paletted(@image.rect(0, 0, 1, 1), pal)
+  let result = try? encode_all({
+    image: [frame],
+    delay: [0],
+    loop_count: -1,
+    disposal: [b'\x00', b'\x00'],
+    background_index: b'\x00',
+    config: {
+      color_model: @color.AnyModel::PaletteModel(pal),
+      width: 1,
+      height: 1,
+    },
+  })
+  assert_true(result is Err(_))
+}
+
+///|
+test "gif_encode_rejects_non_palette_config_model" {
+  let pal : @color.Palette = {
+    colors: [
+      @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' }),
+      @color.AnyColor::RGBA({ r: b'\xff', g: b'\xff', b: b'\xff', a: b'\xff' }),
+    ],
+  }
+  let frame = @image.new_image_paletted(@image.rect(0, 0, 1, 1), pal)
+  let result = try? encode_all({
+    image: [frame],
+    delay: [0],
+    loop_count: -1,
+    disposal: [],
+    background_index: b'\x00',
+    config: { color_model: @color.AnyModel::RGBAModel, width: 1, height: 1 },
+  })
+  assert_true(result is Err(_))
+}
+
+///|
+test "gif_encode_rejects_empty_frame_palette" {
+  let frame = @image.new_image_paletted(@image.rect(0, 0, 1, 1), { colors: [] })
+  let result = try? encode_all({
+    image: [frame],
+    delay: [0],
+    loop_count: -1,
+    disposal: [],
+    background_index: b'\x00',
+    config: {
+      color_model: @color.AnyModel::PaletteModel({ colors: [] }),
+      width: 1,
+      height: 1,
+    },
+  })
+  assert_true(result is Err(_))
 }
 
 ///|

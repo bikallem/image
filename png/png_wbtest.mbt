@@ -516,6 +516,40 @@ fn split_idat_with_text_chunk(data : Bytes) -> Bytes raise Error {
 }
 
 ///|
+fn append_trailing_idat_after_text(data : Bytes) -> Bytes raise Error {
+  let mut iend_pos = -1
+  let mut pos = 8
+  while pos + 12 <= data.length() {
+    let chunk_len = @binary.read_uint32_be_bytes(data, pos).reinterpret_as_int()
+    let chunk_type = @binary.read_uint32_be_bytes(data, pos + 4)
+    if chunk_type == ct_iend {
+      iend_pos = pos
+      break
+    }
+    pos += 12 + chunk_len
+  }
+  assert_true(iend_pos >= 0)
+  let text = FixedArray::make(3, b'\x00')
+  text[0] = b'k'
+  text[1] = b'\x00'
+  text[2] = b'v'
+  let garbage = FixedArray::make(3, b'\x00')
+  garbage[0] = b'\xaa'
+  garbage[1] = b'\xbb'
+  garbage[2] = b'\xcc'
+  let buf = @blit.Buffer::new(size_hint=data.length() + 32)
+  for i in 0..<iend_pos {
+    buf.write_byte(data.unsafe_get(i))
+  }
+  write_chunk(buf, 0x74455874U, text)
+  write_chunk(buf, ct_idat, garbage)
+  for i in iend_pos..<data.length() {
+    buf.write_byte(data.unsafe_get(i))
+  }
+  buf.to_bytes()
+}
+
+///|
 test "png_nonconsecutive_idat" {
   let img = @image.new_image_rgba(@image.rect(0, 0, 4, 4))
   for y in 0..<4 {
@@ -531,6 +565,33 @@ test "png_nonconsecutive_idat" {
   let malformed = split_idat_with_text_chunk(encode(@image.AnyImage::RGBA(img)))
   let result = try? decode(malformed)
   assert_true(result is Err(_))
+}
+
+///|
+test "png_trailing_idat_after_complete_stream" {
+  let img = @image.new_image_rgba(@image.rect(0, 0, 4, 4))
+  for y in 0..<4 {
+    for x in 0..<4 {
+      img.set_rgba(x, y, {
+        r: (x * 23).to_byte(),
+        g: (y * 29).to_byte(),
+        b: ((x + y) * 17).to_byte(),
+        a: b'\xff',
+      })
+    }
+  }
+  let encoded = encode(@image.AnyImage::RGBA(img))
+  let decoded = decode(append_trailing_idat_after_text(encoded))
+  for y in 0..<4 {
+    for x in 0..<4 {
+      let (r1, g1, b1, a1) = @image.AnyImage::RGBA(img).at(x, y).rgba()
+      let (r2, g2, b2, a2) = decoded.at(x, y).rgba()
+      assert_eq(r1, r2)
+      assert_eq(g1, g2)
+      assert_eq(b1, b2)
+      assert_eq(a1, a2)
+    }
+  }
 }
 
 ///|
@@ -590,6 +651,26 @@ test "png_paletted_out_of_range_index_defaults_black" {
 }
 
 ///|
+test "png_encode_rejects_invalid_palette_lengths" {
+  let empty = @image.new_image_paletted(@image.rect(0, 0, 1, 1), { colors: [] })
+  assert_true((try? encode(@image.AnyImage::Paletted(empty))) is Err(_))
+
+  let large_pal : @color.Palette = {
+    colors: Array::makei(257, fn(i) {
+      @color.AnyColor::RGBA({
+        r: i.to_byte(),
+        g: (i * 3).to_byte(),
+        b: (i * 7).to_byte(),
+        a: b'\xff',
+      })
+    }),
+  }
+  let large = @image.new_image_paletted(@image.rect(0, 0, 1, 1), large_pal)
+  large.set_color_index(0, 0, b'\x00')
+  assert_true((try? encode(@image.AnyImage::Paletted(large))) is Err(_))
+}
+
+///|
 test "png_writer_paletted_bit_depths" {
   let cases = [(2, b'\x01'), (4, b'\x02'), (16, b'\x04'), (17, b'\x08')]
   for entry in cases {
@@ -620,4 +701,24 @@ test "png_writer_paletted_bit_depths" {
       assert_eq(a1, a2)
     }
   }
+}
+
+///|
+test "png_writer_uses_non_none_filters_for_repeated_rows" {
+  let img = @image.new_image_rgba(@image.rect(0, 0, 8, 2))
+  for x in 0..<8 {
+    let c : @color.RGBA = {
+      r: (x * 21).to_byte(),
+      g: (255 - x * 17).to_byte(),
+      b: (x * 9).to_byte(),
+      a: b'\xff',
+    }
+    img.set_rgba(x, 0, c)
+    img.set_rgba(x, 1, c)
+  }
+  let encoded = encode(@image.AnyImage::RGBA(img))
+  let parsed = parse_png(encoded)
+  let raw = decompress_png_idat(parsed.idat)
+  let row_len = bytes_per_row(8, b'\x08', ct_true_color)
+  assert_eq(raw.unsafe_get(row_len + 1), ft_up)
 }

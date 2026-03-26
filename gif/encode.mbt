@@ -34,8 +34,16 @@ pub fn encode(img : @image.ImagePaletted) -> Bytes raise Error {
 /// Encodes multiple frames as an animated GIF.
 pub fn encode_all(gif : GIF) -> Bytes raise Error {
   let buf = @blit.Buffer::new()
-  let width = gif.config.width
-  let height = gif.config.height
+  if gif.image.is_empty() {
+    raise GifError::FormatError("must provide at least one image")
+  }
+  if gif.image.length() != gif.delay.length() {
+    raise GifError::FormatError("mismatched image and delay lengths")
+  }
+  if !gif.disposal.is_empty() && gif.image.length() != gif.disposal.length() {
+    raise GifError::FormatError("mismatched image and disposal lengths")
+  }
+  let (width, height, global_palette) = resolve_gif_config(gif)
   if width < 0 || width >= 1 << 16 || height < 0 || height >= 1 << 16 {
     raise GifError::FormatError("image is too large to encode")
   }
@@ -43,7 +51,6 @@ pub fn encode_all(gif : GIF) -> Bytes raise Error {
   write_uint16_le(buf, width.reinterpret_as_uint())
   write_uint16_le(buf, height.reinterpret_as_uint())
 
-  let global_palette = gif_global_palette(gif)
   let has_global = !global_palette.is_empty()
   if has_global {
     let ct_size = color_table_size(global_palette.length())
@@ -70,11 +77,16 @@ pub fn encode_all(gif : GIF) -> Bytes raise Error {
   }
 
   for i, img in gif.image {
-    let delay = if i < gif.delay.length() { gif.delay[i] } else { 0 }
-    let disposal = if i < gif.disposal.length() {
-      gif.disposal.unsafe_get(i)
-    } else {
+    if img.palette.colors.is_empty() {
+      raise GifError::FormatError(
+        "cannot encode image block with empty palette",
+      )
+    }
+    let delay = gif.delay[i]
+    let disposal = if gif.disposal.is_empty() {
       b'\x00'
+    } else {
+      gif.disposal.unsafe_get(i)
     }
     let transparent_index = find_transparent_index(img.palette.colors)
     if delay > 0 || disposal != b'\x00' || transparent_index >= 0 {
@@ -149,11 +161,26 @@ pub fn encode_all(gif : GIF) -> Bytes raise Error {
 }
 
 ///|
-fn gif_global_palette(gif : GIF) -> Array[@color.AnyColor] {
-  match gif.config.color_model {
+fn resolve_gif_config(
+  gif : GIF,
+) -> (Int, Int, Array[@color.AnyColor]) raise GifError {
+  let mut width = gif.config.width
+  let mut height = gif.config.height
+  let global_palette = match gif.config.color_model {
     @color.AnyModel::PaletteModel(p) => p.colors
-    _ => []
+    _ =>
+      if width == 0 && height == 0 {
+        []
+      } else {
+        raise GifError::FormatError("GIF color model must be a color.Palette")
+      }
   }
+  if width == 0 && height == 0 {
+    let first_bounds = gif.image[0].rect
+    width = first_bounds.max_x
+    height = first_bounds.max_y
+  }
+  (width, height, global_palette)
 }
 
 ///|

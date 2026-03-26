@@ -157,6 +157,25 @@ fn make_flex_sof_segment() -> Bytes {
 }
 
 ///|
+fn find_segment(data : Bytes, marker : UInt) -> Bytes raise Error {
+  let d = Decoder::new(data)
+  assert_eq(read_marker(d), marker_soi)
+  while d.r.remaining() > 0 {
+    let got = read_marker(d)
+    if got == marker {
+      let length = d.r.read_uint16_be().reinterpret_as_int()
+      assert_true(length >= 2)
+      return d.r.read_bytes(length - 2)
+    }
+    if got == marker_sos || got == marker_eoi {
+      break
+    }
+    skip_segment(d)
+  }
+  fail("segment not found")
+}
+
+///|
 /// Port of Go's TestWriter from writer_test.go.
 /// JPEG encode -> decode roundtrip with delta check.
 test "jpeg_writer" {
@@ -200,6 +219,48 @@ test "jpeg_writer" {
   let avg = total_delta / num_pixels
   // Quality 75 default — verify reasonable fidelity
   assert_true(avg < 80)
+}
+
+///|
+test "jpeg_writer_uses_420_sampling" {
+  let img = @image.new_image_rgba(@image.rect(0, 0, 16, 16))
+  for y in 0..<16 {
+    for x in 0..<16 {
+      img.set_rgba(x, y, {
+        r: (x * 11).to_byte(),
+        g: (y * 13).to_byte(),
+        b: ((x + y) * 7).to_byte(),
+        a: b'\xff',
+      })
+    }
+  }
+  let sof = find_segment(encode(@image.AnyImage::RGBA(img)), marker_sof0)
+  assert_eq(sof.unsafe_get(7), b'\x22')
+  assert_eq(sof.unsafe_get(10), b'\x11')
+  assert_eq(sof.unsafe_get(13), b'\x11')
+}
+
+///|
+test "jpeg_encode_ycbcr_matches_rgba" {
+  let rect = @image.rect(0, 0, 16, 16)
+  let rgba = @image.new_image_rgba(rect)
+  let ycbcr = @image.new_image_ycbcr(rect, @image.Ratio444)
+  for y in 0..<16 {
+    for x in 0..<16 {
+      let r = (x * 17 + y * 3).to_byte()
+      let g = (x * 5 + y * 19).to_byte()
+      let b = (x * 9 + y * 7).to_byte()
+      rgba.set_rgba(x, y, { r, g, b, a: b'\xff' })
+      let (yy, cb, cr) = @color.rgb_to_ycbcr(r, g, b)
+      ycbcr.y_[ycbcr.y_offset(x, y)] = yy
+      let ci = ycbcr.c_offset(x, y)
+      ycbcr.cb[ci] = cb
+      ycbcr.cr[ci] = cr
+    }
+  }
+  let rgba_bytes = encode(@image.AnyImage::RGBA(rgba))
+  let ycbcr_bytes = encode(@image.AnyImage::YCbCr(ycbcr))
+  assert_eq(rgba_bytes, ycbcr_bytes)
 }
 
 ///|

@@ -12,7 +12,7 @@ pub(all) enum CompressionLevel {
 pub fn encode(
   img : @image.AnyImage,
   compression? : CompressionLevel = DefaultCompression,
-) -> Bytes {
+) -> Bytes raise Error {
   let buf = @blit.Buffer::new()
   // Write PNG signature
   for i in 0..<8 {
@@ -22,6 +22,9 @@ pub fn encode(
   let width = bounds.dx()
   let height = bounds.dy()
   let all_opaque = png_is_opaque(img)
+  if img is @image.AnyImage::Paletted(p) {
+    validate_png_palette_length(p.palette.colors.length())
+  }
   // Determine color type based on image type
   let (color_type, bit_depth) : (Byte, Byte) = match img {
     @image.AnyImage::Gray(_) => (ct_grayscale, b'\x08')
@@ -248,7 +251,14 @@ pub fn encode(
     BestSpeed => @flate.BestSpeed
     BestCompression => @flate.BestCompression
   }
-  let raw_bytes = raw_buf.to_bytes()
+  let raw_bytes = filter_png_rows(
+    raw_buf.to_bytes(),
+    width,
+    height,
+    bit_depth,
+    color_type,
+    compression,
+  )
   let idat_buf = @blit.Buffer::new(size_hint=raw_bytes.length())
   // Zlib header (CMF=0x78, FLG depends on level)
   let cmf : Int = 0x78 // deflate, window=32K
@@ -318,6 +328,13 @@ fn png_is_opaque(img : @image.AnyImage) -> Bool {
 }
 
 ///|
+fn validate_png_palette_length(n : Int) -> Unit raise PngError {
+  if n < 1 || n > 256 {
+    raise PngError::FormatError("bad palette length: " + n.to_string())
+  }
+}
+
+///|
 fn png_palette_bit_depth(n : Int) -> Byte {
   if n <= 2 {
     b'\x01'
@@ -328,6 +345,132 @@ fn png_palette_bit_depth(n : Int) -> Byte {
   } else {
     b'\x08'
   }
+}
+
+///|
+fn abs8(v : Byte) -> Int {
+  let n = v.to_int()
+  if n < 128 {
+    n
+  } else {
+    256 - n
+  }
+}
+
+///|
+fn filter_png_rows(
+  raw_bytes : Bytes,
+  width : Int,
+  height : Int,
+  bit_depth : Byte,
+  color_type : Byte,
+  compression : CompressionLevel,
+) -> Bytes {
+  if compression == NoCompression || color_type == ct_paletted {
+    return raw_bytes
+  }
+  let row_len = bytes_per_row(width, bit_depth, color_type)
+  let bpp = bytes_per_pixel(bit_depth, color_type)
+  let prev_row = FixedArray::make(row_len, b'\x00')
+  let cur_row = FixedArray::make(row_len, b'\x00')
+  let best_row = FixedArray::make(row_len, b'\x00')
+  let out = @blit.Buffer::new(size_hint=raw_bytes.length())
+  for y in 0..<height {
+    let row_start = y * (row_len + 1)
+    for i in 0..<row_len {
+      cur_row[i] = raw_bytes.unsafe_get(row_start + 1 + i)
+    }
+    out.write_byte(select_png_filter(cur_row, prev_row, bpp, best_row))
+    for i in 0..<row_len {
+      out.write_byte(best_row[i])
+    }
+    @blit.blit_fixed_array(prev_row, 0, cur_row, 0, row_len)
+  }
+  out.to_bytes()
+}
+
+///|
+fn select_png_filter(
+  cur_row : FixedArray[Byte],
+  prev_row : FixedArray[Byte],
+  bpp : Int,
+  best_row : FixedArray[Byte],
+) -> Byte {
+  let n = cur_row.length()
+  let trial = FixedArray::make(n, b'\x00')
+  let mut best_sum = 0
+  for i in 0..<n {
+    let v = (cur_row[i].to_int() - prev_row[i].to_int()).to_byte()
+    trial[i] = v
+    best_sum += abs8(v)
+  }
+  let mut best_filter = ft_up
+  @blit.blit_fixed_array(best_row, 0, trial, 0, n)
+
+  let mut sum = 0
+  for i in 0..<n {
+    let left = if i >= bpp { cur_row[i - bpp].to_int() } else { 0 }
+    let upper_left = if i >= bpp { prev_row[i - bpp].to_int() } else { 0 }
+    let v = (cur_row[i].to_int() - paeth(left, prev_row[i].to_int(), upper_left)).to_byte()
+    trial[i] = v
+    sum += abs8(v)
+    if sum >= best_sum {
+      break
+    }
+  }
+  if sum < best_sum {
+    best_sum = sum
+    best_filter = ft_paeth
+    @blit.blit_fixed_array(best_row, 0, trial, 0, n)
+  }
+
+  sum = 0
+  for i in 0..<n {
+    let v = cur_row[i]
+    trial[i] = v
+    sum += abs8(v)
+    if sum >= best_sum {
+      break
+    }
+  }
+  if sum < best_sum {
+    best_sum = sum
+    best_filter = ft_none
+    @blit.blit_fixed_array(best_row, 0, trial, 0, n)
+  }
+
+  sum = 0
+  for i in 0..<n {
+    let left = if i >= bpp { cur_row[i - bpp].to_int() } else { 0 }
+    let v = (cur_row[i].to_int() - left).to_byte()
+    trial[i] = v
+    sum += abs8(v)
+    if sum >= best_sum {
+      break
+    }
+  }
+  if sum < best_sum {
+    best_sum = sum
+    best_filter = ft_sub
+    @blit.blit_fixed_array(best_row, 0, trial, 0, n)
+  }
+
+  sum = 0
+  for i in 0..<n {
+    let left = if i >= bpp { cur_row[i - bpp].to_int() } else { 0 }
+    let v = (cur_row[i].to_int() - (left + prev_row[i].to_int()) / 2).to_byte()
+    trial[i] = v
+    sum += abs8(v)
+    if sum >= best_sum {
+      break
+    }
+  }
+  if sum < best_sum {
+    best_filter = ft_average
+    @blit.blit_fixed_array(best_row, 0, trial, 0, n)
+  }
+
+  best_filter
 }
 
 ///|
