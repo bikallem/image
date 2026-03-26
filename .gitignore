@@ -8,3 +8,4 @@ testdata/roundtrip_*
 .dolt/
 *.db
 .beads
+.direnv
