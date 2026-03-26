@@ -1,13 +1,14 @@
 ///|
 /// Encodes any image as a GIF by auto-quantizing to n_colors.
-/// Default: 256 colors using median-cut quantization.
+/// Default: 256 colors using Go-like Plan9 + Floyd-Steinberg quantization.
 pub fn encode_image(
   img : @image.AnyImage,
   n_colors? : Int = 256,
 ) -> Bytes raise Error {
+  let max_colors = normalize_num_colors(n_colors)
   let paletted = match img {
-    @image.AnyImage::Paletted(p) => p
-    _ => quantize_image(img, n_colors)
+    @image.AnyImage::Paletted(p) if p.palette.colors.length() <= max_colors => p
+    _ => quantize_image(img, max_colors)
   }
   encode(paletted)
 }
@@ -15,19 +16,48 @@ pub fn encode_image(
 ///|
 /// Encodes a single paletted image as a GIF.
 pub fn encode(img : @image.ImagePaletted) -> Bytes raise Error {
+  let still = normalize_still_frame(img)
   let gif : GIF = {
-    image: [img],
+    image: [still],
     delay: [0],
     loop_count: 0,
     disposal: [b'\x00'],
     background_index: b'\x00',
     config: {
-      color_model: @color.AnyModel::PaletteModel(img.palette),
-      width: img.rect.dx(),
-      height: img.rect.dy(),
+      color_model: @color.AnyModel::PaletteModel(still.palette),
+      width: still.rect.dx(),
+      height: still.rect.dy(),
     },
   }
   encode_all(gif)
+}
+
+///|
+fn normalize_still_frame(img : @image.ImagePaletted) -> @image.ImagePaletted {
+  let rect = img.rect
+  if rect.min_x == 0 && rect.min_y == 0 {
+    return img
+  }
+  let translated = @image.new_image_paletted(rect.sub(rect.min()), img.palette)
+  for y = rect.min_y; y < rect.max_y; y = y + 1 {
+    for x = rect.min_x; x < rect.max_x; x = x + 1 {
+      translated.set_color_index(
+        x - rect.min_x,
+        y - rect.min_y,
+        img.color_index_at(x, y),
+      )
+    }
+  }
+  translated
+}
+
+///|
+fn normalize_num_colors(n_colors : Int) -> Int {
+  if n_colors < 1 || n_colors > 256 {
+    256
+  } else {
+    n_colors
+  }
 }
 
 ///|

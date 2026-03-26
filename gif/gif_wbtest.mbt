@@ -454,6 +454,83 @@ test "gif_encode_rgba" {
 }
 
 ///|
+test "gif_encode_normalizes_non_zero_paletted_bounds" {
+  let frame = @image.new_image_paletted(@image.rect(2, 3, 8, 9), @color.Palette::{
+    colors: Array::makei(16, fn(i) { @palette.plan9[i] }),
+  })
+  for y = frame.rect.min_y; y < frame.rect.max_y; y = y + 1 {
+    for x = frame.rect.min_x; x < frame.rect.max_x; x = x + 1 {
+      frame.set_color_index(x, y, ((x + y) % 16).to_byte())
+    }
+  }
+  let decoded = decode(encode(frame))
+  assert_eq(decoded.bounds(), @image.rect(0, 0, 6, 6))
+  let (r0, _, _, _) = decoded.at(0, 0).rgba()
+  let (r1, _, _, _) = decoded.at(5, 5).rgba()
+  let (want0, _, _, _) = frame.at(2, 3).rgba()
+  let (want1, _, _, _) = frame.at(7, 8).rgba()
+  assert_eq(r0 >> 8, want0 >> 8)
+  assert_eq(r1 >> 8, want1 >> 8)
+}
+
+///|
+test "gif_encode_image_normalizes_non_zero_generic_bounds" {
+  let img = @image.new_image_rgba(@image.rect(2, 2, 8, 8))
+  for i in 0..<6 {
+    let v = (0x22 + i * 0x11).to_byte()
+    img.set_rgba(2 + i, 2 + i, { r: v, g: v, b: v, a: b'\xff' })
+  }
+  let decoded = decode(encode_image(@image.AnyImage::RGBA(img)))
+  assert_eq(decoded.bounds(), @image.rect(0, 0, 6, 6))
+  let (r0, _, _, _) = decoded.at(0, 0).rgba()
+  let (r1, _, _, _) = decoded.at(5, 5).rgba()
+  assert_true(r0 >> 8 > 0U)
+  assert_true(r1 >> 8 > 0U)
+}
+
+///|
+test "gif_encode_image_requantizes_paletted_sources_to_requested_cap" {
+  let pal : @color.Palette = {
+    colors: Array::makei(16, fn(i) { @palette.plan9[i] }),
+  }
+  let frame = @image.new_image_paletted(@image.rect(0, 0, 4, 4), pal)
+  for y in 0..<4 {
+    for x in 0..<4 {
+      frame.set_color_index(x, y, ((x + y * 4) % 16).to_byte())
+    }
+  }
+  let decoded = decode_all(
+    encode_image(@image.AnyImage::Paletted(frame), n_colors=2),
+  )
+  assert_eq(decoded.image.length(), 1)
+  assert_eq(decoded.image[0].palette.colors.length(), 2)
+}
+
+///|
+test "gif_encode_image_supports_one_color" {
+  let img = @image.new_image_rgba(@image.rect(0, 0, 3, 2))
+  for y in 0..<2 {
+    for x in 0..<3 {
+      img.set_rgba(x, y, {
+        r: (x * 70 + y * 20).to_byte(),
+        g: (x * 30 + y * 50).to_byte(),
+        b: (x * 10 + y * 90).to_byte(),
+        a: b'\xff',
+      })
+    }
+  }
+  let decoded = decode_all(encode_image(@image.AnyImage::RGBA(img), n_colors=1))
+  assert_eq(decoded.image.length(), 1)
+  assert_eq(decoded.image[0].rect, @image.rect(0, 0, 3, 2))
+  assert_eq(decoded.image[0].palette.colors.length(), 2)
+  for y in 0..<2 {
+    for x in 0..<3 {
+      assert_eq(decoded.image[0].color_index_at(x, y), b'\x00')
+    }
+  }
+}
+
+///|
 /// Test GIF encoding/decoding pixel parity.
 test "gif_pixel_parity" {
   let pal : @color.Palette = {

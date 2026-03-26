@@ -1,6 +1,8 @@
 import {
   "bikallem/image/image",
   "bikallem/image/color",
+  "bikallem/image/color/palette",
+  "bikallem/image/draw",
   "bikallem/image/internal/binary",
   "bikallem/compress/lzw",
   "bikallem/blit",

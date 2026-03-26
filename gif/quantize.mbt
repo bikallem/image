@@ -1,187 +1,20 @@
 ///|
-/// Quantize reduces an image to at most n_colors using median-cut.
+/// Quantize reduces an image to at most n_colors using Go-like defaults.
 fn quantize_image(
   img : @image.AnyImage,
   n_colors : Int,
 ) -> @image.ImagePaletted {
   let bounds = img.bounds()
-  let w = bounds.dx()
-  let h = bounds.dy()
-  let n = if n_colors < 2 { 2 } else if n_colors > 256 { 256 } else { n_colors }
-  // Collect pixel samples
-  let pixels = Array::new(capacity=w * h)
-  if img is @image.AnyImage::RGBA(rgba) {
-    for y in bounds.min_y..<bounds.max_y {
-      let row = rgba.pix_offset +
-        (y - rgba.rect.min_y) * rgba.stride +
-        (bounds.min_x - rgba.rect.min_x) * 4
-      for x in 0..<w {
-        let si = row + x * 4
-        pixels.push(
-          (
-            rgba.pix.unsafe_get(si),
-            rgba.pix.unsafe_get(si + 1),
-            rgba.pix.unsafe_get(si + 2),
-          ),
-        )
-      }
-    }
-  } else {
-    for y = bounds.min_y; y < bounds.max_y; y = y + 1 {
-      for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
-        let (rv, gv, bv, _) = img.at(x, y).rgba()
-        pixels.push(
-          ((rv >> 8).to_byte(), (gv >> 8).to_byte(), (bv >> 8).to_byte()),
-        )
-      }
-    }
+  let pal = @color.Palette::{
+    colors: plan9_palette(normalize_num_colors(n_colors)),
   }
-  // Median-cut to produce palette
-  let palette = median_cut(pixels, n)
-  // Create paletted image
-  let pal = @color.Palette::{ colors: palette }
   let result = @image.new_image_paletted(bounds, pal)
-  // Map each pixel to nearest palette entry with color cache
-  let cache_hi = FixedArray::make(256, -1)
-  let cache_lo = FixedArray::make(256, -1)
-  let cache_vals = FixedArray::make(256, 0)
-  if img is @image.AnyImage::RGBA(rgba) {
-    for y in bounds.min_y..<bounds.max_y {
-      let src_row = rgba.pix_offset +
-        (y - rgba.rect.min_y) * rgba.stride +
-        (bounds.min_x - rgba.rect.min_x) * 4
-      let dst_row = result.pix_offset +
-        (y - result.rect.min_y) * result.stride +
-        (bounds.min_x - result.rect.min_x)
-      for x in 0..<w {
-        let si = src_row + x * 4
-        let r = rgba.pix.unsafe_get(si)
-        let g = rgba.pix.unsafe_get(si + 1)
-        let b = rgba.pix.unsafe_get(si + 2)
-        let a = rgba.pix.unsafe_get(si + 3)
-        let hi = (r.to_int() << 8) | g.to_int()
-        let lo = (b.to_int() << 8) | a.to_int()
-        let slot = hi.lxor(lo).lxor(hi >> 4).land(0xFF)
-        if cache_hi.unsafe_get(slot) == hi && cache_lo.unsafe_get(slot) == lo {
-          result.pix.unsafe_set(
-            dst_row + x,
-            cache_vals.unsafe_get(slot).to_byte(),
-          )
-        } else {
-          let c = @color.AnyColor::RGBA({ r, g, b, a })
-          let idx = pal.index(c)
-          cache_hi.unsafe_set(slot, hi)
-          cache_lo.unsafe_set(slot, lo)
-          cache_vals.unsafe_set(slot, idx)
-          result.pix.unsafe_set(dst_row + x, idx.to_byte())
-        }
-      }
-    }
-  } else {
-    for y = bounds.min_y; y < bounds.max_y; y = y + 1 {
-      for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
-        let c = img.at(x, y)
-        let idx = pal.index(c)
-        result.set_color_index(x, y, idx.to_byte())
-      }
-    }
-  }
+  @draw.floyd_steinberg_draw(result, bounds, img, bounds.min())
   result
 }
 
 ///|
-fn median_cut(
-  pixels : Array[(Byte, Byte, Byte)],
-  n_colors : Int,
-) -> Array[@color.AnyColor] {
-  if pixels.is_empty() {
-    return []
-  }
-  let boxes : Array[Array[(Byte, Byte, Byte)]] = [pixels]
-  while boxes.length() < n_colors {
-    let mut best_idx = 0
-    let mut best_range = 0
-    let mut best_channel = 0
-    for i, box_ in boxes {
-      if box_.length() < 2 {
-        continue
-      }
-      for ch in 0..<3 {
-        let mut lo = 255
-        let mut hi = 0
-        for p in box_ {
-          let v = match ch {
-            0 => p.0.to_int()
-            1 => p.1.to_int()
-            2 => p.2.to_int()
-            _ => abort("invalid channel")
-          }
-          if v < lo {
-            lo = v
-          }
-          if v > hi {
-            hi = v
-          }
-        }
-        let range = hi - lo
-        if range > best_range {
-          best_range = range
-          best_idx = i
-          best_channel = ch
-        }
-      }
-    }
-    if best_range == 0 {
-      break
-    }
-    let box_ = boxes.unsafe_get(best_idx)
-    box_.sort_by(fn(a, b) {
-      let va = match best_channel {
-        0 => a.0.to_int()
-        1 => a.1.to_int()
-        2 => a.2.to_int()
-        _ => abort("invalid channel")
-      }
-      let vb = match best_channel {
-        0 => b.0.to_int()
-        1 => b.1.to_int()
-        2 => b.2.to_int()
-        _ => abort("invalid channel")
-      }
-      va - vb
-    })
-    let mid = box_.length() / 2
-    let box2 = Array::new(capacity=box_.length() - mid)
-    for i = mid; i < box_.length(); i = i + 1 {
-      box2.push(box_.unsafe_get(i))
-    }
-    while box_.length() > mid {
-      ignore(box_.pop())
-    }
-    boxes.push(box2)
-  }
-  let colors : Array[@color.AnyColor] = Array::new(capacity=boxes.length())
-  for box_ in boxes {
-    if box_.is_empty() {
-      continue
-    }
-    let mut sr = 0
-    let mut sg = 0
-    let mut sb = 0
-    for p in box_ {
-      sr += p.0.to_int()
-      sg += p.1.to_int()
-      sb += p.2.to_int()
-    }
-    let nn = box_.length()
-    colors.push(
-      @color.AnyColor::RGBA({
-        r: (sr / nn).to_byte(),
-        g: (sg / nn).to_byte(),
-        b: (sb / nn).to_byte(),
-        a: b'\xff',
-      }),
-    )
-  }
-  colors
+fn plan9_palette(n_colors : Int) -> Array[@color.AnyColor] {
+  let n = normalize_num_colors(n_colors)
+  Array::makei(n, fn(i) { @palette.plan9[i] })
 }
