@@ -12,7 +12,8 @@ fn quantize_image(
   let pixels = Array::new(capacity=w * h)
   if img is @image.AnyImage::RGBA(rgba) {
     for y in bounds.min_y..<bounds.max_y {
-      let row = rgba.pix_offset + (y - rgba.rect.min_y) * rgba.stride +
+      let row = rgba.pix_offset +
+        (y - rgba.rect.min_y) * rgba.stride +
         (bounds.min_x - rgba.rect.min_x) * 4
       for x in 0..<w {
         let si = row + x * 4
@@ -46,7 +47,8 @@ fn quantize_image(
   let cache_vals = FixedArray::make(256, 0)
   if img is @image.AnyImage::RGBA(rgba) {
     for y in bounds.min_y..<bounds.max_y {
-      let src_row = rgba.pix_offset + (y - rgba.rect.min_y) * rgba.stride +
+      let src_row = rgba.pix_offset +
+        (y - rgba.rect.min_y) * rgba.stride +
         (bounds.min_x - rgba.rect.min_x) * 4
       let dst_row = result.pix_offset +
         (y - result.rect.min_y) * result.stride +
@@ -60,9 +62,11 @@ fn quantize_image(
         let hi = (r.to_int() << 8) | g.to_int()
         let lo = (b.to_int() << 8) | a.to_int()
         let slot = hi.lxor(lo).lxor(hi >> 4).land(0xFF)
-        if cache_hi.unsafe_get(slot) == hi &&
-          cache_lo.unsafe_get(slot) == lo {
-          result.pix.unsafe_set(dst_row + x, cache_vals.unsafe_get(slot).to_byte())
+        if cache_hi.unsafe_get(slot) == hi && cache_lo.unsafe_get(slot) == lo {
+          result.pix.unsafe_set(
+            dst_row + x,
+            cache_vals.unsafe_get(slot).to_byte(),
+          )
         } else {
           let c = @color.AnyColor::RGBA({ r, g, b, a })
           let idx = pal.index(c)

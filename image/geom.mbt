@@ -121,10 +121,26 @@ pub fn Rectangle::inset(self : Rectangle, n : Int) -> Rectangle {
 ///|
 pub fn Rectangle::intersect(self : Rectangle, s : Rectangle) -> Rectangle {
   let r : Rectangle = {
-    min_x: if self.min_x > s.min_x { self.min_x } else { s.min_x },
-    min_y: if self.min_y > s.min_y { self.min_y } else { s.min_y },
-    max_x: if self.max_x < s.max_x { self.max_x } else { s.max_x },
-    max_y: if self.max_y < s.max_y { self.max_y } else { s.max_y },
+    min_x: if self.min_x > s.min_x {
+      self.min_x
+    } else {
+      s.min_x
+    },
+    min_y: if self.min_y > s.min_y {
+      self.min_y
+    } else {
+      s.min_y
+    },
+    max_x: if self.max_x < s.max_x {
+      self.max_x
+    } else {
+      s.max_x
+    },
+    max_y: if self.max_y < s.max_y {
+      self.max_y
+    } else {
+      s.max_y
+    },
   }
   if r.empty() {
     { min_x: 0, min_y: 0, max_x: 0, max_y: 0 }
@@ -142,10 +158,26 @@ pub fn Rectangle::union(self : Rectangle, s : Rectangle) -> Rectangle {
     return self
   }
   {
-    min_x: if self.min_x < s.min_x { self.min_x } else { s.min_x },
-    min_y: if self.min_y < s.min_y { self.min_y } else { s.min_y },
-    max_x: if self.max_x > s.max_x { self.max_x } else { s.max_x },
-    max_y: if self.max_y > s.max_y { self.max_y } else { s.max_y },
+    min_x: if self.min_x < s.min_x {
+      self.min_x
+    } else {
+      s.min_x
+    },
+    min_y: if self.min_y < s.min_y {
+      self.min_y
+    } else {
+      s.min_y
+    },
+    max_x: if self.max_x > s.max_x {
+      self.max_x
+    } else {
+      s.max_x
+    },
+    max_y: if self.max_y > s.max_y {
+      self.max_y
+    } else {
+      s.max_y
+    },
   }
 }
 

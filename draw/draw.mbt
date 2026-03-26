@@ -172,7 +172,11 @@ fn draw_fill_src(
     }
     for y in (r.min_y + 1)..<r.max_y {
       @blit.blit_fixed_array(
-        dst.pix, row0 + (y - r.min_y) * dst.stride, dst.pix, row0, n,
+        dst.pix,
+        row0 + (y - r.min_y) * dst.stride,
+        dst.pix,
+        row0,
+        n,
       )
     }
   }
@@ -226,7 +230,11 @@ fn draw_copy_src(
   for y in r.min_y..<r.max_y {
     let dy = y - r.min_y
     @blit.blit_fixed_array(
-      dst.pix, d_row0 + dy * dst.stride, src.pix, s_row0 + dy * src.stride, n,
+      dst.pix,
+      d_row0 + dy * dst.stride,
+      src.pix,
+      s_row0 + dy * src.stride,
+      n,
     )
   }
 }
@@ -458,15 +466,9 @@ fn draw_rgba64_to_rgba(
         let db16 = db | (db << 8)
         let da16 = da | (da << 8)
         dst.pix.unsafe_set(di, ((div65535(dr16 * a) + sr) >> 8).to_byte())
-        dst.pix.unsafe_set(
-          di + 1, ((div65535(dg16 * a) + sg) >> 8).to_byte(),
-        )
-        dst.pix.unsafe_set(
-          di + 2, ((div65535(db16 * a) + sb) >> 8).to_byte(),
-        )
-        dst.pix.unsafe_set(
-          di + 3, ((div65535(da16 * a) + sa) >> 8).to_byte(),
-        )
+        dst.pix.unsafe_set(di + 1, ((div65535(dg16 * a) + sg) >> 8).to_byte())
+        dst.pix.unsafe_set(di + 2, ((div65535(db16 * a) + sb) >> 8).to_byte())
+        dst.pix.unsafe_set(di + 3, ((div65535(da16 * a) + sa) >> 8).to_byte())
       } else {
         dst.pix.unsafe_set(di, (sr >> 8).to_byte())
         dst.pix.unsafe_set(di + 1, (sg >> 8).to_byte())
@@ -553,8 +555,7 @@ fn draw_paletted(
       let hi = (cr.reinterpret_as_int() << 16) | cg.reinterpret_as_int()
       let lo = (cb.reinterpret_as_int() << 16) | ca.reinterpret_as_int()
       let slot = hi.lxor(lo).lxor(hi >> 8).land(0xFF)
-      if cache_hi.unsafe_get(slot) == hi &&
-        cache_lo.unsafe_get(slot) == lo {
+      if cache_hi.unsafe_get(slot) == hi && cache_lo.unsafe_get(slot) == lo {
         dst.pix.unsafe_set(d_row + x, cache_vals.unsafe_get(slot).to_byte())
       } else {
         let idx = dst.palette.index(c)

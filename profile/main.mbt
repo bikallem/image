@@ -1,11 +1,19 @@
 ///|
 fn abs_diff64(a : Int64, b : Int64) -> Int64 {
-  if a > b { a - b } else { b - a }
+  if a > b {
+    a - b
+  } else {
+    b - a
+  }
 }
 
 ///|
 fn abs_diff(a : UInt, b : UInt) -> UInt {
-  if a > b { a - b } else { b - a }
+  if a > b {
+    a - b
+  } else {
+    b - a
+  }
 }
 
 ///|
@@ -104,17 +112,20 @@ fn main {
   @fs.write_bytes_to_file("testdata/roundtrip_moonbit.png", png_enc) catch {
     _ => ()
   }
-  let jpeg_enc = @jpeg.encode(@image.AnyImage::RGBA(
-    @image.new_image_rgba(@image.rect(0, 0, 32, 32)),
-  ))
+  let jpeg_enc = @jpeg.encode(
+    @image.AnyImage::RGBA(@image.new_image_rgba(@image.rect(0, 0, 32, 32))),
+  )
   @fs.write_bytes_to_file("testdata/roundtrip_moonbit.jpeg", jpeg_enc) catch {
     _ => ()
   }
   let pal : @color.Palette = {
     colors: Array::makei(256, fn(i) {
-      @color.AnyColor::RGBA(
-        { r: i.to_byte(), g: i.to_byte(), b: i.to_byte(), a: b'\xff' },
-      )
+      @color.AnyColor::RGBA({
+        r: i.to_byte(),
+        g: i.to_byte(),
+        b: i.to_byte(),
+        a: b'\xff',
+      })
     }),
   }
   let pal_img = @image.new_image_paletted(@image.rect(0, 0, 32, 32), pal)

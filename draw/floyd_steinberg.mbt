@@ -1,6 +1,12 @@
 ///|
 fn clamp16(v : Int) -> UInt {
-  if v < 0 { 0U } else if v > 0xffff { 0xffffU } else { v.reinterpret_as_uint() }
+  if v < 0 {
+    0U
+  } else if v > 0xffff {
+    0xffffU
+  } else {
+    v.reinterpret_as_uint()
+  }
 }
 
 ///|

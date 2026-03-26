@@ -69,8 +69,7 @@ pub fn idct_islow(
     let d5 = block.unsafe_get(base + 5)
     let d6 = block.unsafe_get(base + 6)
     let d7 = block.unsafe_get(base + 7)
-    if d1 == 0 && d2 == 0 && d3 == 0 && d4 == 0 && d5 == 0 && d6 == 0 &&
-      d7 == 0 {
+    if d1 == 0 && d2 == 0 && d3 == 0 && d4 == 0 && d5 == 0 && d6 == 0 && d7 == 0 {
       let dcval = d0 << islow_pass1_bits
       ws.unsafe_set(base, dcval)
       ws.unsafe_set(base + 1, dcval)
@@ -111,14 +110,38 @@ pub fn idct_islow(
     let tmp6 = tmp6 + z2 + z3
     let tmp7 = tmp7 + z1 + z4
     // Combine and descale
-    ws.unsafe_set(base, descale(tmp0 + tmp7, islow_const_bits - islow_pass1_bits))
-    ws.unsafe_set(base + 7, descale(tmp0 - tmp7, islow_const_bits - islow_pass1_bits))
-    ws.unsafe_set(base + 1, descale(tmp1 + tmp6, islow_const_bits - islow_pass1_bits))
-    ws.unsafe_set(base + 6, descale(tmp1 - tmp6, islow_const_bits - islow_pass1_bits))
-    ws.unsafe_set(base + 2, descale(tmp2 + tmp5, islow_const_bits - islow_pass1_bits))
-    ws.unsafe_set(base + 5, descale(tmp2 - tmp5, islow_const_bits - islow_pass1_bits))
-    ws.unsafe_set(base + 3, descale(tmp3 + tmp4, islow_const_bits - islow_pass1_bits))
-    ws.unsafe_set(base + 4, descale(tmp3 - tmp4, islow_const_bits - islow_pass1_bits))
+    ws.unsafe_set(
+      base,
+      descale(tmp0 + tmp7, islow_const_bits - islow_pass1_bits),
+    )
+    ws.unsafe_set(
+      base + 7,
+      descale(tmp0 - tmp7, islow_const_bits - islow_pass1_bits),
+    )
+    ws.unsafe_set(
+      base + 1,
+      descale(tmp1 + tmp6, islow_const_bits - islow_pass1_bits),
+    )
+    ws.unsafe_set(
+      base + 6,
+      descale(tmp1 - tmp6, islow_const_bits - islow_pass1_bits),
+    )
+    ws.unsafe_set(
+      base + 2,
+      descale(tmp2 + tmp5, islow_const_bits - islow_pass1_bits),
+    )
+    ws.unsafe_set(
+      base + 5,
+      descale(tmp2 - tmp5, islow_const_bits - islow_pass1_bits),
+    )
+    ws.unsafe_set(
+      base + 3,
+      descale(tmp3 + tmp4, islow_const_bits - islow_pass1_bits),
+    )
+    ws.unsafe_set(
+      base + 4,
+      descale(tmp3 - tmp4, islow_const_bits - islow_pass1_bits),
+    )
   }
   // Pass 2: process columns. Input: workspace. Output: clamped bytes.
   let range_center = 128
@@ -131,8 +154,7 @@ pub fn idct_islow(
     let d5 = ws.unsafe_get(5 * 8 + col)
     let d6 = ws.unsafe_get(6 * 8 + col)
     let d7 = ws.unsafe_get(7 * 8 + col)
-    if d1 == 0 && d2 == 0 && d3 == 0 && d4 == 0 && d5 == 0 && d6 == 0 &&
-      d7 == 0 {
+    if d1 == 0 && d2 == 0 && d3 == 0 && d4 == 0 && d5 == 0 && d6 == 0 && d7 == 0 {
       let dcval = idct_clamp_byte(
         descale(d0, islow_pass1_bits + 3) + range_center,
       )
@@ -179,28 +201,36 @@ pub fn idct_islow(
     // Combine, descale, level-shift, clamp
     let shift = islow_const_bits + islow_pass1_bits + 3
     dst.unsafe_set(
-      0 * 8 + col, idct_clamp_byte(((tmp0 + tmp7) >> shift) + range_center),
+      0 * 8 + col,
+      idct_clamp_byte(((tmp0 + tmp7) >> shift) + range_center),
     )
     dst.unsafe_set(
-      7 * 8 + col, idct_clamp_byte(((tmp0 - tmp7) >> shift) + range_center),
+      7 * 8 + col,
+      idct_clamp_byte(((tmp0 - tmp7) >> shift) + range_center),
     )
     dst.unsafe_set(
-      1 * 8 + col, idct_clamp_byte(((tmp1 + tmp6) >> shift) + range_center),
+      1 * 8 + col,
+      idct_clamp_byte(((tmp1 + tmp6) >> shift) + range_center),
     )
     dst.unsafe_set(
-      6 * 8 + col, idct_clamp_byte(((tmp1 - tmp6) >> shift) + range_center),
+      6 * 8 + col,
+      idct_clamp_byte(((tmp1 - tmp6) >> shift) + range_center),
     )
     dst.unsafe_set(
-      2 * 8 + col, idct_clamp_byte(((tmp2 + tmp5) >> shift) + range_center),
+      2 * 8 + col,
+      idct_clamp_byte(((tmp2 + tmp5) >> shift) + range_center),
     )
     dst.unsafe_set(
-      5 * 8 + col, idct_clamp_byte(((tmp2 - tmp5) >> shift) + range_center),
+      5 * 8 + col,
+      idct_clamp_byte(((tmp2 - tmp5) >> shift) + range_center),
     )
     dst.unsafe_set(
-      3 * 8 + col, idct_clamp_byte(((tmp3 + tmp4) >> shift) + range_center),
+      3 * 8 + col,
+      idct_clamp_byte(((tmp3 + tmp4) >> shift) + range_center),
     )
     dst.unsafe_set(
-      4 * 8 + col, idct_clamp_byte(((tmp3 - tmp4) >> shift) + range_center),
+      4 * 8 + col,
+      idct_clamp_byte(((tmp3 - tmp4) >> shift) + range_center),
     )
   }
 }

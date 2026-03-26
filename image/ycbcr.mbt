@@ -39,8 +39,7 @@ pub fn ImageYCbCr::c_offset(self : ImageYCbCr, x : Int, y : Int) -> Int {
     Ratio410 =>
       (y / 2 - self.rect.min_y / 2) * self.c_stride +
       (x / 4 - self.rect.min_x / 4)
-    Ratio444 =>
-      (y - self.rect.min_y) * self.c_stride + (x - self.rect.min_x)
+    Ratio444 => (y - self.rect.min_y) * self.c_stride + (x - self.rect.min_x)
   }
 }
 
