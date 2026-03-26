@@ -120,10 +120,9 @@ pub fn process_sos(d : Decoder) -> Unit raise JpegError {
   flush_bits(d)
   d.eob_run = 0
   reset_dc_preds(d)
-  let h0 = d.comp.unsafe_get(0).h
-  let v0 = d.comp.unsafe_get(0).v
-  let mcu_cols = (d.width + h0 * 8 - 1) / (h0 * 8)
-  let mcu_rows = (d.height + v0 * 8 - 1) / (v0 * 8)
+  let (max_h, max_v) = max_sampling(d)
+  let mcu_cols = (d.width + max_h * 8 - 1) / (max_h * 8)
+  let mcu_rows = (d.height + max_v * 8 - 1) / (max_v * 8)
   for i in 0..<ns {
     ensure_coeff_blocks(d, scan_comp.unsafe_get(i), mcu_cols, mcu_rows)
   }
@@ -499,8 +498,9 @@ fn is_rgb_jpeg(d : Decoder) -> Bool {
 fn ycbcr_subsample_ratio(
   d : Decoder,
 ) -> @image.YCbCrSubsampleRatio raise JpegError {
-  let h_ratio = d.comp.unsafe_get(0).h / d.comp.unsafe_get(1).h
-  let v_ratio = d.comp.unsafe_get(0).v / d.comp.unsafe_get(1).v
+  let (max_h, max_v) = max_sampling(d)
+  let h_ratio = max_h / d.comp.unsafe_get(1).h
+  let v_ratio = max_v / d.comp.unsafe_get(1).v
   match (h_ratio << 4) | v_ratio {
     0x11 => @image.Ratio444
     0x12 => @image.Ratio440
@@ -513,6 +513,23 @@ fn ycbcr_subsample_ratio(
 }
 
 ///|
+fn is_flex_ycbcr(d : Decoder) -> Bool {
+  let (max_h, max_v) = max_sampling(d)
+  if d.comp.unsafe_get(1).h != d.comp.unsafe_get(2).h ||
+    d.comp.unsafe_get(1).v != d.comp.unsafe_get(2).v ||
+    d.comp.unsafe_get(0).h != max_h ||
+    d.comp.unsafe_get(0).v != max_v {
+    return true
+  }
+  let h_ratio = max_h / d.comp.unsafe_get(1).h
+  let v_ratio = max_v / d.comp.unsafe_get(1).v
+  match (h_ratio << 4) | v_ratio {
+    0x11 | 0x12 | 0x21 | 0x22 | 0x41 | 0x42 => false
+    _ => true
+  }
+}
+
+///|
 fn components_to_ycbcr(
   d : Decoder,
   comp_data : FixedArray[FixedArray[Byte]],
@@ -520,6 +537,9 @@ fn components_to_ycbcr(
   comp_height : FixedArray[Int],
   rect : @image.Rectangle,
 ) -> @image.AnyImage raise JpegError {
+  if is_flex_ycbcr(d) {
+    return components_to_ycbcr444(d, comp_data, comp_width, comp_height, rect)
+  }
   let full = @image.new_image_ycbcr(
     @image.rect(0, 0, comp_width.unsafe_get(0), comp_height.unsafe_get(0)),
     ycbcr_subsample_ratio(d),
@@ -538,16 +558,67 @@ fn components_to_ycbcr(
 }
 
 ///|
-fn sample_component(
+fn components_to_ycbcr444(
   d : Decoder,
   comp_data : FixedArray[FixedArray[Byte]],
   comp_width : FixedArray[Int],
+  comp_height : FixedArray[Int],
+  rect : @image.Rectangle,
+) -> @image.AnyImage {
+  let (max_h, max_v) = max_sampling(d)
+  let mut full_width = 0
+  let mut full_height = 0
+  for i in 0..<3 {
+    if comp_width.unsafe_get(i) > full_width {
+      full_width = comp_width.unsafe_get(i)
+    }
+    if comp_height.unsafe_get(i) > full_height {
+      full_height = comp_height.unsafe_get(i)
+    }
+  }
+  let full = @image.new_image_ycbcr(
+    @image.rect(0, 0, full_width, full_height),
+    @image.Ratio444,
+  )
+  for y in 0..<full_height {
+    let row_start = y * full_width
+    for x in 0..<full_width {
+      full.y_.unsafe_set(
+        row_start + x,
+        sample_component_with_max(
+          d, comp_data, comp_width, max_h, max_v, 0, x, y,
+        ),
+      )
+      full.cb.unsafe_set(
+        row_start + x,
+        sample_component_with_max(
+          d, comp_data, comp_width, max_h, max_v, 1, x, y,
+        ),
+      )
+      full.cr.unsafe_set(
+        row_start + x,
+        sample_component_with_max(
+          d, comp_data, comp_width, max_h, max_v, 2, x, y,
+        ),
+      )
+    }
+  }
+  @image.AnyImage::YCbCr(full.sub_image(rect))
+}
+
+///|
+fn sample_component_with_max(
+  d : Decoder,
+  comp_data : FixedArray[FixedArray[Byte]],
+  comp_width : FixedArray[Int],
+  max_h : Int,
+  max_v : Int,
   ci : Int,
   x : Int,
   y : Int,
 ) -> Byte {
-  let h_ratio = d.comp.unsafe_get(0).h / d.comp.unsafe_get(ci).h
-  let v_ratio = d.comp.unsafe_get(0).v / d.comp.unsafe_get(ci).v
+  let h_ratio = max_h / d.comp.unsafe_get(ci).h
+  let v_ratio = max_v / d.comp.unsafe_get(ci).v
   let sx = x / h_ratio
   let sy = y / v_ratio
   comp_data.unsafe_get(ci)[sy * comp_width.unsafe_get(ci) + sx]
@@ -560,6 +631,7 @@ fn rgb_to_rgba(
   comp_width : FixedArray[Int],
   rect : @image.Rectangle,
 ) -> @image.AnyImage {
+  let (max_h, max_v) = max_sampling(d)
   let img = @image.new_image_rgba(rect)
   for y in 0..<d.height {
     let di_row = y * img.stride
@@ -567,15 +639,21 @@ fn rgb_to_rgba(
       let di = di_row + x * 4
       img.pix.unsafe_set(
         di,
-        sample_component(d, comp_data, comp_width, 0, x, y),
+        sample_component_with_max(
+          d, comp_data, comp_width, max_h, max_v, 0, x, y,
+        ),
       )
       img.pix.unsafe_set(
         di + 1,
-        sample_component(d, comp_data, comp_width, 1, x, y),
+        sample_component_with_max(
+          d, comp_data, comp_width, max_h, max_v, 1, x, y,
+        ),
       )
       img.pix.unsafe_set(
         di + 2,
-        sample_component(d, comp_data, comp_width, 2, x, y),
+        sample_component_with_max(
+          d, comp_data, comp_width, max_h, max_v, 2, x, y,
+        ),
       )
       img.pix.unsafe_set(di + 3, b'\xff')
     }
@@ -590,6 +668,7 @@ fn components_to_cmyk(
   comp_width : FixedArray[Int],
   rect : @image.Rectangle,
 ) -> @image.AnyImage raise JpegError {
+  let (max_h, max_v) = max_sampling(d)
   if !d.adobe_transform_valid {
     raise JpegError::UnsupportedError(
       "unknown color model: 4-component JPEG doesn't have Adobe APP14 metadata",
@@ -600,21 +679,42 @@ fn components_to_cmyk(
     for x in 0..<d.width {
       if d.adobe_transform == adobe_transform_unknown {
         img.set_cmyk(x, y, {
-          c: (255 - sample_component(d, comp_data, comp_width, 0, x, y).to_int()).to_byte(),
-          m: (255 - sample_component(d, comp_data, comp_width, 1, x, y).to_int()).to_byte(),
-          y: (255 - sample_component(d, comp_data, comp_width, 2, x, y).to_int()).to_byte(),
-          k: (255 - sample_component(d, comp_data, comp_width, 3, x, y).to_int()).to_byte(),
+          c: (255 -
+          sample_component_with_max(
+            d, comp_data, comp_width, max_h, max_v, 0, x, y,
+          ).to_int()).to_byte(),
+          m: (255 -
+          sample_component_with_max(
+            d, comp_data, comp_width, max_h, max_v, 1, x, y,
+          ).to_int()).to_byte(),
+          y: (255 -
+          sample_component_with_max(
+            d, comp_data, comp_width, max_h, max_v, 2, x, y,
+          ).to_int()).to_byte(),
+          k: (255 -
+          sample_component_with_max(
+            d, comp_data, comp_width, max_h, max_v, 3, x, y,
+          ).to_int()).to_byte(),
         })
       } else {
-        let yy = sample_component(d, comp_data, comp_width, 0, x, y)
-        let cb = sample_component(d, comp_data, comp_width, 1, x, y)
-        let cr = sample_component(d, comp_data, comp_width, 2, x, y)
+        let yy = sample_component_with_max(
+          d, comp_data, comp_width, max_h, max_v, 0, x, y,
+        )
+        let cb = sample_component_with_max(
+          d, comp_data, comp_width, max_h, max_v, 1, x, y,
+        )
+        let cr = sample_component_with_max(
+          d, comp_data, comp_width, max_h, max_v, 2, x, y,
+        )
         let (c, m, yv) = @color.ycbcr_to_rgb(yy, cb, cr)
         img.set_cmyk(x, y, {
           c,
           m,
           y: yv,
-          k: (255 - sample_component(d, comp_data, comp_width, 3, x, y).to_int()).to_byte(),
+          k: (255 -
+          sample_component_with_max(
+            d, comp_data, comp_width, max_h, max_v, 3, x, y,
+          ).to_int()).to_byte(),
         })
       }
     }

@@ -436,9 +436,9 @@ test "png_dimension_overflow" {
   write_chunk(buf, ct_ihdr, ihdr)
   write_chunk(buf, ct_idat, FixedArray::make(0, b'\x00'))
   write_chunk(buf, ct_iend, FixedArray::make(0, b'\x00'))
-  let result = try? decode_config(buf.to_bytes())
-  // decode_config should report dimensions without attempting allocation.
-  assert_true(result is Ok(_))
+  let data = buf.to_bytes()
+  assert_true((try? decode_config(data)) is Err(_))
+  assert_true((try? decode(data)) is Err(_))
 }
 
 ///|
@@ -531,4 +531,93 @@ test "png_nonconsecutive_idat" {
   let malformed = split_idat_with_text_chunk(encode(@image.AnyImage::RGBA(img)))
   let result = try? decode(malformed)
   assert_true(result is Err(_))
+}
+
+///|
+fn shrink_plte_to_one_color(data : Bytes) -> Bytes {
+  let buf = @blit.Buffer::new(size_hint=data.length())
+  for i in 0..<8 {
+    buf.write_byte(data.unsafe_get(i))
+  }
+  let mut pos = 8
+  while pos + 12 <= data.length() {
+    let chunk_len = @binary.read_uint32_be_bytes(data, pos).reinterpret_as_int()
+    let chunk_type = @binary.read_uint32_be_bytes(data, pos + 4)
+    if chunk_type == ct_plte {
+      let rgb = FixedArray::make(3, b'\x00')
+      for i in 0..<3 {
+        rgb[i] = data.unsafe_get(pos + 8 + i)
+      }
+      write_chunk(buf, ct_plte, rgb)
+    } else {
+      for i in pos..<(pos + 12 + chunk_len) {
+        buf.write_byte(data.unsafe_get(i))
+      }
+    }
+    pos += 12 + chunk_len
+  }
+  buf.to_bytes()
+}
+
+///|
+fn encoded_png_bit_depth(data : Bytes) -> Byte raise Error {
+  assert_true(data.length() >= 25)
+  assert_eq(@binary.read_uint32_be_bytes(data, 12), ct_ihdr)
+  data.unsafe_get(24)
+}
+
+///|
+test "png_paletted_out_of_range_index_defaults_black" {
+  let pal : @color.Palette = {
+    colors: [
+      @color.AnyColor::RGBA({ r: b'\x11', g: b'\x22', b: b'\x33', a: b'\xff' }),
+      @color.AnyColor::RGBA({ r: b'\x44', g: b'\x55', b: b'\x66', a: b'\xff' }),
+      @color.AnyColor::RGBA({ r: b'\x77', g: b'\x88', b: b'\x99', a: b'\xff' }),
+      @color.AnyColor::RGBA({ r: b'\xaa', g: b'\xbb', b: b'\xcc', a: b'\xff' }),
+    ],
+  }
+  let img = @image.new_image_paletted(@image.rect(0, 0, 1, 1), pal)
+  img.set_color_index(0, 0, b'\x03')
+  let malformed = shrink_plte_to_one_color(
+    encode(@image.AnyImage::Paletted(img)),
+  )
+  let decoded = decode(malformed)
+  let (r, g, b, a) = decoded.at(0, 0).rgba()
+  assert_eq(r, 0U)
+  assert_eq(g, 0U)
+  assert_eq(b, 0U)
+  assert_eq(a, 0xffffU)
+}
+
+///|
+test "png_writer_paletted_bit_depths" {
+  let cases = [(2, b'\x01'), (4, b'\x02'), (16, b'\x04'), (17, b'\x08')]
+  for entry in cases {
+    let (size, want_depth) = entry
+    let pal : @color.Palette = {
+      colors: Array::makei(size, fn(i) {
+        @color.AnyColor::RGBA({
+          r: (i * 13).to_byte(),
+          g: (i * 17).to_byte(),
+          b: (i * 19).to_byte(),
+          a: b'\xff',
+        })
+      }),
+    }
+    let img = @image.new_image_paletted(@image.rect(0, 0, 8, 1), pal)
+    for x in 0..<8 {
+      img.set_color_index(x, 0, (x % size).to_byte())
+    }
+    let encoded = encode(@image.AnyImage::Paletted(img))
+    assert_eq(encoded_png_bit_depth(encoded), want_depth)
+    let decoded = decode(encoded)
+    for x in 0..<8 {
+      let (r1, g1, b1, a1) = @image.AnyImage::Paletted(img).at(x, 0).rgba()
+      let (r2, g2, b2, a2) = decoded.at(x, 0).rgba()
+      assert_eq(r1, r2)
+      assert_eq(g1, g2)
+      assert_eq(b1, b2)
+      assert_eq(a1, a2)
+    }
+  }
 }

@@ -181,6 +181,43 @@ fn make_gif_with_bad_second_frame() -> Bytes raise Error {
 }
 
 ///|
+fn make_gif_with_unknown_extension() -> Bytes raise Error {
+  let buf = @blit.Buffer::new()
+  for b in [b'G', b'I', b'F', b'8', b'9', b'a'] {
+    buf.write_byte(b)
+  }
+  write_uint16_le(buf, 1U)
+  write_uint16_le(buf, 1U)
+  buf.write_byte(b'\x80')
+  buf.write_byte(b'\x00')
+  buf.write_byte(b'\x00')
+  buf.write_byte(b'\x00')
+  buf.write_byte(b'\x00')
+  buf.write_byte(b'\x00')
+  buf.write_byte(b'\xff')
+  buf.write_byte(b'\xff')
+  buf.write_byte(b'\xff')
+  buf.write_byte(ext_introducer)
+  buf.write_byte(b'\x02')
+  buf.write_byte(b'\x01')
+  buf.write_byte(b'\x00')
+  buf.write_byte(b'\x00')
+  buf.write_byte(image_descriptor)
+  write_uint16_le(buf, 0U)
+  write_uint16_le(buf, 0U)
+  write_uint16_le(buf, 1U)
+  write_uint16_le(buf, 1U)
+  buf.write_byte(b'\x00')
+  buf.write_byte(b'\x02')
+  write_sub_blocks(
+    buf,
+    @lzw.compress(Bytes::from_array([b'\x00']), @lzw.BitOrder::LSB, 2),
+  )
+  buf.write_byte(trailer)
+  buf.to_bytes()
+}
+
+///|
 fn assert_empty_palette_model(
   color_model : @color.AnyModel,
 ) -> Unit raise Error {
@@ -235,6 +272,13 @@ test "gif_decode_stops_after_first_frame" {
   assert_eq(img.bounds(), @image.rect(0, 0, 1, 1))
   let result = try? decode_all(data)
   assert_true(result is Err(_))
+}
+
+///|
+test "gif_rejects_unknown_extension" {
+  let data = make_gif_with_unknown_extension()
+  assert_true((try? decode(data)) is Err(_))
+  assert_true((try? decode_all(data)) is Err(_))
 }
 
 ///|

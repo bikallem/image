@@ -27,8 +27,7 @@ pub(all) suberror JpegError {
   FormatError(String)
   UnsupportedError(String)
   UnexpectedEOF
-}
-pub impl Show for JpegError
+} derive(Show)
 
 // Types and methods
 pub(all) struct BitReader {

@@ -79,6 +79,33 @@ fn check_png_header(r : ByteReader) -> Unit raise PngError {
 }
 
 ///|
+fn validate_png_dimensions(width : Int, height : Int) -> Unit raise PngError {
+  if width <= 0 || height <= 0 {
+    raise PngError::FormatError("bad IHDR width or height")
+  }
+  let n_pixels = width * height
+  if n_pixels < 0 || n_pixels / width != height {
+    raise PngError::UnsupportedError("dimension overflow")
+  }
+  let total_bytes = n_pixels * 8
+  if total_bytes < 0 || total_bytes / 8 != n_pixels {
+    raise PngError::UnsupportedError("dimension overflow")
+  }
+}
+
+///|
+fn opaque_black() -> @color.AnyColor {
+  @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' })
+}
+
+///|
+fn ensure_palette_index(palette : Array[@color.AnyColor], idx : Int) -> Unit {
+  while palette.length() <= idx {
+    palette.push(opaque_black())
+  }
+}
+
+///|
 fn parse_png(data : Bytes) -> ParsedPNG raise PngError {
   let r = ByteReader::new(data)
   check_png_header(r)
@@ -126,9 +153,7 @@ fn parse_png(data : Bytes) -> ParsedPNG raise PngError {
         let compression = r.data.unsafe_get(chunk_data_start + 10)
         let filter = r.data.unsafe_get(chunk_data_start + 11)
         interlace = r.data.unsafe_get(chunk_data_start + 12)
-        if width <= 0 || height <= 0 {
-          raise PngError::FormatError("bad IHDR width or height")
-        }
+        validate_png_dimensions(width, height)
         if !valid_color_type_bit_depth(bit_depth, color_type) {
           raise PngError::UnsupportedError(
             "bit depth " +
@@ -282,9 +307,7 @@ fn parse_png_config(data : Bytes) -> ParsedPNGConfig raise PngError {
         let compression = r.data.unsafe_get(chunk_data_start + 10)
         let filter = r.data.unsafe_get(chunk_data_start + 11)
         let interlace = r.data.unsafe_get(chunk_data_start + 12)
-        if width <= 0 || height <= 0 {
-          raise PngError::FormatError("bad IHDR width or height")
-        }
+        validate_png_dimensions(width, height)
         if !valid_color_type_bit_depth(bit_depth, color_type) {
           raise PngError::UnsupportedError(
             "bit depth " +
@@ -684,6 +707,7 @@ fn set_interlaced_pixel(
     }
     @image.AnyImage::Paletted(img) =>
       if palette_index >= 0 {
+        ensure_palette_index(img.palette.colors, palette_index)
         img.set_color_index(x, y, palette_index.to_byte())
       } else {
         img.set(x, y, c)
@@ -973,31 +997,32 @@ fn decode_image(
         match bit_depth {
           b'\x08' =>
             for x in 0..<width {
-              img.pix.unsafe_set(y * img.stride + x, cur_row.unsafe_get(x))
+              let idx = cur_row.unsafe_get(x)
+              ensure_palette_index(img.palette.colors, idx.to_int())
+              img.pix.unsafe_set(y * img.stride + x, idx)
             }
           b'\x04' =>
             for x in 0..<width {
               let shift = if x % 2 == 0 { 4 } else { 0 }
-              img.pix.unsafe_set(
-                y * img.stride + x,
-                ((cur_row.unsafe_get(x / 2).to_int() >> shift) & 0x0f).to_byte(),
-              )
+              let idx = ((cur_row.unsafe_get(x / 2).to_int() >> shift) & 0x0f).to_byte()
+              ensure_palette_index(img.palette.colors, idx.to_int())
+              img.pix.unsafe_set(y * img.stride + x, idx)
             }
           b'\x02' =>
             for x in 0..<width {
-              let shift = (3 - x % 4) * 2
-              img.pix.unsafe_set(
-                y * img.stride + x,
-                ((cur_row.unsafe_get(x / 4).to_int() >> shift) & 0x03).to_byte(),
-              )
+              let idx = ((
+                cur_row.unsafe_get(x / 4).to_int() >> ((3 - x % 4) * 2)
+              ) &
+              0x03).to_byte()
+              ensure_palette_index(img.palette.colors, idx.to_int())
+              img.pix.unsafe_set(y * img.stride + x, idx)
             }
           b'\x01' =>
             for x in 0..<width {
-              let shift = 7 - x % 8
-              img.pix.unsafe_set(
-                y * img.stride + x,
-                ((cur_row.unsafe_get(x / 8).to_int() >> shift) & 0x01).to_byte(),
-              )
+              let idx = ((cur_row.unsafe_get(x / 8).to_int() >> (7 - x % 8)) &
+              0x01).to_byte()
+              ensure_palette_index(img.palette.colors, idx.to_int())
+              img.pix.unsafe_set(y * img.stride + x, idx)
             }
           _ => ()
         }

@@ -263,23 +263,6 @@ fn process_sof(d : Decoder) -> Unit raise JpegError {
         h = 1
         v = 1
       }
-      3 =>
-        match i {
-          0 =>
-            if v == 4 {
-              raise JpegError::UnsupportedError("unsupported subsampling ratio")
-            }
-          1 =>
-            if d.comp.unsafe_get(0).h % h != 0 ||
-              d.comp.unsafe_get(0).v % v != 0 {
-              raise JpegError::UnsupportedError("unsupported subsampling ratio")
-            }
-          2 =>
-            if d.comp.unsafe_get(1).h != h || d.comp.unsafe_get(1).v != v {
-              raise JpegError::UnsupportedError("unsupported subsampling ratio")
-            }
-          _ => ()
-        }
       4 =>
         match i {
           0 =>
@@ -306,6 +289,24 @@ fn process_sof(d : Decoder) -> Unit raise JpegError {
     for j in 0..<i {
       if d.comp.unsafe_get(j).id == comp_id {
         raise JpegError::FormatError("repeated component identifier")
+      }
+    }
+  }
+  if d.num_components == 3 {
+    let mut max_h = 1
+    let mut max_v = 1
+    for i in 0..<3 {
+      if d.comp.unsafe_get(i).h > max_h {
+        max_h = d.comp.unsafe_get(i).h
+      }
+      if d.comp.unsafe_get(i).v > max_v {
+        max_v = d.comp.unsafe_get(i).v
+      }
+    }
+    for i in 0..<3 {
+      if max_h % d.comp.unsafe_get(i).h != 0 ||
+        max_v % d.comp.unsafe_get(i).v != 0 {
+        raise JpegError::UnsupportedError("unsupported subsampling ratio")
       }
     }
   }

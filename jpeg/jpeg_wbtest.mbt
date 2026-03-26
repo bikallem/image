@@ -134,6 +134,29 @@ fn assert_ycbcr_decode(
 }
 
 ///|
+fn make_flex_sof_segment() -> Bytes {
+  let buf = @blit.Buffer::new(size_hint=32)
+  buf.write_byte(b'\x00')
+  buf.write_byte(b'\x11')
+  buf.write_byte(b'\x08')
+  buf.write_byte(b'\x00')
+  buf.write_byte(b'\x08')
+  buf.write_byte(b'\x00')
+  buf.write_byte(b'\x10')
+  buf.write_byte(b'\x03')
+  buf.write_byte(b'\x01')
+  buf.write_byte(b'\x11')
+  buf.write_byte(b'\x00')
+  buf.write_byte(b'\x02')
+  buf.write_byte(b'\x21')
+  buf.write_byte(b'\x00')
+  buf.write_byte(b'\x03')
+  buf.write_byte(b'\x11')
+  buf.write_byte(b'\x00')
+  buf.to_bytes()
+}
+
+///|
 /// Port of Go's TestWriter from writer_test.go.
 /// JPEG encode -> decode roundtrip with delta check.
 test "jpeg_writer" {
@@ -304,6 +327,68 @@ test "jpeg_ycbcr_decode_type_and_ratio" {
   assert_ycbcr_decode("testdata/video-001.q50.411.jpeg", @image.Ratio411)
   assert_ycbcr_decode("testdata/video-001.q50.420.jpeg", @image.Ratio420)
   assert_ycbcr_decode("testdata/video-001.q50.444.jpeg", @image.Ratio444)
+}
+
+///|
+test "jpeg_flex_sof_supported" {
+  let d = Decoder::new(make_flex_sof_segment())
+  process_sof(d)
+  assert_eq(d.num_components, 3)
+  assert_eq(d.width, 16)
+  assert_eq(d.height, 8)
+  assert_eq(d.comp.unsafe_get(0).h, 1)
+  assert_eq(d.comp.unsafe_get(1).h, 2)
+  assert_eq(d.comp.unsafe_get(2).h, 1)
+}
+
+///|
+test "jpeg_flex_ycbcr_output" {
+  let d = Decoder::new(Bytes::new(0))
+  d.num_components = 3
+  d.width = 16
+  d.height = 8
+  d.comp.unsafe_get(0).h = 1
+  d.comp.unsafe_get(0).v = 1
+  d.comp.unsafe_get(1).h = 2
+  d.comp.unsafe_get(1).v = 1
+  d.comp.unsafe_get(2).h = 1
+  d.comp.unsafe_get(2).v = 1
+  let comp_data = FixedArray::make(3, FixedArray::make(0, b'\x00'))
+  let y_plane = FixedArray::make(64, b'\x00')
+  for y in 0..<8 {
+    for x in 0..<8 {
+      y_plane[y * 8 + x] = (x + 1).to_byte()
+    }
+  }
+  comp_data[0] = y_plane
+  comp_data[1] = FixedArray::make(128, b'\x20')
+  comp_data[2] = FixedArray::make(64, b'\x40')
+  let comp_width = FixedArray::make(3, 0)
+  comp_width[0] = 8
+  comp_width[1] = 16
+  comp_width[2] = 8
+  let comp_height = FixedArray::make(3, 8)
+  let img = components_to_ycbcr(
+    d,
+    comp_data,
+    comp_width,
+    comp_height,
+    @image.rect(0, 0, 16, 8),
+  )
+  match img {
+    @image.AnyImage::YCbCr(ycbcr) => {
+      assert_eq(ycbcr.subsample_ratio, @image.Ratio444)
+      let p0 = ycbcr.ycbcr_at(0, 0)
+      let p1 = ycbcr.ycbcr_at(1, 0)
+      let p2 = ycbcr.ycbcr_at(2, 0)
+      assert_eq(p0.y, b'\x01')
+      assert_eq(p1.y, b'\x01')
+      assert_eq(p2.y, b'\x02')
+      assert_eq(p0.cb, b'\x20')
+      assert_eq(p0.cr, b'\x40')
+    }
+    _ => fail("expected YCbCr image")
+  }
 }
 
 ///|

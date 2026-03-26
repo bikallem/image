@@ -26,7 +26,8 @@ pub fn encode(
   let (color_type, bit_depth) : (Byte, Byte) = match img {
     @image.AnyImage::Gray(_) => (ct_grayscale, b'\x08')
     @image.AnyImage::Gray16(_) => (ct_grayscale, b'\x10')
-    @image.AnyImage::Paletted(_) => (ct_paletted, b'\x08')
+    @image.AnyImage::Paletted(p) =>
+      (ct_paletted, png_palette_bit_depth(p.palette.colors.length()))
     @image.AnyImage::RGBA(_)
     | @image.AnyImage::NRGBA(_)
     | @image.AnyImage::Alpha(_) =>
@@ -123,9 +124,7 @@ pub fn encode(
       t if t == ct_paletted =>
         match img {
           @image.AnyImage::Paletted(p) =>
-            for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
-              raw_buf.write_byte(p.color_index_at(x, y))
-            }
+            write_paletted_row(raw_buf, p, bounds, y, bit_depth)
           _ => ()
         }
       t if t == ct_true_color && bit_depth == b'\x08' =>
@@ -316,6 +315,55 @@ fn png_is_opaque(img : @image.AnyImage) -> Bool {
     }
   }
   true
+}
+
+///|
+fn png_palette_bit_depth(n : Int) -> Byte {
+  if n <= 2 {
+    b'\x01'
+  } else if n <= 4 {
+    b'\x02'
+  } else if n <= 16 {
+    b'\x04'
+  } else {
+    b'\x08'
+  }
+}
+
+///|
+fn write_paletted_row(
+  raw_buf : @blit.Buffer,
+  img : @image.ImagePaletted,
+  bounds : @image.Rectangle,
+  y : Int,
+  bit_depth : Byte,
+) -> Unit {
+  if bit_depth == b'\x08' {
+    for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
+      raw_buf.write_byte(img.color_index_at(x, y))
+    }
+    return
+  }
+  let bits_per_pixel = bit_depth.to_int()
+  let pixels_per_byte = 8 / bits_per_pixel
+  let mut packed = 0
+  let mut count = 0
+  for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
+    packed = (packed << bits_per_pixel) | img.color_index_at(x, y).to_int()
+    count += 1
+    if count == pixels_per_byte {
+      raw_buf.write_byte(packed.to_byte())
+      packed = 0
+      count = 0
+    }
+  }
+  if count != 0 {
+    while count < pixels_per_byte {
+      packed = packed << bits_per_pixel
+      count += 1
+    }
+    raw_buf.write_byte(packed.to_byte())
+  }
 }
 
 ///|

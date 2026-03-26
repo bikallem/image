@@ -29,8 +29,7 @@ pub(all) suberror GifError {
   FormatError(String)
   UnsupportedError(String)
   UnexpectedEOF
-}
-pub impl Show for GifError
+} derive(Show)
 
 // Types and methods
 pub(all) struct GIF {

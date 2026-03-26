@@ -18,9 +18,7 @@ pub fn floyd_steinberg_draw(@image.ImagePaletted, @image.Rectangle, @image.AnyIm
 pub(all) enum Op {
   Over
   Src
-}
-pub impl Eq for Op
-pub impl Show for Op
+} derive(Eq, Show)
 
 // Type aliases
 

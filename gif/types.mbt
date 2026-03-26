@@ -36,6 +36,12 @@ let ext_graphic_control : Byte = b'\xf9'
 let ext_application : Byte = b'\xff'
 
 ///|
+let ext_comment : Byte = b'\xfe'
+
+///|
+let ext_plain_text : Byte = b'\x01'
+
+///|
 /// Disposal methods
 pub let disposal_none : Byte = b'\x01'
 

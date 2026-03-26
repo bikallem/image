@@ -127,7 +127,8 @@ fn decode_gif(data : Bytes, keep_all_frames : Bool) -> GIF raise Error {
           }
           l if l == ext_application =>
             loop_count = read_application_extension(r, loop_count)
-          _ => skip_sub_blocks(r)
+          l if l == ext_comment || l == ext_plain_text => skip_sub_blocks(r)
+          _ => raise GifError::FormatError("unknown extension")
         }
       }
       b if b == image_descriptor => {

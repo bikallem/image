@@ -25,17 +25,13 @@ pub fn ycbcr_to_rgb(Byte, Byte, Byte) -> (Byte, Byte, Byte)
 // Types and methods
 pub(all) struct Alpha {
   a : Byte
-}
+} derive(Eq, Show)
 pub impl Color for Alpha
-pub impl Eq for Alpha
-pub impl Show for Alpha
 
 pub(all) struct Alpha16 {
   a : UInt
-}
+} derive(Eq, Show)
 pub impl Color for Alpha16
-pub impl Eq for Alpha16
-pub impl Show for Alpha16
 
 pub(all) enum AnyColor {
   RGBA(RGBA)
@@ -49,10 +45,8 @@ pub(all) enum AnyColor {
   YCbCr(YCbCr)
   NYCbCrA(NYCbCrA)
   CMYK(CMYK)
-}
+} derive(Eq, Show)
 pub impl Color for AnyColor
-pub impl Eq for AnyColor
-pub impl Show for AnyColor
 
 pub(all) enum AnyModel {
   RGBAModel
@@ -67,100 +61,80 @@ pub(all) enum AnyModel {
   NYCbCrAModel
   CMYKModel
   PaletteModel(Palette)
-}
+} derive(Show)
 pub fn AnyModel::convert(Self, AnyColor) -> AnyColor
-pub impl Show for AnyModel
 
 pub(all) struct CMYK {
   c : Byte
   m : Byte
   y : Byte
   k : Byte
-}
+} derive(Eq, Show)
 pub impl Color for CMYK
-pub impl Eq for CMYK
-pub impl Show for CMYK
 
 pub(all) struct Gray {
   y : Byte
-}
+} derive(Eq, Show)
 pub impl Color for Gray
-pub impl Eq for Gray
-pub impl Show for Gray
 
 pub(all) struct Gray16 {
   y : UInt
-}
+} derive(Eq, Show)
 pub impl Color for Gray16
-pub impl Eq for Gray16
-pub impl Show for Gray16
 
 pub(all) struct NRGBA {
   r : Byte
   g : Byte
   b : Byte
   a : Byte
-}
+} derive(Eq, Show)
 pub impl Color for NRGBA
-pub impl Eq for NRGBA
-pub impl Show for NRGBA
 
 pub(all) struct NRGBA64 {
   r : UInt
   g : UInt
   b : UInt
   a : UInt
-}
+} derive(Eq, Show)
 pub impl Color for NRGBA64
-pub impl Eq for NRGBA64
-pub impl Show for NRGBA64
 
 pub(all) struct NYCbCrA {
   y : Byte
   cb : Byte
   cr : Byte
   a : Byte
-}
+} derive(Eq, Show)
 pub fn NYCbCrA::ycbcr(Self) -> YCbCr
 pub impl Color for NYCbCrA
-pub impl Eq for NYCbCrA
-pub impl Show for NYCbCrA
 
 pub(all) struct Palette {
   colors : Array[AnyColor]
-}
+} derive(Show)
 pub fn Palette::convert(Self, AnyColor) -> AnyColor?
 pub fn Palette::index(Self, AnyColor) -> Int
-pub impl Show for Palette
 
 pub(all) struct RGBA {
   r : Byte
   g : Byte
   b : Byte
   a : Byte
-}
+} derive(Eq, Show)
 pub impl Color for RGBA
-pub impl Eq for RGBA
-pub impl Show for RGBA
 
 pub(all) struct RGBA64 {
   r : UInt
   g : UInt
   b : UInt
   a : UInt
-}
+} derive(Eq, Show)
 pub impl Color for RGBA64
-pub impl Eq for RGBA64
-pub impl Show for RGBA64
 
 pub(all) struct YCbCr {
   y : Byte
   cb : Byte
   cr : Byte
-}
+} derive(Eq, Show)
 pub impl Color for YCbCr
-pub impl Eq for YCbCr
-pub impl Show for YCbCr
 
 // Type aliases
 
