@@ -114,7 +114,9 @@ fn main {
   }
   let jpeg_enc = @jpeg.encode(
     @image.AnyImage::RGBA(@image.new_image_rgba(@image.rect(0, 0, 32, 32))),
-  )
+  ) catch {
+    _ => Bytes::new(0)
+  }
   @fs.write_bytes_to_file("testdata/roundtrip_moonbit.jpeg", jpeg_enc) catch {
     _ => ()
   }

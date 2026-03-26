@@ -47,6 +47,7 @@ pub fn encode_all(gif : GIF) -> Bytes raise Error {
   if width < 0 || width >= 1 << 16 || height < 0 || height >= 1 << 16 {
     raise GifError::FormatError("image is too large to encode")
   }
+  validate_gif_palette_length(global_palette.length())
   write_string(buf, gif89a)
   write_uint16_le(buf, width.reinterpret_as_uint())
   write_uint16_le(buf, height.reinterpret_as_uint())
@@ -82,6 +83,7 @@ pub fn encode_all(gif : GIF) -> Bytes raise Error {
         "cannot encode image block with empty palette",
       )
     }
+    validate_gif_palette_length(img.palette.colors.length())
     let delay = gif.delay[i]
     let disposal = if gif.disposal.is_empty() {
       b'\x00'
@@ -228,6 +230,15 @@ fn color_table_size(n : Int) -> Int {
     8
   } else {
     size
+  }
+}
+
+///|
+fn validate_gif_palette_length(n : Int) -> Unit raise GifError {
+  if n > 256 {
+    raise GifError::FormatError(
+      "cannot encode color table with more than 256 entries",
+    )
   }
 }
 

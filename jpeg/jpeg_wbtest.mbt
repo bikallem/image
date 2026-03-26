@@ -241,6 +241,12 @@ test "jpeg_writer_uses_420_sampling" {
 }
 
 ///|
+test "jpeg_encode_rejects_oversize_image" {
+  let result = try? encode(@image.AnyImage::Uniform(@image.white))
+  assert_true(result is Err(_))
+}
+
+///|
 test "jpeg_encode_ycbcr_matches_rgba" {
   let rect = @image.rect(0, 0, 16, 16)
   let rgba = @image.new_image_rgba(rect)

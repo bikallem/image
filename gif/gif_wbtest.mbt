@@ -228,6 +228,20 @@ fn assert_empty_palette_model(
 }
 
 ///|
+fn make_test_palette(size : Int) -> @color.Palette {
+  {
+    colors: Array::makei(size, fn(i) {
+      @color.AnyColor::RGBA({
+        r: i.to_byte(),
+        g: (i * 3).to_byte(),
+        b: (i * 7).to_byte(),
+        a: b'\xff',
+      })
+    }),
+  }
+}
+
+///|
 test "gif_rejects_frame_bounds_outside_screen" {
   let result = try? decode(
     make_test_gif(1, 1, 1, 0, 1, 1, Bytes::makei(1, fn(_) { b'\x00' })),
@@ -644,6 +658,49 @@ test "gif_encode_rejects_empty_frame_palette" {
     background_index: b'\x00',
     config: {
       color_model: @color.AnyModel::PaletteModel({ colors: [] }),
+      width: 1,
+      height: 1,
+    },
+  })
+  assert_true(result is Err(_))
+}
+
+///|
+test "gif_encode_rejects_oversize_global_palette" {
+  let pal = make_test_palette(257)
+  let frame = @image.new_image_paletted(
+    @image.rect(0, 0, 1, 1),
+    make_test_palette(2),
+  )
+  frame.set_color_index(0, 0, b'\x00')
+  let result = try? encode_all({
+    image: [frame],
+    delay: [0],
+    loop_count: -1,
+    disposal: [],
+    background_index: b'\x00',
+    config: {
+      color_model: @color.AnyModel::PaletteModel(pal),
+      width: 1,
+      height: 1,
+    },
+  })
+  assert_true(result is Err(_))
+}
+
+///|
+test "gif_encode_rejects_oversize_local_palette" {
+  let pal = make_test_palette(257)
+  let frame = @image.new_image_paletted(@image.rect(0, 0, 1, 1), pal)
+  frame.set_color_index(0, 0, b'\x00')
+  let result = try? encode_all({
+    image: [frame],
+    delay: [0],
+    loop_count: -1,
+    disposal: [],
+    background_index: b'\x00',
+    config: {
+      color_model: @color.AnyModel::PaletteModel(make_test_palette(2)),
       width: 1,
       height: 1,
     },

@@ -13,14 +13,15 @@ pub fn encode(
   img : @image.AnyImage,
   compression? : CompressionLevel = DefaultCompression,
 ) -> Bytes raise Error {
+  let bounds = img.bounds()
+  let width = bounds.dx()
+  let height = bounds.dy()
+  validate_png_image_size(width, height)
   let buf = @blit.Buffer::new()
   // Write PNG signature
   for i in 0..<8 {
     buf.write_byte(png_header.unsafe_get(i))
   }
-  let bounds = img.bounds()
-  let width = bounds.dx()
-  let height = bounds.dy()
   let all_opaque = png_is_opaque(img)
   if img is @image.AnyImage::Paletted(p) {
     validate_png_palette_length(p.palette.colors.length())
@@ -331,6 +332,15 @@ fn png_is_opaque(img : @image.AnyImage) -> Bool {
 fn validate_png_palette_length(n : Int) -> Unit raise PngError {
   if n < 1 || n > 256 {
     raise PngError::FormatError("bad palette length: " + n.to_string())
+  }
+}
+
+///|
+fn validate_png_image_size(width : Int, height : Int) -> Unit raise PngError {
+  if width <= 0 || height <= 0 {
+    raise PngError::FormatError(
+      "invalid image size: " + width.to_string() + "x" + height.to_string(),
+    )
   }
 }
 

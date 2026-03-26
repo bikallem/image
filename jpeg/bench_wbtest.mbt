@@ -32,6 +32,6 @@ test (b : @bench.T) {
     }
   }
   b.bench(name="encode_rgba", fn() {
-    b.keep(encode(@image.AnyImage::RGBA(rgba_img)))
+    b.keep(try? encode(@image.AnyImage::RGBA(rgba_img)))
   })
 }

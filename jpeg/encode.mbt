@@ -385,11 +385,12 @@ fn scale_quant(unscaled : FixedArray[Int], quality : Int) -> FixedArray[Byte] {
 ///|
 /// Encode an image as a baseline JPEG.
 /// quality: 1 (worst) to 100 (best), default 75.
-pub fn encode(img : @image.AnyImage, quality? : Int = 75) -> Bytes {
+pub fn encode(img : @image.AnyImage, quality? : Int = 75) -> Bytes raise Error {
   let e = Encoder::new()
   let bounds = img.bounds()
   let width = bounds.dx()
   let height = bounds.dy()
+  validate_jpeg_image_size(width, height)
   // Scale quantization tables by quality
   let luma_q = scale_quant(unscaled_quant_luma, quality)
   let chroma_q = scale_quant(unscaled_quant_chroma, quality)
@@ -601,4 +602,11 @@ pub fn encode(img : @image.AnyImage, quality? : Int = 75) -> Bytes {
   enc_flush_bits(e)
   enc_write_marker(e, marker_eoi)
   e.buf.to_bytes()
+}
+
+///|
+fn validate_jpeg_image_size(width : Int, height : Int) -> Unit raise JpegError {
+  if width >= 1 << 16 || height >= 1 << 16 {
+    raise JpegError::FormatError("image is too large to encode")
+  }
 }

@@ -671,6 +671,14 @@ test "png_encode_rejects_invalid_palette_lengths" {
 }
 
 ///|
+test "png_encode_rejects_invalid_image_size" {
+  let zero_width = @image.new_image_rgba(@image.rect(0, 0, 0, 1))
+  let zero_height = @image.new_image_rgba(@image.rect(0, 0, 1, 0))
+  assert_true((try? encode(@image.AnyImage::RGBA(zero_width))) is Err(_))
+  assert_true((try? encode(@image.AnyImage::RGBA(zero_height))) is Err(_))
+}
+
+///|
 test "png_writer_paletted_bit_depths" {
   let cases = [(2, b'\x01'), (4, b'\x02'), (16, b'\x04'), (17, b'\x08')]
   for entry in cases {
