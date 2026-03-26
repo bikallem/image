@@ -22,7 +22,7 @@ pub fn encode(img : @image.ImagePaletted) -> Bytes raise Error {
     disposal: [b'\x00'],
     background_index: b'\x00',
     config: {
-      color_model: @color.AnyModel::RGBAModel,
+      color_model: @color.AnyModel::PaletteModel(img.palette),
       width: img.rect.dx(),
       height: img.rect.dy(),
     },
@@ -36,68 +36,151 @@ pub fn encode_all(gif : GIF) -> Bytes raise Error {
   let buf = @blit.Buffer::new()
   let width = gif.config.width
   let height = gif.config.height
-  // Header
   write_string(buf, gif89a)
-  // Logical Screen Descriptor
   write_uint16_le(buf, width.reinterpret_as_uint())
   write_uint16_le(buf, height.reinterpret_as_uint())
-  // Use first frame's palette as global color table
-  let first_pal = if gif.image.length() > 0 {
-    gif.image.unsafe_get(0).palette.colors
+
+  let global_palette = gif_global_palette(gif)
+  let has_global = !global_palette.is_empty()
+  if has_global {
+    let ct_size = color_table_size(global_palette.length())
+    let packed : Byte = (0x80 | ((ct_size - 1) << 4) | (ct_size - 1)).to_byte()
+    buf.write_byte(packed)
+    buf.write_byte(gif.background_index)
+    buf.write_byte(b'\x00')
+    write_color_table(buf, global_palette, 1 << ct_size)
   } else {
-    []
+    buf.write_byte(b'\x00')
+    buf.write_byte(b'\x00')
+    buf.write_byte(b'\x00')
   }
-  let ct_size = color_table_size(first_pal.length())
-  let packed : Byte = (0x80 | ((ct_size - 1) << 4) | (ct_size - 1)).to_byte()
-  buf.write_byte(packed)
-  buf.write_byte(gif.background_index) // bg color index
-  buf.write_byte(b'\x00') // pixel aspect ratio
-  // Global Color Table
-  write_color_table(buf, first_pal, 1 << ct_size)
-  // Frames
+
+  if gif.image.length() > 1 && gif.loop_count >= 0 {
+    buf.write_byte(ext_introducer)
+    buf.write_byte(ext_application)
+    buf.write_byte(b'\x0b')
+    write_string(buf, "NETSCAPE2.0")
+    buf.write_byte(b'\x03')
+    buf.write_byte(b'\x01')
+    write_uint16_le(buf, gif.loop_count.reinterpret_as_uint())
+    buf.write_byte(b'\x00')
+  }
+
   for i, img in gif.image {
-    // Graphic Control Extension
-    if i < gif.delay.length() || i < gif.disposal.length() {
+    let delay = if i < gif.delay.length() { gif.delay[i] } else { 0 }
+    let disposal = if i < gif.disposal.length() {
+      gif.disposal.unsafe_get(i)
+    } else {
+      b'\x00'
+    }
+    let transparent_index = find_transparent_index(img.palette.colors)
+    if delay > 0 || disposal != b'\x00' || transparent_index >= 0 {
       buf.write_byte(ext_introducer)
       buf.write_byte(ext_graphic_control)
-      buf.write_byte(b'\x04') // block size
-      let disp = if i < gif.disposal.length() {
-        gif.disposal.unsafe_get(i)
+      buf.write_byte(b'\x04')
+      let flags = if transparent_index >= 0 {
+        (0x01 | ((disposal.to_int() & 0x07) << 2)).to_byte()
       } else {
-        b'\x00'
+        ((disposal.to_int() & 0x07) << 2).to_byte()
       }
-      buf.write_byte(((disp.to_int() & 0x07) << 2).to_byte())
-      let d = if i < gif.delay.length() { gif.delay[i] } else { 0 }
-      write_uint16_le(buf, d.reinterpret_as_uint())
-      buf.write_byte(b'\x00') // transparent color index
-      buf.write_byte(b'\x00') // terminator
+      buf.write_byte(flags)
+      write_uint16_le(buf, delay.reinterpret_as_uint())
+      buf.write_byte(
+        if transparent_index >= 0 {
+          transparent_index.to_byte()
+        } else {
+          b'\x00'
+        },
+      )
+      buf.write_byte(b'\x00')
     }
-    // Image Descriptor
+
+    let rect = img.rect
+    if rect.min_x < 0 ||
+      rect.min_y < 0 ||
+      rect.max_x > width ||
+      rect.max_y > height {
+      raise GifError::FormatError("image block is out of bounds")
+    }
     buf.write_byte(image_descriptor)
-    write_uint16_le(buf, 0U) // left
-    write_uint16_le(buf, 0U) // top
-    write_uint16_le(buf, img.rect.dx().reinterpret_as_uint())
-    write_uint16_le(buf, img.rect.dy().reinterpret_as_uint())
-    buf.write_byte(b'\x00') // packed (no local color table)
-    // LZW data
-    let lit_width = ct_size
-    let lit_width = if lit_width < 2 { 2 } else { lit_width }
-    buf.write_byte(lit_width.to_byte()) // LZW minimum code size
-    // Get pixel data
-    let pixel_count = img.rect.dx() * img.rect.dy()
-    let pixel_buf = @blit.Buffer::new(size_hint=pixel_count)
-    for j in 0..<pixel_count {
-      pixel_buf.write_byte(img.pix.unsafe_get(img.pix_offset + j))
+    write_uint16_le(buf, rect.min_x.reinterpret_as_uint())
+    write_uint16_le(buf, rect.min_y.reinterpret_as_uint())
+    write_uint16_le(buf, rect.dx().reinterpret_as_uint())
+    write_uint16_le(buf, rect.dy().reinterpret_as_uint())
+
+    let use_local = !has_global ||
+      !palette_equals(global_palette, img.palette.colors, transparent_index)
+    let ct_size = color_table_size(img.palette.colors.length())
+    if use_local {
+      buf.write_byte((0x80 | (ct_size - 1)).to_byte())
+      write_color_table(buf, img.palette.colors, 1 << ct_size)
+    } else {
+      buf.write_byte(b'\x00')
     }
-    let pixels = pixel_buf.to_bytes()
-    // Compress with LZW
-    let compressed = @lzw.compress(pixels, @lzw.BitOrder::LSB, lit_width)
-    // Write as sub-blocks
+
+    let mut lit_width = ct_size
+    if lit_width < 2 {
+      lit_width = 2
+    }
+    buf.write_byte(lit_width.to_byte())
+
+    let pixel_buf = @blit.Buffer::new(size_hint=rect.dx() * rect.dy())
+    for y = rect.min_y; y < rect.max_y; y = y + 1 {
+      for x = rect.min_x; x < rect.max_x; x = x + 1 {
+        pixel_buf.write_byte(img.color_index_at(x, y))
+      }
+    }
+    let compressed = @lzw.compress(
+      pixel_buf.to_bytes(),
+      @lzw.BitOrder::LSB,
+      lit_width,
+    )
     write_sub_blocks(buf, compressed)
   }
-  // Trailer
+
   buf.write_byte(trailer)
   buf.to_bytes()
+}
+
+///|
+fn gif_global_palette(gif : GIF) -> Array[@color.AnyColor] {
+  match gif.config.color_model {
+    @color.AnyModel::PaletteModel(p) => p.colors
+    _ => []
+  }
+}
+
+///|
+fn find_transparent_index(palette : Array[@color.AnyColor]) -> Int {
+  for i, c in palette {
+    let (_, _, _, a) = c.rgba()
+    if a == 0U {
+      return i
+    }
+  }
+  -1
+}
+
+///|
+fn palette_equals(
+  left : Array[@color.AnyColor],
+  right : Array[@color.AnyColor],
+  transparent_index : Int,
+) -> Bool {
+  if left.length() < right.length() {
+    return false
+  }
+  for i in 0..<right.length() {
+    if i == transparent_index {
+      continue
+    }
+    let (lr, lg, lb, la) = left.unsafe_get(i).rgba()
+    let (rr, rg, rb, ra) = right.unsafe_get(i).rgba()
+    if lr != rr || lg != rg || lb != rb || la != ra {
+      return false
+    }
+  }
+  true
 }
 
 ///|
@@ -106,7 +189,13 @@ fn color_table_size(n : Int) -> Int {
   while 1 << size < n {
     size += 1
   }
-  if size < 1 { 1 } else if size > 8 { 8 } else { size }
+  if size < 1 {
+    1
+  } else if size > 8 {
+    8
+  } else {
+    size
+  }
 }
 
 ///|
@@ -154,5 +243,5 @@ fn write_sub_blocks(buf : @blit.Buffer, data : Bytes) -> Unit {
     }
     pos = pos + block_size
   }
-  buf.write_byte(b'\x00') // block terminator
+  buf.write_byte(b'\x00')
 }

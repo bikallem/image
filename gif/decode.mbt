@@ -15,7 +15,18 @@ pub fn decode_config(data : Bytes) -> @image.Config raise Error {
   validate_gif_header(r)
   let width = r.read_uint16_le().reinterpret_as_int()
   let height = r.read_uint16_le().reinterpret_as_int()
-  { color_model: @color.AnyModel::RGBAModel, width, height }
+  let packed = r.read_byte()
+  ignore(r.read_byte())
+  r.skip(1)
+  let has_gct = (packed.to_int() & 0x80) != 0
+  let gct_size = 1 << ((packed.to_int() & 0x07) + 1)
+  let color_model = if has_gct {
+    let palette = read_color_table(r, gct_size)
+    @color.AnyModel::PaletteModel(@color.Palette::{ colors: palette })
+  } else {
+    @color.AnyModel::RGBAModel
+  }
+  { color_model, width, height }
 }
 
 ///|
@@ -37,13 +48,11 @@ fn validate_gif_header(r : GifByteReader) -> Unit raise GifError {
 pub fn decode_all(data : Bytes) -> GIF raise Error {
   let r = GifByteReader::new(data)
   validate_gif_header(r)
-  // Logical screen descriptor
   let width = r.read_uint16_le().reinterpret_as_int()
   let height = r.read_uint16_le().reinterpret_as_int()
   let packed = r.read_byte()
   let bg_index = r.read_byte()
-  r.skip(1) // aspect ratio
-  // Global color table
+  r.skip(1)
   let has_gct = (packed.to_int() & 0x80) != 0
   let gct_size = 1 << ((packed.to_int() & 0x07) + 1)
   let global_palette = if has_gct { read_color_table(r, gct_size) } else { [] }
@@ -53,6 +62,7 @@ pub fn decode_all(data : Bytes) -> GIF raise Error {
   let mut delay = 0
   let mut disposal : Byte = b'\x00'
   let mut transparent_index : Int = -1
+  let mut loop_count = -1
   let mut done = false
   while !done && r.remaining() > 0 {
     let block_type = r.read_byte()
@@ -61,75 +71,75 @@ pub fn decode_all(data : Bytes) -> GIF raise Error {
         let label = r.read_byte()
         match label {
           l if l == ext_graphic_control => {
-            r.skip(1) // block size
+            let block_size = r.read_byte()
+            if block_size != b'\x04' {
+              raise GifError::FormatError("bad graphic control block size")
+            }
             let gce_packed = r.read_byte()
             delay = r.read_uint16_le().reinterpret_as_int()
-            let ti = r.read_byte()
-            r.skip(1) // terminator
+            let ti = r.read_byte().to_int()
+            let terminator = r.read_byte()
+            if terminator != b'\x00' {
+              raise GifError::FormatError("bad graphic control terminator")
+            }
             disposal = ((gce_packed.to_int() >> 2) & 0x07).to_byte()
             if (gce_packed.to_int() & 0x01) != 0 {
-              transparent_index = ti.to_int()
+              transparent_index = ti
             } else {
               transparent_index = -1
             }
           }
           l if l == ext_application =>
-            // Skip application extension
-            skip_sub_blocks(r)
-          _ =>
-            // Skip other extensions
-            skip_sub_blocks(r)
+            loop_count = read_application_extension(r, loop_count)
+          _ => skip_sub_blocks(r)
         }
       }
       b if b == image_descriptor => {
-        r.skip(4) // left, top
+        let left = r.read_uint16_le().reinterpret_as_int()
+        let top = r.read_uint16_le().reinterpret_as_int()
         let img_width = r.read_uint16_le().reinterpret_as_int()
         let img_height = r.read_uint16_le().reinterpret_as_int()
         let img_packed = r.read_byte()
         let has_lct = (img_packed.to_int() & 0x80) != 0
+        let interlaced = (img_packed.to_int() & 0x40) != 0
         let lct_size = 1 << ((img_packed.to_int() & 0x07) + 1)
-        let palette = if has_lct {
+        let mut palette = if has_lct {
           read_color_table(r, lct_size)
-        } else {
+        } else if !global_palette.is_empty() {
           global_palette.copy()
+        } else {
+          raise GifError::FormatError("no color table")
         }
-        // Apply transparency
-        if transparent_index >= 0 && transparent_index < palette.length() {
-          palette[transparent_index] = @color.AnyColor::RGBA({
-            r: b'\x00',
-            g: b'\x00',
-            b: b'\x00',
-            a: b'\x00',
-          })
+        if transparent_index >= 0 {
+          palette = apply_transparent_index(palette, transparent_index)
         }
-        // Read LZW minimum code size
         let lzw_min = r.read_byte()
-        // Read sub-blocks into contiguous buffer
         let lzw_data = read_sub_blocks(r)
-        // Decompress LZW
         let decompressed = @lzw.decompress(
-            lzw_data,
-            @lzw.BitOrder::LSB,
-            lzw_min.to_int(),
-          )
-          
-        // Build paletted image
+          lzw_data,
+          @lzw.BitOrder::LSB,
+          lzw_min.to_int(),
+        )
         let rect : @image.Rectangle = {
-          min_x: 0,
-          min_y: 0,
-          max_x: img_width,
-          max_y: img_height,
+          min_x: left,
+          min_y: top,
+          max_x: left + img_width,
+          max_y: top + img_height,
         }
         let pal = @color.Palette::{ colors: palette }
         let img = @image.new_image_paletted(rect, pal)
         let pixel_count = img_width * img_height
-        let copy_count = if decompressed.length() < pixel_count {
-          decompressed.length()
+        if interlaced {
+          write_interlaced_pixels(img, decompressed, pixel_count)
         } else {
-          pixel_count
-        }
-        for i in 0..<copy_count {
-          img.pix.unsafe_set(i, decompressed[i])
+          let copy_count = if decompressed.length() < pixel_count {
+            decompressed.length()
+          } else {
+            pixel_count
+          }
+          for i in 0..<copy_count {
+            img.pix.unsafe_set(i, decompressed[i])
+          }
         }
         images.push(img)
         delays.push(delay)
@@ -139,16 +149,98 @@ pub fn decode_all(data : Bytes) -> GIF raise Error {
         transparent_index = -1
       }
       b if b == trailer => done = true
-      _ => ()
+      _ => raise GifError::FormatError("unknown block type")
     }
+  }
+  if images.is_empty() {
+    raise GifError::FormatError("no image data")
+  }
+  let color_model = if !global_palette.is_empty() {
+    @color.AnyModel::PaletteModel(@color.Palette::{ colors: global_palette })
+  } else {
+    @color.AnyModel::RGBAModel
   }
   {
     image: images,
     delay: delays,
-    loop_count: 0,
+    loop_count,
     disposal: disposals,
     background_index: bg_index,
-    config: { color_model: @color.AnyModel::RGBAModel, width, height },
+    config: { color_model, width, height },
+  }
+}
+
+///|
+fn read_application_extension(
+  r : GifByteReader,
+  current_loop_count : Int,
+) -> Int raise GifError {
+  let app_size = r.read_byte().to_int()
+  let ident = r.read_bytes(app_size)
+  let data = read_sub_blocks(r)
+  if ident.length() == 11 &&
+    ident.unsafe_get(0) == b'N' &&
+    ident.unsafe_get(1) == b'E' &&
+    ident.unsafe_get(2) == b'T' &&
+    ident.unsafe_get(3) == b'S' &&
+    ident.unsafe_get(4) == b'C' &&
+    ident.unsafe_get(5) == b'A' &&
+    ident.unsafe_get(6) == b'P' &&
+    ident.unsafe_get(7) == b'E' &&
+    ident.unsafe_get(8) == b'2' &&
+    ident.unsafe_get(9) == b'.' &&
+    ident.unsafe_get(10) == b'0' &&
+    data.length() >= 3 &&
+    data.unsafe_get(0) == b'\x01' {
+    data.unsafe_get(1).to_int() | (data.unsafe_get(2).to_int() << 8)
+  } else {
+    current_loop_count
+  }
+}
+
+///|
+fn apply_transparent_index(
+  palette : Array[@color.AnyColor],
+  transparent_index : Int,
+) -> Array[@color.AnyColor] {
+  let out = palette.copy()
+  while out.length() <= transparent_index {
+    out.push(
+      @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\x00' }),
+    )
+  }
+  out[transparent_index] = @color.AnyColor::RGBA({
+    r: b'\x00',
+    g: b'\x00',
+    b: b'\x00',
+    a: b'\x00',
+  })
+  out
+}
+
+///|
+fn write_interlaced_pixels(
+  img : @image.ImagePaletted,
+  decompressed : Bytes,
+  pixel_count : Int,
+) -> Unit {
+  let width = img.rect.dx()
+  let height = img.rect.dy()
+  let mut src = 0
+  let passes = [(0, 8), (4, 8), (2, 4), (1, 2)]
+  for pass in passes {
+    let (start_y, step_y) = pass
+    let mut y = start_y
+    while y < height && src < decompressed.length() && src < pixel_count {
+      for x in 0..<width {
+        if src >= decompressed.length() || src >= pixel_count {
+          return
+        }
+        img.pix.unsafe_set(y * img.stride + x, decompressed[src])
+        src += 1
+      }
+      y += step_y
+    }
   }
 }
 

@@ -101,7 +101,14 @@ test "png_reader_error" {
     let result = try? decode(data)
     assert_true(result is Err(_))
   }
-  // CRC and no-end files may or may not error depending on strictness
+  // CRC validation should reject corrupt chunks.
+  let invalid_crc = @fs.read_file_to_bytes("png/testdata/invalid-crc32.png")
+  let invalid_crc_result = try? decode(invalid_crc)
+  assert_true(invalid_crc_result is Err(_))
+  // Missing IEND should still be rejected.
+  let invalid_noend = @fs.read_file_to_bytes("png/testdata/invalid-noend.png")
+  let invalid_noend_result = try? decode(invalid_noend)
+  assert_true(invalid_noend_result is Err(_))
   // Test interlaced PNG
   let interlaced_data = @fs.read_file_to_bytes(
     "png/testdata/gray-gradient.interlaced.png",
@@ -114,14 +121,6 @@ test "png_reader_error" {
   let normal_img = decode(normal_data)
   assert_eq(interlaced_img.bounds().dx(), normal_img.bounds().dx())
   assert_eq(interlaced_img.bounds().dy(), normal_img.bounds().dy())
-  let maybe_invalid = [
-    "png/testdata/invalid-crc32.png", "png/testdata/invalid-noend.png",
-  ]
-  for path in maybe_invalid {
-    let data = @fs.read_file_to_bytes(path)
-    // Just verify they don't crash — error is acceptable either way
-    ignore(try? decode(data))
-  }
 }
 
 ///|
@@ -155,6 +154,67 @@ test "png_writer" {
         x += 1
       }
       y += 1
+    }
+  }
+}
+
+///|
+test "png_high_depth_models" {
+  let gray16 = decode(
+    @fs.read_file_to_bytes("png/testdata/pngsuite/basn0g16.png"),
+  )
+  assert_true(gray16 is @image.AnyImage::Gray16(_))
+  let rgba64 = decode(
+    @fs.read_file_to_bytes("png/testdata/pngsuite/basn2c16.png"),
+  )
+  assert_true(rgba64 is @image.AnyImage::RGBA64(_))
+  let nrgba64_gray = decode(
+    @fs.read_file_to_bytes("png/testdata/pngsuite/basn4a16.png"),
+  )
+  assert_true(nrgba64_gray is @image.AnyImage::NRGBA64(_))
+  let nrgba64 = decode(
+    @fs.read_file_to_bytes("png/testdata/pngsuite/basn6a16.png"),
+  )
+  assert_true(nrgba64 is @image.AnyImage::NRGBA64(_))
+}
+
+///|
+test "png_decode_config_models" {
+  let gray16 = decode_config(
+    @fs.read_file_to_bytes("png/testdata/pngsuite/basn0g16.png"),
+  )
+  assert_true(gray16.color_model is @color.AnyModel::Gray16Model)
+  let rgba64 = decode_config(
+    @fs.read_file_to_bytes("png/testdata/pngsuite/basn2c16.png"),
+  )
+  assert_true(rgba64.color_model is @color.AnyModel::RGBA64Model)
+  let nrgba64 = decode_config(
+    @fs.read_file_to_bytes("png/testdata/pngsuite/basn6a16.png"),
+  )
+  assert_true(nrgba64.color_model is @color.AnyModel::NRGBA64Model)
+  let paletted = decode_config(
+    @fs.read_file_to_bytes("png/testdata/pngsuite/basn3p08-trns.png"),
+  )
+  assert_true(paletted.color_model is @color.AnyModel::PaletteModel(_))
+}
+
+///|
+test "png_write_rgba64" {
+  let img = @image.new_image_rgba64(@image.rect(0, 0, 2, 2))
+  img.set_rgba64(0, 0, { r: 0x1234U, g: 0x5678U, b: 0x9abCU, a: 0xffffU })
+  img.set_rgba64(1, 0, { r: 0xffffU, g: 0x0000U, b: 0x1111U, a: 0xffffU })
+  img.set_rgba64(0, 1, { r: 0x2222U, g: 0x3333U, b: 0x4444U, a: 0xffffU })
+  img.set_rgba64(1, 1, { r: 0xabcdU, g: 0xdef0U, b: 0x0102U, a: 0xffffU })
+  let decoded = decode(encode(@image.AnyImage::RGBA64(img)))
+  assert_true(decoded is @image.AnyImage::RGBA64(_))
+  for y in 0..<2 {
+    for x in 0..<2 {
+      let (r1, g1, b1, a1) = @image.AnyImage::RGBA64(img).at(x, y).rgba()
+      let (r2, g2, b2, a2) = decoded.at(x, y).rgba()
+      assert_eq(r1, r2)
+      assert_eq(g1, g2)
+      assert_eq(b1, b2)
+      assert_eq(a1, a2)
     }
   }
 }
@@ -301,28 +361,24 @@ test "png_paletted_transparency" {
 ///|
 /// Port of Go's TestDimensionOverflow.
 test "png_dimension_overflow" {
-  // A PNG with valid header but impossibly large dimensions should not crash
-  let header : FixedArray[Byte] = [
-    b'\x89', b'\x50', b'\x4e', b'\x47', b'\x0d', b'\x0a', b'\x1a', b'\x0a',
-    // IHDR chunk: length=13
-    b'\x00', b'\x00', b'\x00', b'\x0d',
-    // "IHDR"
-    b'\x49', b'\x48', b'\x44', b'\x52',
-    // Width: 0x7FFFFFFF (max int)
-    b'\x7f', b'\xff', b'\xff', b'\xff',
-    // Height: 0x7FFFFFFF (max int)
-    b'\x7f', b'\xff', b'\xff', b'\xff',
-    // bit_depth=8, color_type=2 (truecolor), compression=0, filter=0, interlace=0
-    b'\x08', b'\x02', b'\x00', b'\x00', b'\x00',
-    // CRC (doesn't matter, we'll fail before checking)
-    b'\x00', b'\x00', b'\x00', b'\x00',
-  ]
+  // A structurally valid PNG with impossibly large dimensions should not crash.
   let buf = @blit.Buffer::new()
-  for b in header {
+  for b in png_header {
     buf.write_byte(b)
   }
+  let ihdr = FixedArray::make(13, b'\x00')
+  @binary.write_uint32_be(ihdr, 0, 0x7fffffffU)
+  @binary.write_uint32_be(ihdr, 4, 0x7fffffffU)
+  ihdr[8] = b'\x08'
+  ihdr[9] = b'\x02'
+  ihdr[10] = b'\x00'
+  ihdr[11] = b'\x00'
+  ihdr[12] = b'\x00'
+  write_chunk(buf, ct_ihdr, ihdr)
+  write_chunk(buf, ct_idat, FixedArray::make(0, b'\x00'))
+  write_chunk(buf, ct_iend, FixedArray::make(0, b'\x00'))
   let result = try? decode_config(buf.to_bytes())
-  // Should succeed (config just reads dimensions) but decode should fail
+  // decode_config should report dimensions without attempting allocation.
   assert_true(result is Ok(_))
 }
 

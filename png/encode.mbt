@@ -21,21 +21,32 @@ pub fn encode(
   let bounds = img.bounds()
   let width = bounds.dx()
   let height = bounds.dy()
+  let all_opaque = png_is_opaque(img)
   // Determine color type based on image type
   let (color_type, bit_depth) : (Byte, Byte) = match img {
     @image.AnyImage::Gray(_) => (ct_grayscale, b'\x08')
     @image.AnyImage::Gray16(_) => (ct_grayscale, b'\x10')
     @image.AnyImage::Paletted(_) => (ct_paletted, b'\x08')
     @image.AnyImage::RGBA(_)
-    | @image.AnyImage::RGBA64(_)
     | @image.AnyImage::NRGBA(_)
+    | @image.AnyImage::Alpha(_) =>
+      if all_opaque {
+        (ct_true_color, b'\x08')
+      } else {
+        (ct_true_color_alpha, b'\x08')
+      }
+    @image.AnyImage::RGBA64(_)
     | @image.AnyImage::NRGBA64(_)
-    | @image.AnyImage::Alpha(_)
     | @image.AnyImage::Alpha16(_)
     | @image.AnyImage::YCbCr(_)
     | @image.AnyImage::NYCbCrA(_)
     | @image.AnyImage::CMYK(_)
-    | @image.AnyImage::Uniform(_) => (ct_true_color_alpha, b'\x08')
+    | @image.AnyImage::Uniform(_) =>
+      if all_opaque {
+        (ct_true_color, b'\x10')
+      } else {
+        (ct_true_color_alpha, b'\x10')
+      }
   }
   // Write IHDR
   let ihdr = FixedArray::make(13, b'\x00')
@@ -75,95 +86,159 @@ pub fn encode(
   for y = bounds.min_y; y < bounds.max_y; y = y + 1 {
     // Write filter byte (None for simplicity)
     raw_buf.write_byte(ft_none)
-    match img {
-      @image.AnyImage::Gray(g) =>
-        for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
-          let c = g.gray_at(x, y)
-          raw_buf.write_byte(c.y)
+    match color_type {
+      t if t == ct_grayscale && bit_depth == b'\x08' =>
+        match img {
+          @image.AnyImage::Gray(g) =>
+            for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
+              raw_buf.write_byte(g.gray_at(x, y).y)
+            }
+          _ =>
+            for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
+              guard @color.AnyModel::GrayModel.convert(img.at(x, y))
+                is @color.AnyColor::Gray(c) else {
+                continue
+              }
+              raw_buf.write_byte(c.y)
+            }
         }
-      @image.AnyImage::Gray16(g) =>
-        for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
-          let c = g.gray16_at(x, y)
-          raw_buf.write_byte((c.y >> 8).to_byte())
-          raw_buf.write_byte(c.y.to_byte())
+      t if t == ct_grayscale && bit_depth == b'\x10' =>
+        match img {
+          @image.AnyImage::Gray16(g) =>
+            for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
+              let c = g.gray16_at(x, y)
+              raw_buf.write_byte((c.y >> 8).to_byte())
+              raw_buf.write_byte(c.y.to_byte())
+            }
+          _ =>
+            for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
+              guard @color.AnyModel::Gray16Model.convert(img.at(x, y))
+                is @color.AnyColor::Gray16(c) else {
+                continue
+              }
+              raw_buf.write_byte((c.y >> 8).to_byte())
+              raw_buf.write_byte(c.y.to_byte())
+            }
         }
-      @image.AnyImage::Paletted(p) =>
-        for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
-          raw_buf.write_byte(p.color_index_at(x, y))
+      t if t == ct_paletted =>
+        match img {
+          @image.AnyImage::Paletted(p) =>
+            for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
+              raw_buf.write_byte(p.color_index_at(x, y))
+            }
+          _ => ()
         }
-      @image.AnyImage::NRGBA(n) =>
-        for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
-          let c = n.nrgba_at(x, y)
-          raw_buf.write_byte(c.r)
-          raw_buf.write_byte(c.g)
-          raw_buf.write_byte(c.b)
-          raw_buf.write_byte(c.a)
-        }
-      @image.AnyImage::RGBA(rgba) => {
-        // Fast path: read directly from pix array, avoiding per-pixel dispatch
-        let row_off = rgba.pix_offset +
-          (y - rgba.rect.min_y) * rgba.stride +
-          (bounds.min_x - rgba.rect.min_x) * 4
-        for x in 0..<width {
-          let si = row_off + x * 4
-          let r = rgba.pix.unsafe_get(si)
-          let g = rgba.pix.unsafe_get(si + 1)
-          let b = rgba.pix.unsafe_get(si + 2)
-          let a = rgba.pix.unsafe_get(si + 3)
-          if a == b'\xff' {
-            // Fully opaque: premultiplied == straight
-            raw_buf.write_byte(r)
-            raw_buf.write_byte(g)
-            raw_buf.write_byte(b)
-            raw_buf.write_byte(b'\xff')
-          } else if a == b'\x00' {
-            raw_buf.write_byte(b'\x00')
-            raw_buf.write_byte(b'\x00')
-            raw_buf.write_byte(b'\x00')
-            raw_buf.write_byte(b'\x00')
-          } else {
-            // Un-premultiply
-            let aa = a.to_uint()
-            let nr = r.to_uint() * 0xffU / aa
-            let ng = g.to_uint() * 0xffU / aa
-            let nb = b.to_uint() * 0xffU / aa
-            raw_buf.write_byte(nr.to_byte())
-            raw_buf.write_byte(ng.to_byte())
-            raw_buf.write_byte(nb.to_byte())
-            raw_buf.write_byte(a)
-          }
-        }
-      }
-      @image.AnyImage::RGBA64(_)
-      | @image.AnyImage::NRGBA64(_)
-      | @image.AnyImage::Alpha(_)
-      | @image.AnyImage::Alpha16(_)
-      | @image.AnyImage::YCbCr(_)
-      | @image.AnyImage::NYCbCrA(_)
-      | @image.AnyImage::CMYK(_)
-      | @image.AnyImage::Uniform(_) =>
+      t if t == ct_true_color && bit_depth == b'\x08' =>
         for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
           let (r, g, b, a) = img.at(x, y).rgba()
-          if a == 0U {
-            raw_buf.write_byte(b'\x00')
-            raw_buf.write_byte(b'\x00')
-            raw_buf.write_byte(b'\x00')
-            raw_buf.write_byte(b'\x00')
+          let (rr, gg, bb) = if a == 0U {
+            (0U, 0U, 0U)
           } else if a == 0xffffU {
-            raw_buf.write_byte((r >> 8).to_byte())
-            raw_buf.write_byte((g >> 8).to_byte())
-            raw_buf.write_byte((b >> 8).to_byte())
-            raw_buf.write_byte(b'\xff')
+            (r, g, b)
           } else {
-            let nr = r * 0xffffU / a
-            let ng = g * 0xffffU / a
-            let nb = b * 0xffffU / a
-            raw_buf.write_byte((nr >> 8).to_byte())
-            raw_buf.write_byte((ng >> 8).to_byte())
-            raw_buf.write_byte((nb >> 8).to_byte())
-            raw_buf.write_byte((a >> 8).to_byte())
+            (r * 0xffffU / a, g * 0xffffU / a, b * 0xffffU / a)
           }
+          raw_buf.write_byte((rr >> 8).to_byte())
+          raw_buf.write_byte((gg >> 8).to_byte())
+          raw_buf.write_byte((bb >> 8).to_byte())
         }
+      t if t == ct_true_color && bit_depth == b'\x10' =>
+        for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
+          let (r, g, b, a) = img.at(x, y).rgba()
+          let (rr, gg, bb) = if a == 0U {
+            (0U, 0U, 0U)
+          } else if a == 0xffffU {
+            (r, g, b)
+          } else {
+            (r * 0xffffU / a, g * 0xffffU / a, b * 0xffffU / a)
+          }
+          raw_buf.write_byte((rr >> 8).to_byte())
+          raw_buf.write_byte(rr.to_byte())
+          raw_buf.write_byte((gg >> 8).to_byte())
+          raw_buf.write_byte(gg.to_byte())
+          raw_buf.write_byte((bb >> 8).to_byte())
+          raw_buf.write_byte(bb.to_byte())
+        }
+      t if t == ct_true_color_alpha && bit_depth == b'\x08' =>
+        match img {
+          @image.AnyImage::NRGBA(n) =>
+            for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
+              let c = n.nrgba_at(x, y)
+              raw_buf.write_byte(c.r)
+              raw_buf.write_byte(c.g)
+              raw_buf.write_byte(c.b)
+              raw_buf.write_byte(c.a)
+            }
+          @image.AnyImage::RGBA(rgba) => {
+            let row_off = rgba.pix_offset +
+              (y - rgba.rect.min_y) * rgba.stride +
+              (bounds.min_x - rgba.rect.min_x) * 4
+            for x in 0..<width {
+              let si = row_off + x * 4
+              let r = rgba.pix.unsafe_get(si)
+              let g = rgba.pix.unsafe_get(si + 1)
+              let b = rgba.pix.unsafe_get(si + 2)
+              let a = rgba.pix.unsafe_get(si + 3)
+              if a == b'\xff' {
+                raw_buf.write_byte(r)
+                raw_buf.write_byte(g)
+                raw_buf.write_byte(b)
+                raw_buf.write_byte(b'\xff')
+              } else if a == b'\x00' {
+                raw_buf.write_byte(b'\x00')
+                raw_buf.write_byte(b'\x00')
+                raw_buf.write_byte(b'\x00')
+                raw_buf.write_byte(b'\x00')
+              } else {
+                let aa = a.to_uint()
+                raw_buf.write_byte((r.to_uint() * 0xffU / aa).to_byte())
+                raw_buf.write_byte((g.to_uint() * 0xffU / aa).to_byte())
+                raw_buf.write_byte((b.to_uint() * 0xffU / aa).to_byte())
+                raw_buf.write_byte(a)
+              }
+            }
+          }
+          _ =>
+            for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
+              let (r, g, b, a) = img.at(x, y).rgba()
+              if a == 0U {
+                raw_buf.write_byte(b'\x00')
+                raw_buf.write_byte(b'\x00')
+                raw_buf.write_byte(b'\x00')
+                raw_buf.write_byte(b'\x00')
+              } else if a == 0xffffU {
+                raw_buf.write_byte((r >> 8).to_byte())
+                raw_buf.write_byte((g >> 8).to_byte())
+                raw_buf.write_byte((b >> 8).to_byte())
+                raw_buf.write_byte(b'\xff')
+              } else {
+                raw_buf.write_byte(((r * 0xffffU / a) >> 8).to_byte())
+                raw_buf.write_byte(((g * 0xffffU / a) >> 8).to_byte())
+                raw_buf.write_byte(((b * 0xffffU / a) >> 8).to_byte())
+                raw_buf.write_byte((a >> 8).to_byte())
+              }
+            }
+        }
+      t if t == ct_true_color_alpha && bit_depth == b'\x10' =>
+        for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
+          let (r, g, b, a) = img.at(x, y).rgba()
+          let (rr, gg, bb) = if a == 0U {
+            (0U, 0U, 0U)
+          } else if a == 0xffffU {
+            (r, g, b)
+          } else {
+            (r * 0xffffU / a, g * 0xffffU / a, b * 0xffffU / a)
+          }
+          raw_buf.write_byte((rr >> 8).to_byte())
+          raw_buf.write_byte(rr.to_byte())
+          raw_buf.write_byte((gg >> 8).to_byte())
+          raw_buf.write_byte(gg.to_byte())
+          raw_buf.write_byte((bb >> 8).to_byte())
+          raw_buf.write_byte(bb.to_byte())
+          raw_buf.write_byte((a >> 8).to_byte())
+          raw_buf.write_byte(a.to_byte())
+        }
+      _ => ()
     }
   }
   // Compress raw image data using deflate directly, streaming into idat_buf.
@@ -227,6 +302,20 @@ pub fn encode(
   // Write IEND
   write_chunk(buf, ct_iend, FixedArray::make(0, b'\x00'))
   buf.to_bytes()
+}
+
+///|
+fn png_is_opaque(img : @image.AnyImage) -> Bool {
+  let bounds = img.bounds()
+  for y = bounds.min_y; y < bounds.max_y; y = y + 1 {
+    for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
+      let (_, _, _, a) = img.at(x, y).rgba()
+      if a != 0xffffU {
+        return false
+      }
+    }
+  }
+  true
 }
 
 ///|

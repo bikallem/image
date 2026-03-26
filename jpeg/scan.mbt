@@ -166,7 +166,7 @@ pub fn process_sos(d : Decoder) -> @image.AnyImage raise JpegError {
     }
     @image.AnyImage::Gray(img)
   } else {
-    ycbcr_to_rgba(d, comp_data, comp_width, comp_height, rect)
+    build_output_image(d, comp_data, comp_width, comp_height, rect)
   }
 }
 
@@ -465,7 +465,7 @@ fn read_bit(d : Decoder) -> Bool raise JpegError {
 
 ///|
 /// Reconstruct the full image from progressive coefficients.
-fn reconstruct_progressive(d : Decoder) -> @image.AnyImage {
+fn reconstruct_progressive(d : Decoder) -> @image.AnyImage raise JpegError {
   let (max_h, max_v) = max_sampling(d)
   let mcu_cols = (d.width + max_h * 8 - 1) / (max_h * 8)
   let mcu_rows = (d.height + max_v * 8 - 1) / (max_v * 8)
@@ -543,8 +543,125 @@ fn reconstruct_progressive(d : Decoder) -> @image.AnyImage {
     }
     @image.AnyImage::Gray(img)
   } else {
+    build_output_image(d, comp_data, comp_width, comp_height, rect)
+  }
+}
+
+///|
+fn build_output_image(
+  d : Decoder,
+  comp_data : FixedArray[FixedArray[Byte]],
+  comp_width : FixedArray[Int],
+  comp_height : FixedArray[Int],
+  rect : @image.Rectangle,
+) -> @image.AnyImage raise JpegError {
+  ignore(comp_height)
+  if d.num_components == 4 {
+    components_to_cmyk(d, comp_data, comp_width, rect)
+  } else if is_rgb_jpeg(d) {
+    rgb_to_rgba(d, comp_data, comp_width, rect)
+  } else {
     ycbcr_to_rgba(d, comp_data, comp_width, comp_height, rect)
   }
+}
+
+///|
+fn is_rgb_jpeg(d : Decoder) -> Bool {
+  if d.jfif {
+    return false
+  }
+  if d.adobe_transform_valid && d.adobe_transform == adobe_transform_unknown {
+    return true
+  }
+  d.num_components == 3 &&
+  d.comp.unsafe_get(0).id == b'R'.to_int() &&
+  d.comp.unsafe_get(1).id == b'G'.to_int() &&
+  d.comp.unsafe_get(2).id == b'B'.to_int()
+}
+
+///|
+fn sample_component(
+  d : Decoder,
+  comp_data : FixedArray[FixedArray[Byte]],
+  comp_width : FixedArray[Int],
+  ci : Int,
+  x : Int,
+  y : Int,
+) -> Byte {
+  let h_ratio = d.comp.unsafe_get(0).h / d.comp.unsafe_get(ci).h
+  let v_ratio = d.comp.unsafe_get(0).v / d.comp.unsafe_get(ci).v
+  let sx = x / h_ratio
+  let sy = y / v_ratio
+  comp_data.unsafe_get(ci)[sy * comp_width.unsafe_get(ci) + sx]
+}
+
+///|
+fn rgb_to_rgba(
+  d : Decoder,
+  comp_data : FixedArray[FixedArray[Byte]],
+  comp_width : FixedArray[Int],
+  rect : @image.Rectangle,
+) -> @image.AnyImage {
+  let img = @image.new_image_rgba(rect)
+  for y in 0..<d.height {
+    let di_row = y * img.stride
+    for x in 0..<d.width {
+      let di = di_row + x * 4
+      img.pix.unsafe_set(
+        di,
+        sample_component(d, comp_data, comp_width, 0, x, y),
+      )
+      img.pix.unsafe_set(
+        di + 1,
+        sample_component(d, comp_data, comp_width, 1, x, y),
+      )
+      img.pix.unsafe_set(
+        di + 2,
+        sample_component(d, comp_data, comp_width, 2, x, y),
+      )
+      img.pix.unsafe_set(di + 3, b'\xff')
+    }
+  }
+  @image.AnyImage::RGBA(img)
+}
+
+///|
+fn components_to_cmyk(
+  d : Decoder,
+  comp_data : FixedArray[FixedArray[Byte]],
+  comp_width : FixedArray[Int],
+  rect : @image.Rectangle,
+) -> @image.AnyImage raise JpegError {
+  if !d.adobe_transform_valid {
+    raise JpegError::UnsupportedError(
+      "unknown color model: 4-component JPEG doesn't have Adobe APP14 metadata",
+    )
+  }
+  let img = @image.new_image_cmyk(rect)
+  for y in 0..<d.height {
+    for x in 0..<d.width {
+      if d.adobe_transform == adobe_transform_unknown {
+        img.set_cmyk(x, y, {
+          c: (255 - sample_component(d, comp_data, comp_width, 0, x, y).to_int()).to_byte(),
+          m: (255 - sample_component(d, comp_data, comp_width, 1, x, y).to_int()).to_byte(),
+          y: (255 - sample_component(d, comp_data, comp_width, 2, x, y).to_int()).to_byte(),
+          k: (255 - sample_component(d, comp_data, comp_width, 3, x, y).to_int()).to_byte(),
+        })
+      } else {
+        let yy = sample_component(d, comp_data, comp_width, 0, x, y)
+        let cb = sample_component(d, comp_data, comp_width, 1, x, y)
+        let cr = sample_component(d, comp_data, comp_width, 2, x, y)
+        let (c, m, yv) = @color.ycbcr_to_rgb(yy, cb, cr)
+        img.set_cmyk(x, y, {
+          c,
+          m,
+          y: yv,
+          k: (255 - sample_component(d, comp_data, comp_width, 3, x, y).to_int()).to_byte(),
+        })
+      }
+    }
+  }
+  @image.AnyImage::CMYK(img)
 }
 
 ///|

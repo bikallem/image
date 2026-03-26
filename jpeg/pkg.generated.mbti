@@ -69,6 +69,9 @@ pub(all) struct Decoder {
   mut width : Int
   mut height : Int
   mut restart_interval : Int
+  mut jfif : Bool
+  mut adobe_transform_valid : Bool
+  mut adobe_transform : Int
   bits : BitReader
   mut progressive : Bool
   mut eob_run : Int

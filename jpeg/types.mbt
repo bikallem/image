@@ -43,6 +43,9 @@ let marker_rst7 : UInt = 0xFFD7U // Restart Marker 7
 let marker_app0 : UInt = 0xFFE0U // Application-specific 0
 
 ///|
+let marker_app14 : UInt = 0xFFEEU // Application-specific 14
+
+///|
 let marker_app15 : UInt = 0xFFEFU // Application-specific 15
 
 ///|
@@ -173,6 +176,9 @@ pub(all) struct Decoder {
   mut width : Int
   mut height : Int
   mut restart_interval : Int
+  mut jfif : Bool
+  mut adobe_transform_valid : Bool
+  mut adobe_transform : Int
   bits : BitReader
   // Progressive JPEG state
   mut progressive : Bool
@@ -226,8 +232,8 @@ pub fn Decoder::new(data : Bytes) -> Decoder {
     }
     huff.unsafe_set(tc, row)
   }
-  let comp = FixedArray::make(3, Component::new())
-  for i in 0..<3 {
+  let comp = FixedArray::make(4, Component::new())
+  for i in 0..<4 {
     comp.unsafe_set(i, Component::new())
   }
   let prog_coeffs : FixedArray[Array[FixedArray[Int]]] = FixedArray::make(4, [])
@@ -240,9 +246,15 @@ pub fn Decoder::new(data : Bytes) -> Decoder {
     width: 0,
     height: 0,
     restart_interval: 0,
+    jfif: false,
+    adobe_transform_valid: false,
+    adobe_transform: 0,
     bits: BitReader::new(),
     progressive: false,
     eob_run: 0,
     prog_coeffs,
   }
 }
+
+///|
+let adobe_transform_unknown = 0

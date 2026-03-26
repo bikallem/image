@@ -20,6 +20,36 @@ test "gif_decode_all" {
 }
 
 ///|
+test "gif_interlaced_pixels_match_reference" {
+  let interlaced = decode_all(
+    @fs.read_file_to_bytes("testdata/video-001.interlaced.gif"),
+  )
+  let normal = decode_all(@fs.read_file_to_bytes("testdata/video-001.gif"))
+  assert_eq(interlaced.image.length(), normal.image.length())
+  let interlaced_frame = interlaced.image[0]
+  let normal_frame = normal.image[0]
+  assert_eq(interlaced_frame.rect, normal_frame.rect)
+  for y = interlaced_frame.rect.min_y
+      y < interlaced_frame.rect.max_y
+      y = y + 1 {
+    for x = interlaced_frame.rect.min_x
+        x < interlaced_frame.rect.max_x
+        x = x + 1 {
+      let (r1, g1, b1, a1) = @image.AnyImage::Paletted(interlaced_frame)
+        .at(x, y)
+        .rgba()
+      let (r2, g2, b2, a2) = @image.AnyImage::Paletted(normal_frame)
+        .at(x, y)
+        .rgba()
+      assert_eq(r1, r2)
+      assert_eq(g1, g2)
+      assert_eq(b1, b2)
+      assert_eq(a1, a2)
+    }
+  }
+}
+
+///|
 /// Port of Go's TestBounds from reader_test.go.
 test "gif_bounds" {
   let data = @fs.read_file_to_bytes("testdata/video-001.gif")
@@ -94,6 +124,69 @@ test "gif_loop_count" {
   let encoded = encode_all(gif)
   let decoded_gif = decode_all(encoded)
   assert_eq(decoded_gif.loop_count, 0)
+}
+
+///|
+test "gif_roundtrip_frame_metadata" {
+  let pal1 : @color.Palette = {
+    colors: [
+      @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' }),
+      @color.AnyColor::RGBA({ r: b'\xff', g: b'\x00', b: b'\x00', a: b'\xff' }),
+    ],
+  }
+  let frame1 = @image.new_image_paletted(@image.rect(0, 0, 4, 4), pal1)
+  for y in 0..<4 {
+    for x in 0..<4 {
+      frame1.set_color_index(
+        x,
+        y,
+        if (x + y) % 2 == 0 {
+          b'\x01'
+        } else {
+          b'\x00'
+        },
+      )
+    }
+  }
+  let pal2 : @color.Palette = {
+    colors: [
+      @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\x00' }),
+      @color.AnyColor::RGBA({ r: b'\x00', g: b'\xff', b: b'\x00', a: b'\xff' }),
+    ],
+  }
+  let frame2 = @image.new_image_paletted(@image.rect(1, 1, 3, 3), pal2)
+  frame2.set_color_index(1, 1, b'\x00')
+  frame2.set_color_index(2, 1, b'\x01')
+  frame2.set_color_index(1, 2, b'\x01')
+  frame2.set_color_index(2, 2, b'\x00')
+  let gif : GIF = {
+    image: [frame1, frame2],
+    delay: [7, 11],
+    loop_count: 5,
+    disposal: [b'\x01', b'\x02'],
+    background_index: b'\x00',
+    config: {
+      color_model: @color.AnyModel::PaletteModel(pal1),
+      width: 4,
+      height: 4,
+    },
+  }
+  let decoded = decode_all(encode_all(gif))
+  assert_eq(decoded.loop_count, 5)
+  assert_eq(decoded.delay, [7, 11])
+  assert_eq(decoded.disposal, [b'\x01', b'\x02'])
+  assert_eq(decoded.image.length(), 2)
+  assert_eq(decoded.image[0].rect, @image.rect(0, 0, 4, 4))
+  assert_eq(decoded.image[1].rect, @image.rect(1, 1, 3, 3))
+  let (_, _, _, a0) = @image.AnyImage::Paletted(decoded.image[1])
+    .at(1, 1)
+    .rgba()
+  let (_, g1, _, a1) = @image.AnyImage::Paletted(decoded.image[1])
+    .at(2, 1)
+    .rgba()
+  assert_eq(a0, 0U)
+  assert_eq(g1, 0xffffU)
+  assert_eq(a1, 0xffffU)
 }
 
 ///|

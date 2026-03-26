@@ -8,4 +8,5 @@ import {
 import {
   "moonbitlang/x/fs",
   "moonbitlang/core/bench",
+  "bikallem/image/png",
 } for "wbtest"

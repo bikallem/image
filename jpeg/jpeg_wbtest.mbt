@@ -183,6 +183,72 @@ test "jpeg_decode_config" {
 }
 
 ///|
+test "jpeg_decode_config_models" {
+  let gray = decode_config(
+    @fs.read_file_to_bytes("testdata/video-005.gray.jpeg"),
+  )
+  assert_true(gray.color_model is @color.AnyModel::GrayModel)
+  let ycbcr = decode_config(
+    @fs.read_file_to_bytes("testdata/video-001.progressive.jpeg"),
+  )
+  assert_true(ycbcr.color_model is @color.AnyModel::YCbCrModel)
+  let rgb = decode_config(@fs.read_file_to_bytes("testdata/video-001.rgb.jpeg"))
+  assert_true(rgb.color_model is @color.AnyModel::RGBAModel)
+  let cmyk = decode_config(
+    @fs.read_file_to_bytes("testdata/video-001.cmyk.jpeg"),
+  )
+  assert_true(cmyk.color_model is @color.AnyModel::CMYKModel)
+}
+
+///|
+test "jpeg_rgb_decode_matches_reference" {
+  let img = decode(@fs.read_file_to_bytes("testdata/video-001.rgb.jpeg"))
+  assert_true(img is @image.AnyImage::RGBA(_))
+  let reference = @png.decode(
+    @fs.read_file_to_bytes("testdata/video-001.rgb.png"),
+  )
+  let b = img.bounds()
+  assert_eq(b.dx(), reference.bounds().dx())
+  assert_eq(b.dy(), reference.bounds().dy())
+  let samples = [(0, 0), (b.dx() / 2, b.dy() / 2), (b.dx() - 1, b.dy() - 1)]
+  for sample in samples {
+    let (x, y) = sample
+    let (r1, g1, b1, _) = img.at(x, y).rgba()
+    let (r2, g2, b2, _) = reference.at(x, y).rgba()
+    let dr = if r1 >= r2 { r1 - r2 } else { r2 - r1 }
+    let dg = if g1 >= g2 { g1 - g2 } else { g2 - g1 }
+    let db = if b1 >= b2 { b1 - b2 } else { b2 - b1 }
+    assert_true(dr >> 8 < 80U)
+    assert_true(dg >> 8 < 80U)
+    assert_true(db >> 8 < 80U)
+  }
+}
+
+///|
+test "jpeg_cmyk_decode_matches_reference" {
+  let img = decode(@fs.read_file_to_bytes("testdata/video-001.cmyk.jpeg"))
+  assert_true(img is @image.AnyImage::CMYK(_))
+  let reference = @png.decode(
+    @fs.read_file_to_bytes("testdata/video-001.cmyk.png"),
+  )
+  let b = img.bounds()
+  assert_eq(b.dx(), reference.bounds().dx())
+  assert_eq(b.dy(), reference.bounds().dy())
+  let samples = [(0, 0), (b.dx() / 2, b.dy() / 2), (b.dx() - 1, b.dy() - 1)]
+  for sample in samples {
+    let (x, y) = sample
+    let (r1, g1, b1, _) = img.at(x, y).rgba()
+    let (r2, g2, b2, _) = reference.at(x, y).rgba()
+    let dr = if r1 >= r2 { r1 - r2 } else { r2 - r1 }
+    let dg = if g1 >= g2 { g1 - g2 } else { g2 - g1 }
+    let db = if b1 >= b2 { b1 - b2 } else { b2 - b1 }
+    assert_true(dr >> 8 < 96U)
+    assert_true(dg >> 8 < 96U)
+    assert_true(db >> 8 < 96U)
+  }
+}
+
+///|
 /// Test JPEG encode with different quality levels.
 test "jpeg_quality_levels" {
   let img = @image.new_image_rgba(@image.rect(0, 0, 16, 16))
