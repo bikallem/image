@@ -2,6 +2,7 @@
 package "bikallem/image/gif"
 
 import {
+  "bikallem/image/color",
   "bikallem/image/image",
 }
 
@@ -18,11 +19,13 @@ pub let disposal_none : Byte
 
 pub let disposal_previous : Byte
 
-pub fn encode(@image.ImagePaletted) -> Bytes raise
+pub fn encode(@image.AnyImage, options? : Options) -> Bytes raise
 
 pub fn encode_all(GIF) -> Bytes raise
 
 pub fn encode_image(@image.AnyImage, n_colors? : Int) -> Bytes raise
+
+pub fn encode_paletted(@image.ImagePaletted) -> Bytes raise
 
 // Errors
 pub(all) suberror GifError {
@@ -39,6 +42,12 @@ pub(all) struct GIF {
   disposal : Array[Byte]
   background_index : Byte
   config : @image.Config
+}
+
+pub(all) struct Options {
+  num_colors : Int
+  quantizer : ((@image.AnyImage, Int) -> @color.Palette)?
+  drawer : ((@image.ImagePaletted, @image.Rectangle, @image.AnyImage, @image.Point) -> Unit)?
 }
 
 // Type aliases

@@ -676,6 +676,8 @@ test "png_encode_rejects_invalid_image_size" {
   let zero_height = @image.new_image_rgba(@image.rect(0, 0, 1, 0))
   assert_true((try? encode(@image.AnyImage::RGBA(zero_width))) is Err(_))
   assert_true((try? encode(@image.AnyImage::RGBA(zero_height))) is Err(_))
+  assert_true((try? validate_png_image_size(1L << 32, 1L)) is Err(_))
+  assert_true((try? validate_png_image_size(1L, 1L << 32)) is Err(_))
 }
 
 ///|

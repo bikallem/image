@@ -16,7 +16,7 @@ pub fn encode(
   let bounds = img.bounds()
   let width = bounds.dx()
   let height = bounds.dy()
-  validate_png_image_size(width, height)
+  validate_png_image_size(width.to_int64(), height.to_int64())
   let buf = @blit.Buffer::new()
   // Write PNG signature
   for i in 0..<8 {
@@ -336,8 +336,11 @@ fn validate_png_palette_length(n : Int) -> Unit raise PngError {
 }
 
 ///|
-fn validate_png_image_size(width : Int, height : Int) -> Unit raise PngError {
-  if width <= 0 || height <= 0 {
+fn validate_png_image_size(
+  width : Int64,
+  height : Int64,
+) -> Unit raise PngError {
+  if width <= 0L || height <= 0L || width >= 1L << 32 || height >= 1L << 32 {
     raise PngError::FormatError(
       "invalid image size: " + width.to_string() + "x" + height.to_string(),
     )

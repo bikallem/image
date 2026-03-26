@@ -82,7 +82,7 @@ test "gif_writer" {
       m.set_color_index(x, y, ((x + y) % 256).to_byte())
     }
   }
-  let encoded = encode(m)
+  let encoded = encode(@image.AnyImage::Paletted(m))
   let decoded = decode(encoded)
   let b = decoded.bounds()
   assert_eq(b.dx(), 32)
@@ -426,7 +426,7 @@ test "gif_palettes" {
         m.set_color_index(x, y, ((x + y) % size).to_byte())
       }
     }
-    let encoded = encode(m)
+    let encoded = encode(@image.AnyImage::Paletted(m))
     let decoded = decode(encoded)
     assert_eq(decoded.bounds().dx(), 4)
     assert_eq(decoded.bounds().dy(), 4)
@@ -463,7 +463,7 @@ test "gif_encode_normalizes_non_zero_paletted_bounds" {
       frame.set_color_index(x, y, ((x + y) % 16).to_byte())
     }
   }
-  let decoded = decode(encode(frame))
+  let decoded = decode(encode_paletted(frame))
   assert_eq(decoded.bounds(), @image.rect(0, 0, 6, 6))
   let (r0, _, _, _) = decoded.at(0, 0).rgba()
   let (r1, _, _, _) = decoded.at(5, 5).rgba()
@@ -531,6 +531,65 @@ test "gif_encode_image_supports_one_color" {
 }
 
 ///|
+test "gif_encode_options_custom_quantizer_and_drawer" {
+  let img = @image.new_image_rgba(@image.rect(0, 0, 4, 2))
+  for y in 0..<2 {
+    for x in 0..<4 {
+      let v = if x < 2 { b'\x10' } else { b'\xf0' }
+      img.set_rgba(x, y, { r: v, g: v, b: v, a: b'\xff' })
+    }
+  }
+  let options : Options = {
+    num_colors: 2,
+    quantizer: Some(fn(_src, _n_colors) {
+      {
+        colors: [
+          @color.AnyColor::RGBA({
+            r: b'\x00',
+            g: b'\x00',
+            b: b'\x00',
+            a: b'\xff',
+          }),
+          @color.AnyColor::RGBA({
+            r: b'\xff',
+            g: b'\xff',
+            b: b'\xff',
+            a: b'\xff',
+          }),
+        ],
+      }
+    }),
+    drawer: Some(fn(dst, r, src, sp) {
+      for y = r.min_y; y < r.max_y; y = y + 1 {
+        for x = r.min_x; x < r.max_x; x = x + 1 {
+          let sx = sp.x + x - r.min_x
+          let sy = sp.y + y - r.min_y
+          let (rv, _, _, _) = src.at(sx, sy).rgba()
+          dst.set_color_index(
+            x,
+            y,
+            if rv >> 8 < 0x80U {
+              b'\x00'
+            } else {
+              b'\x01'
+            },
+          )
+        }
+      }
+    }),
+  }
+  let decoded = decode_all(encode(@image.AnyImage::RGBA(img), options~))
+  assert_eq(decoded.image.length(), 1)
+  assert_eq(decoded.image[0].palette.colors.length(), 2)
+  for y in 0..<2 {
+    assert_eq(decoded.image[0].color_index_at(0, y), b'\x00')
+    assert_eq(decoded.image[0].color_index_at(1, y), b'\x00')
+    assert_eq(decoded.image[0].color_index_at(2, y), b'\x01')
+    assert_eq(decoded.image[0].color_index_at(3, y), b'\x01')
+  }
+}
+
+///|
 /// Test GIF encoding/decoding pixel parity.
 test "gif_pixel_parity" {
   let pal : @color.Palette = {
@@ -549,7 +608,7 @@ test "gif_pixel_parity" {
       m.set_color_index(x, y, ((x + y) % 4).to_byte())
     }
   }
-  let encoded = encode(m)
+  let encoded = encode(@image.AnyImage::Paletted(m))
   let decoded = decode_all(encoded)
   assert_true(decoded.image.length() > 0)
   let frame = decoded.image[0]
@@ -850,7 +909,7 @@ test "gif_small_palette" {
       m.set_color_index(x, y, ((x + y) % 2).to_byte())
     }
   }
-  let encoded = encode(m)
+  let encoded = encode(@image.AnyImage::Paletted(m))
   let decoded = decode_all(encoded)
   assert_true(decoded.image.length() > 0)
   let frame = decoded.image[0]

@@ -2,14 +2,19 @@
 /// Quantize reduces an image to at most n_colors using Go-like defaults.
 fn quantize_image(
   img : @image.AnyImage,
-  n_colors : Int,
+  options : Options,
 ) -> @image.ImagePaletted {
   let bounds = img.bounds()
-  let pal = @color.Palette::{
-    colors: plan9_palette(normalize_num_colors(n_colors)),
+  let n_colors = normalize_num_colors(options.num_colors)
+  let pal = match options.quantizer {
+    Some(quantizer) => quantizer(img, n_colors)
+    None => @color.Palette::{ colors: plan9_palette(n_colors) }
   }
   let result = @image.new_image_paletted(bounds, pal)
-  @draw.floyd_steinberg_draw(result, bounds, img, bounds.min())
+  match options.drawer {
+    Some(drawer) => drawer(result, bounds, img, bounds.min())
+    None => @draw.floyd_steinberg_draw(result, bounds, img, bounds.min())
+  }
   result
 }
 

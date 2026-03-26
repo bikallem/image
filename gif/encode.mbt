@@ -1,21 +1,36 @@
 ///|
-/// Encodes any image as a GIF by auto-quantizing to n_colors.
-/// Default: 256 colors using Go-like Plan9 + Floyd-Steinberg quantization.
+let default_options : Options = {
+  num_colors: 256,
+  quantizer: None,
+  drawer: None,
+}
+
+///|
+/// Encodes any image as a GIF using Go-like defaults and optional hooks.
+pub fn encode(
+  img : @image.AnyImage,
+  options? : Options = default_options,
+) -> Bytes raise Error {
+  let max_colors = normalize_num_colors(options.num_colors)
+  let paletted = match img {
+    @image.AnyImage::Paletted(p) if p.palette.colors.length() <= max_colors => p
+    _ => quantize_image(img, options)
+  }
+  encode_paletted(paletted)
+}
+
+///|
+/// Backward-compatible helper that only overrides the max palette size.
 pub fn encode_image(
   img : @image.AnyImage,
   n_colors? : Int = 256,
 ) -> Bytes raise Error {
-  let max_colors = normalize_num_colors(n_colors)
-  let paletted = match img {
-    @image.AnyImage::Paletted(p) if p.palette.colors.length() <= max_colors => p
-    _ => quantize_image(img, max_colors)
-  }
-  encode(paletted)
+  encode(img, options={ num_colors: n_colors, quantizer: None, drawer: None })
 }
 
 ///|
 /// Encodes a single paletted image as a GIF.
-pub fn encode(img : @image.ImagePaletted) -> Bytes raise Error {
+pub fn encode_paletted(img : @image.ImagePaletted) -> Bytes raise Error {
   let still = normalize_still_frame(img)
   let gif : GIF = {
     image: [still],

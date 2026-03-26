@@ -21,7 +21,9 @@ test (b : @bench.T) {
       m.set_color_index(x, y, ((x * 17 + y * 13) % 256).to_byte())
     }
   }
-  b.bench(name="encode_paletted", fn() { b.keep(try? encode(m)) })
+  b.bench(name="encode_paletted", fn() {
+    b.keep(try? encode(@image.AnyImage::Paletted(m)))
+  })
   // Encode RGBA via auto-quantization
   let rgba = @image.new_image_rgba(@image.rect(0, 0, 64, 64))
   for y in 0..<64 {

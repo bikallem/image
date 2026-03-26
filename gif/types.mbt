@@ -17,6 +17,20 @@ pub(all) struct GIF {
 }
 
 ///|
+/// Options configures generic GIF encoding, mirroring Go's surface as closely
+/// as MoonBit allows.
+pub(all) struct Options {
+  num_colors : Int
+  quantizer : ((@image.AnyImage, Int) -> @color.Palette)?
+  drawer : ((
+    @image.ImagePaletted,
+    @image.Rectangle,
+    @image.AnyImage,
+    @image.Point,
+  ) -> Unit)?
+}
+
+///|
 let gif89a : String = "GIF89a"
 
 ///|

@@ -136,7 +136,9 @@ fn main {
       pal_img.set_color_index(x, y, ((x + y) % 256).to_byte())
     }
   }
-  let gif_enc = @gif.encode(pal_img) catch { _ => Bytes::new(0) }
+  let gif_enc = @gif.encode(@image.AnyImage::Paletted(pal_img)) catch {
+    _ => Bytes::new(0)
+  }
   if gif_enc.length() > 0 {
     @fs.write_bytes_to_file("testdata/roundtrip_moonbit.gif", gif_enc) catch {
       _ => ()
