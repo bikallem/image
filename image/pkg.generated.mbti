@@ -170,6 +170,7 @@ pub(all) struct ImageNYCbCrA {
   ycbcr : ImageYCbCr
   a : FixedArray[Byte]
   a_stride : Int
+  a_offset_base : Int
 }
 pub fn ImageNYCbCrA::a_offset(Self, Int, Int) -> Int
 pub fn ImageNYCbCrA::is_opaque(Self) -> Bool
@@ -231,6 +232,8 @@ pub(all) struct ImageYCbCr {
   c_stride : Int
   subsample_ratio : YCbCrSubsampleRatio
   rect : Rectangle
+  y_offset_base : Int
+  c_offset_base : Int
 }
 pub fn ImageYCbCr::c_offset(Self, Int, Int) -> Int
 pub fn ImageYCbCr::is_opaque(Self) -> Bool

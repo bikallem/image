@@ -17,16 +17,21 @@ pub(all) struct ImageYCbCr {
   c_stride : Int
   subsample_ratio : YCbCrSubsampleRatio
   rect : Rectangle
+  y_offset_base : Int
+  c_offset_base : Int
 }
 
 ///|
 pub fn ImageYCbCr::y_offset(self : ImageYCbCr, x : Int, y : Int) -> Int {
-  (y - self.rect.min_y) * self.y_stride + (x - self.rect.min_x)
+  self.y_offset_base +
+  (y - self.rect.min_y) * self.y_stride +
+  (x - self.rect.min_x)
 }
 
 ///|
 pub fn ImageYCbCr::c_offset(self : ImageYCbCr, x : Int, y : Int) -> Int {
-  match self.subsample_ratio {
+  self.c_offset_base +
+  (match self.subsample_ratio {
     Ratio422 =>
       (y - self.rect.min_y) * self.c_stride + (x / 2 - self.rect.min_x / 2)
     Ratio420 =>
@@ -40,7 +45,7 @@ pub fn ImageYCbCr::c_offset(self : ImageYCbCr, x : Int, y : Int) -> Int {
       (y / 2 - self.rect.min_y / 2) * self.c_stride +
       (x / 4 - self.rect.min_x / 4)
     Ratio444 => (y - self.rect.min_y) * self.c_stride + (x - self.rect.min_x)
-  }
+  })
 }
 
 ///|
@@ -75,10 +80,11 @@ pub fn ImageYCbCr::sub_image(self : ImageYCbCr, r : Rectangle) -> ImageYCbCr {
       c_stride: self.c_stride,
       subsample_ratio: self.subsample_ratio,
       rect: r,
+      y_offset_base: 0,
+      c_offset_base: 0,
     }
   }
-  // YCbCr sub-images share the same underlying buffers
-  // with adjusted rect (offsets computed on access via y_offset/c_offset)
+  // YCbCr sub-images share the same underlying buffers with adjusted bases.
   {
     y_: self.y_,
     cb: self.cb,
@@ -87,6 +93,8 @@ pub fn ImageYCbCr::sub_image(self : ImageYCbCr, r : Rectangle) -> ImageYCbCr {
     c_stride: self.c_stride,
     subsample_ratio: self.subsample_ratio,
     rect: r,
+    y_offset_base: self.y_offset(r.min_x, r.min_y),
+    c_offset_base: self.c_offset(r.min_x, r.min_y),
   }
 }
 
@@ -128,6 +136,8 @@ pub fn new_image_ycbcr(
     c_stride: cw,
     subsample_ratio,
     rect: r,
+    y_offset_base: 0,
+    c_offset_base: 0,
   }
 }
 
@@ -136,6 +146,7 @@ pub(all) struct ImageNYCbCrA {
   ycbcr : ImageYCbCr
   a : FixedArray[Byte]
   a_stride : Int
+  a_offset_base : Int
 }
 
 ///|
@@ -160,7 +171,9 @@ pub fn ImageNYCbCrA::nycbcra_at(
 
 ///|
 pub fn ImageNYCbCrA::a_offset(self : ImageNYCbCrA, x : Int, y : Int) -> Int {
-  (y - self.ycbcr.rect.min_y) * self.a_stride + (x - self.ycbcr.rect.min_x)
+  self.a_offset_base +
+  (y - self.ycbcr.rect.min_y) * self.a_stride +
+  (x - self.ycbcr.rect.min_x)
 }
 
 ///|
@@ -169,33 +182,20 @@ pub fn ImageNYCbCrA::sub_image(
   r : Rectangle,
 ) -> ImageNYCbCrA {
   let r = r.intersect(self.ycbcr.rect)
+  let ycbcr = self.ycbcr.sub_image(r)
   if r.empty() {
     return {
-      ycbcr: {
-        y_: FixedArray::make(0, b'\x00'),
-        cb: FixedArray::make(0, b'\x00'),
-        cr: FixedArray::make(0, b'\x00'),
-        y_stride: self.ycbcr.y_stride,
-        c_stride: self.ycbcr.c_stride,
-        subsample_ratio: self.ycbcr.subsample_ratio,
-        rect: r,
-      },
+      ycbcr,
       a: FixedArray::make(0, b'\x00'),
       a_stride: self.a_stride,
+      a_offset_base: 0,
     }
   }
   {
-    ycbcr: {
-      y_: self.ycbcr.y_,
-      cb: self.ycbcr.cb,
-      cr: self.ycbcr.cr,
-      y_stride: self.ycbcr.y_stride,
-      c_stride: self.ycbcr.c_stride,
-      subsample_ratio: self.ycbcr.subsample_ratio,
-      rect: r,
-    },
+    ycbcr,
     a: self.a,
     a_stride: self.a_stride,
+    a_offset_base: self.a_offset(r.min_x, r.min_y),
   }
 }
 
@@ -205,7 +205,8 @@ pub fn ImageNYCbCrA::is_opaque(self : ImageNYCbCrA) -> Bool {
     return true
   }
   for y = self.ycbcr.rect.min_y; y < self.ycbcr.rect.max_y; y = y + 1 {
-    let row_start = (y - self.ycbcr.rect.min_y) * self.a_stride
+    let row_start = self.a_offset_base +
+      (y - self.ycbcr.rect.min_y) * self.a_stride
     for x in 0..<self.ycbcr.rect.dx() {
       if self.a.unsafe_get(row_start + x) != b'\xff' {
         return false
@@ -231,8 +232,11 @@ pub fn new_image_nycbcra(
       c_stride: cw,
       subsample_ratio,
       rect: r,
+      y_offset_base: 0,
+      c_offset_base: 0,
     },
     a: FixedArray::make(w * h, b'\x00'),
     a_stride: w,
+    a_offset_base: 0,
   }
 }
