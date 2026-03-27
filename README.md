@@ -78,6 +78,18 @@ That registry is explicit. If you do not register formats yourself, call `@png.d
 - GIF decode for animated images plus generic encode with configurable color count, quantizer, and drawer
 - Cross-codec parity tests and benchmarks against vendored Go implementations
 
+## Scope
+
+This repository ports codec behavior, image types, and package-level functionality. It does not aim to port Go's `io.Reader` / `io.Writer` APIs or generic streaming I/O surface.
+
+The public codec APIs are intentionally `Bytes`-based:
+
+- decoders take `Bytes`
+- encoders return `Bytes`
+- generic format registration in `image` is explicit rather than relying on Go-style package init behavior
+
+Future parity work should treat I/O-surface differences as intentional unless the project scope changes.
+
 ## Development
 
 Useful commands from the repository root:
