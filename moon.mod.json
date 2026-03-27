@@ -1,14 +1,15 @@
 {
   "name": "bikallem/image",
   "version": "0.1.1",
-  "readme": "README.md",
-  "repository": "https://github.com/bikallem/image.git",
-  "license": "Apache-2.0",
   "deps": {
     "bikallem/compress": "0.3.2",
     "moonbitlang/x": "0.4.41",
-    "bikallem/blit": "0.2.2"
+    "bikallem/blit": "0.2.2",
+    "moonbitlang/quickcheck": "0.11.2"
   },
+  "readme": "README.md",
+  "repository": "https://github.com/bikallem/image.git",
+  "license": "Apache-2.0",
   "source": ".",
   "exclude": [
     "vendor",

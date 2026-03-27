@@ -10,4 +10,5 @@ import {
 import {
   "moonbitlang/x/fs",
   "moonbitlang/core/bench",
+  "moonbitlang/quickcheck" @qc,
 } for "wbtest"
