@@ -1,6 +1,8 @@
 {
   "name": "bikallem/image",
   "version": "0.1.0",
+  "readme": "README.md",
+  "repository": "https://github.com/bikallem/image.git",
   "deps": {
     "bikallem/compress": "0.3.2",
     "moonbitlang/x": "0.4.41",
