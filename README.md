@@ -8,6 +8,7 @@ The module provides core image types, color models, drawing operations, and PNG/
 
 Import the package you need directly:
 
+- `bikallem/image`: high-level generic decode facade with built-in PNG/JPEG/GIF sniffing
 - `bikallem/image/image`: core image types, geometry, image constructors, and the format registry
 - `bikallem/image/color`: color types, models, conversions, and palettes
 - `bikallem/image/draw`: compositing and Floyd-Steinberg drawing
@@ -27,7 +28,20 @@ moon add bikallem/image
 
 ## Quick Start
 
-Codec-specific entry points are the simplest API:
+For generic format sniffing across PNG, JPEG, and GIF, import the top-level package:
+
+```moonbit
+import {
+  "bikallem/image",
+}
+
+fn decode_unknown(data : Bytes) -> Unit raise {
+  let (img, format) = @image.decode(data)
+  ignore((img, format))
+}
+```
+
+Codec-specific entry points are still the simplest API when the format is already known:
 
 ```moonbit
 import {
@@ -50,7 +64,7 @@ fn png_roundtrip() -> Unit raise {
 }
 ```
 
-The `image` package also exposes a registry-based format sniffer:
+The core `bikallem/image/image` package also exposes an explicit registry for additional formats:
 
 ```moonbit
 import {
@@ -68,7 +82,7 @@ fn register_png() -> Unit {
 }
 ```
 
-That registry is explicit. If you do not register formats yourself, call `@png.decode`, `@jpeg.decode`, or `@gif.decode` directly.
+The top-level `bikallem/image` package auto-sniffs the built-in PNG/JPEG/GIF codecs and falls back to that explicit registry for any custom formats you register yourself.
 
 ## Highlights
 
@@ -86,7 +100,8 @@ The public codec APIs are intentionally `Bytes`-based:
 
 - decoders take `Bytes`
 - encoders return `Bytes`
-- generic format registration in `image` is explicit rather than relying on Go-style package init behavior
+- the top-level `bikallem/image` package auto-sniffs built-in PNG/JPEG/GIF codecs
+- the core `bikallem/image/image` package keeps explicit custom-format registration instead of relying on Go-style package init behavior
 
 Future parity work should treat I/O-surface differences as intentional unless the project scope changes.
 
@@ -122,4 +137,4 @@ make callgrind
 
 Current module version: `0.1.0`
 
-The current work has focused on bringing codec behavior and malformed-input handling in line with vendored Go sources while keeping MoonBit-native APIs for package boundaries and explicit registration.
+The current work has focused on bringing codec behavior and malformed-input handling in line with vendored Go sources while keeping MoonBit-native APIs for package boundaries and `Bytes`-based codec entry points.

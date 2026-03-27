@@ -4,7 +4,6 @@ import {
   "bikallem/image/internal/binary",
   "bikallem/compress/zlib",
   "bikallem/compress/flate",
-  "bikallem/compress/checksum",
   "bikallem/blit",
 }
 

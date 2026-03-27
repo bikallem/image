@@ -13,6 +13,15 @@ pub fn encode(
   img : @image.AnyImage,
   compression? : CompressionLevel = DefaultCompression,
 ) -> Bytes raise Error {
+  encode_with_compressor(img, compression, zlib_compress_png_data)
+}
+
+///|
+fn encode_with_compressor(
+  img : @image.AnyImage,
+  compression : CompressionLevel,
+  compressor : (Bytes, CompressionLevel) -> Bytes raise PngError,
+) -> Bytes raise Error {
   let bounds = img.bounds()
   let width = bounds.dx()
   let height = bounds.dy()
@@ -244,14 +253,6 @@ pub fn encode(
       _ => ()
     }
   }
-  // Compress raw image data using deflate directly, streaming into idat_buf.
-  // This avoids the zlib::compress wrapper which copies data multiple times.
-  let flate_level : @flate.CompressionLevel = match compression {
-    DefaultCompression => @flate.DefaultCompression
-    NoCompression => @flate.NoCompression
-    BestSpeed => @flate.BestSpeed
-    BestCompression => @flate.BestCompression
-  }
   let raw_bytes = filter_png_rows(
     raw_buf.to_bytes(),
     width,
@@ -260,42 +261,8 @@ pub fn encode(
     color_type,
     compression,
   )
-  let idat_buf = @blit.Buffer::new(size_hint=raw_bytes.length())
-  // Zlib header (CMF=0x78, FLG depends on level)
-  let cmf : Int = 0x78 // deflate, window=32K
-  let flevel = match compression {
-    NoCompression => 0
-    BestSpeed => 1
-    DefaultCompression => 2
-    BestCompression => 3
-  }
-  let mut flg = flevel << 6
-  let remainder = (cmf * 256 + flg) % 31
-  if remainder != 0 {
-    flg += 31 - remainder
-  }
-  idat_buf.write_byte(cmf.to_byte())
-  idat_buf.write_byte(flg.to_byte())
-  // Deflate the data
-  let deflater = @flate.Deflater::new(level=flate_level)
-  match deflater.encode(Some(raw_bytes[:])) {
-    @flate.Data(chunk) => idat_buf.write_bytesview(chunk)
-    @flate.Ok | @flate.End => ()
-    @flate.Error(e) => abort("png: deflate error: " + e.to_string())
-  }
-  match deflater.encode(None) {
-    @flate.Data(chunk) => idat_buf.write_bytesview(chunk)
-    @flate.Ok | @flate.End => ()
-    @flate.Error(e) => abort("png: deflate error: " + e.to_string())
-  }
-  // Adler-32 checksum of uncompressed data (big-endian)
-  let adler = @checksum.adler32(raw_bytes[:])
-  idat_buf.write_byte((adler >> 24).to_byte())
-  idat_buf.write_byte((adler >> 16).to_byte())
-  idat_buf.write_byte((adler >> 8).to_byte())
-  idat_buf.write_byte(adler.to_byte())
+  let idat_bytes = compressor(raw_bytes, compression)
   // Write IDAT chunk: length + type + data + CRC
-  let idat_bytes = idat_buf.to_bytes()
   write_u32_be(buf, idat_bytes.length().reinterpret_as_uint())
   write_u32_be(buf, ct_idat)
   buf.write_bytes(idat_bytes)
@@ -312,6 +279,41 @@ pub fn encode(
   // Write IEND
   write_chunk(buf, ct_iend, FixedArray::make(0, b'\x00'))
   buf.to_bytes()
+}
+
+///|
+fn zlib_compress_png_data(
+  raw_bytes : Bytes,
+  compression : CompressionLevel,
+) -> Bytes raise PngError {
+  let flate_level : @flate.CompressionLevel = match compression {
+    DefaultCompression => @flate.DefaultCompression
+    NoCompression => @flate.NoCompression
+    BestSpeed => @flate.BestSpeed
+    BestCompression => @flate.BestCompression
+  }
+  let deflater = @zlib.Deflater::new(level=flate_level)
+  let out = @blit.Buffer::new(size_hint=raw_bytes.length())
+  match deflater.encode(Some(raw_bytes[:])) {
+    @zlib.Data(chunk) => out.write_bytesview(chunk)
+    @zlib.Ok | @zlib.End => ()
+    @zlib.Error(e) =>
+      raise PngError::CompressionError(
+        "zlib compression failed: " + e.to_string(),
+      )
+  }
+  loop deflater.encode(None) {
+    @zlib.Data(chunk) => {
+      out.write_bytesview(chunk)
+      continue deflater.encode(None)
+    }
+    @zlib.End | @zlib.Ok => break
+    @zlib.Error(e) =>
+      raise PngError::CompressionError(
+        "zlib compression failed: " + e.to_string(),
+      )
+  }
+  out.to_bytes()
 }
 
 ///|

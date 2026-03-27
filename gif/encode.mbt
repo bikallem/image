@@ -208,19 +208,12 @@ pub fn encode_all(gif : GIF) -> Bytes raise Error {
 }
 
 ///|
-fn resolve_gif_config(
-  gif : GIF,
-) -> (Int, Int, Array[@color.AnyColor]) raise GifError {
+fn resolve_gif_config(gif : GIF) -> (Int, Int, Array[@color.AnyColor]) {
   let mut width = gif.config.width
   let mut height = gif.config.height
   let global_palette = match gif.config.color_model {
-    @color.AnyModel::PaletteModel(p) => p.colors
-    _ =>
-      if width == 0 && height == 0 {
-        []
-      } else {
-        raise GifError::FormatError("GIF color model must be a color.Palette")
-      }
+    @color.AnyModel::PaletteModel(p) if !p.colors.is_empty() => p.colors
+    _ => []
   }
   if width == 0 && height == 0 {
     let first_bounds = gif.image[0].rect

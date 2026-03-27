@@ -681,6 +681,29 @@ test "png_encode_rejects_invalid_image_size" {
 }
 
 ///|
+fn fail_png_compression(
+  _raw_bytes : Bytes,
+  _compression : CompressionLevel,
+) -> Bytes raise PngError {
+  raise PngError::CompressionError("injected compressor failure")
+}
+
+///|
+test "png_encode_surfaces_compression_errors" {
+  let img = @image.new_image_rgba(@image.rect(0, 0, 1, 1))
+  let result = try? encode_with_compressor(
+    @image.AnyImage::RGBA(img),
+    DefaultCompression,
+    fail_png_compression,
+  )
+  match result {
+    Err(PngError::CompressionError(msg)) =>
+      assert_eq(msg, "injected compressor failure")
+    _ => fail("expected compression error")
+  }
+}
+
+///|
 test "png_writer_paletted_bit_depths" {
   let cases = [(2, b'\x01'), (4, b'\x02'), (16, b'\x04'), (17, b'\x08')]
   for entry in cases {

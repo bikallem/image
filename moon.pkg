@@ -1,0 +1,11 @@
+import {
+  "bikallem/image/image" @coreimage,
+  "bikallem/image/png",
+  "bikallem/image/jpeg",
+  "bikallem/image/gif",
+}
+
+import {
+  "moonbitlang/x/fs",
+  "bikallem/image/color",
+} for "wbtest"

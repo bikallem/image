@@ -2,6 +2,7 @@
 pub(all) suberror PngError {
   FormatError(String)
   UnsupportedError(String)
+  CompressionError(String)
   UnexpectedEOF
 } derive(Show)
 

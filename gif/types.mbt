@@ -13,6 +13,8 @@ pub(all) struct GIF {
   loop_count : Int
   disposal : Array[Byte]
   background_index : Byte
+  // In MoonBit, a non-palette or empty-palette color_model means that the GIF
+  // uses per-frame local color tables and has no global color table.
   config : @image.Config
 }
 
