@@ -135,6 +135,6 @@ make callgrind
 
 ## Status
 
-Current module version: `0.1.0`
+Current module version: `0.1.1`
 
 The current work has focused on bringing codec behavior and malformed-input handling in line with vendored Go sources while keeping MoonBit-native APIs for package boundaries and `Bytes`-based codec entry points.
