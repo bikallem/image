@@ -2,7 +2,7 @@
 priv struct Format {
   name : String
   magic : String
-  decode : (Bytes) -> AnyImage raise Error
+  decode : (Bytes) -> &Image raise Error
   decode_config : (Bytes) -> Config raise Error
 }
 
@@ -13,7 +13,7 @@ let formats : Array[Format] = []
 pub fn register_format(
   name : String,
   magic : String,
-  decode : (Bytes) -> AnyImage raise Error,
+  decode : (Bytes) -> &Image raise Error,
   decode_config : (Bytes) -> Config raise Error,
 ) -> Unit {
   formats.push({ name, magic, decode, decode_config })
@@ -43,7 +43,7 @@ fn sniff(data : Bytes) -> Format? {
 }
 
 ///|
-pub fn decode(data : Bytes) -> (AnyImage, String) raise Error {
+pub fn decode(data : Bytes) -> (&Image, String) raise Error {
   guard sniff(data) is Some(f) else {
     raise ImageError::FormatError("unknown format")
   }

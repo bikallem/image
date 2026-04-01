@@ -217,6 +217,46 @@ pub fn ImageNYCbCrA::is_opaque(self : ImageNYCbCrA) -> Bool {
 }
 
 ///|
+pub impl Image for ImageYCbCr with color_model(_self) -> &@color.Model {
+  @color.YCbCrModel::{  }
+}
+
+///|
+pub impl Image for ImageYCbCr with bounds(self) -> Rectangle {
+  self.rect
+}
+
+///|
+pub impl Image for ImageYCbCr with at(self, x, y) -> &@color.Color {
+  self.ycbcr_at(x, y)
+}
+
+///|
+pub impl Image for ImageYCbCr with set(self, _x, _y, _c) -> Unit {
+  ignore(self)
+}
+
+///|
+pub impl Image for ImageNYCbCrA with color_model(_self) -> &@color.Model {
+  @color.NYCbCrAModel::{  }
+}
+
+///|
+pub impl Image for ImageNYCbCrA with bounds(self) -> Rectangle {
+  self.ycbcr.rect
+}
+
+///|
+pub impl Image for ImageNYCbCrA with at(self, x, y) -> &@color.Color {
+  self.nycbcra_at(x, y)
+}
+
+///|
+pub impl Image for ImageNYCbCrA with set(self, _x, _y, _c) -> Unit {
+  ignore(self)
+}
+
+///|
 pub fn new_image_nycbcra(
   r : Rectangle,
   subsample_ratio : YCbCrSubsampleRatio,

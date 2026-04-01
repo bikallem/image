@@ -6,9 +6,9 @@ import {
 }
 
 // Values
-pub let plan9 : ReadOnlyArray[@color.AnyColor]
+pub let plan9 : ReadOnlyArray[&@color.Color]
 
-pub let websafe : ReadOnlyArray[@color.AnyColor]
+pub let websafe : ReadOnlyArray[&@color.Color]
 
 // Errors
 

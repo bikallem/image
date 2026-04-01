@@ -15,6 +15,7 @@ pub fn ImageRGBA::pix_offset(self : ImageRGBA, x : Int, y : Int) -> Int {
 }
 
 ///|
+#borrow(self)
 pub fn ImageRGBA::rgba_at(self : ImageRGBA, x : Int, y : Int) -> @color.RGBA {
   let r = self.rect
   if x < r.min_x || x >= r.max_x || y < r.min_y || y >= r.max_y {
@@ -34,19 +35,18 @@ pub fn ImageRGBA::set(
   self : ImageRGBA,
   x : Int,
   y : Int,
-  c : @color.AnyColor,
+  c : &@color.Color,
 ) -> Unit {
   let r = self.rect
   if x < r.min_x || x >= r.max_x || y < r.min_y || y >= r.max_y {
     return
   }
-  let c1 = @color.AnyModel::RGBAModel.convert(c)
-  guard c1 is @color.AnyColor::RGBA(rgba) else { return }
+  let (cr, cg, cb, ca) = c.rgba()
   let i = self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x) * 4
-  self.pix.unsafe_set(i, rgba.r)
-  self.pix.unsafe_set(i + 1, rgba.g)
-  self.pix.unsafe_set(i + 2, rgba.b)
-  self.pix.unsafe_set(i + 3, rgba.a)
+  self.pix.unsafe_set(i, (cr >> 8).to_byte())
+  self.pix.unsafe_set(i + 1, (cg >> 8).to_byte())
+  self.pix.unsafe_set(i + 2, (cb >> 8).to_byte())
+  self.pix.unsafe_set(i + 3, (ca >> 8).to_byte())
 }
 
 ///|
@@ -65,6 +65,26 @@ pub fn ImageRGBA::set_rgba(
   self.pix.unsafe_set(i + 1, c.g)
   self.pix.unsafe_set(i + 2, c.b)
   self.pix.unsafe_set(i + 3, c.a)
+}
+
+///|
+pub impl Image for ImageRGBA with color_model(_self) -> &@color.Model {
+  @color.RGBAModel::{  }
+}
+
+///|
+pub impl Image for ImageRGBA with bounds(self) -> Rectangle {
+  self.rect
+}
+
+///|
+pub impl Image for ImageRGBA with at(self, x, y) -> &@color.Color {
+  self.rgba_at(x, y)
+}
+
+///|
+pub impl Image for ImageRGBA with set(self, x, y, c) -> Unit {
+  ImageRGBA::set(self, x, y, c)
 }
 
 ///|
@@ -126,6 +146,7 @@ pub fn ImageRGBA64::pix_offset(self : ImageRGBA64, x : Int, y : Int) -> Int {
 }
 
 ///|
+#borrow(self)
 pub fn ImageRGBA64::rgba64_at(
   self : ImageRGBA64,
   x : Int,
@@ -153,23 +174,22 @@ pub fn ImageRGBA64::set(
   self : ImageRGBA64,
   x : Int,
   y : Int,
-  c : @color.AnyColor,
+  c : &@color.Color,
 ) -> Unit {
   let r = self.rect
   if x < r.min_x || x >= r.max_x || y < r.min_y || y >= r.max_y {
     return
   }
-  let c1 = @color.AnyModel::RGBA64Model.convert(c)
-  guard c1 is @color.AnyColor::RGBA64(rgba64) else { return }
+  let (cr, cg, cb, ca) = c.rgba()
   let i = self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x) * 8
-  self.pix.unsafe_set(i, (rgba64.r >> 8).to_byte())
-  self.pix.unsafe_set(i + 1, rgba64.r.to_byte())
-  self.pix.unsafe_set(i + 2, (rgba64.g >> 8).to_byte())
-  self.pix.unsafe_set(i + 3, rgba64.g.to_byte())
-  self.pix.unsafe_set(i + 4, (rgba64.b >> 8).to_byte())
-  self.pix.unsafe_set(i + 5, rgba64.b.to_byte())
-  self.pix.unsafe_set(i + 6, (rgba64.a >> 8).to_byte())
-  self.pix.unsafe_set(i + 7, rgba64.a.to_byte())
+  self.pix.unsafe_set(i, (cr >> 8).to_byte())
+  self.pix.unsafe_set(i + 1, cr.to_byte())
+  self.pix.unsafe_set(i + 2, (cg >> 8).to_byte())
+  self.pix.unsafe_set(i + 3, cg.to_byte())
+  self.pix.unsafe_set(i + 4, (cb >> 8).to_byte())
+  self.pix.unsafe_set(i + 5, cb.to_byte())
+  self.pix.unsafe_set(i + 6, (ca >> 8).to_byte())
+  self.pix.unsafe_set(i + 7, ca.to_byte())
 }
 
 ///|
@@ -192,6 +212,26 @@ pub fn ImageRGBA64::set_rgba64(
   self.pix.unsafe_set(i + 5, c.b.to_byte())
   self.pix.unsafe_set(i + 6, (c.a >> 8).to_byte())
   self.pix.unsafe_set(i + 7, c.a.to_byte())
+}
+
+///|
+pub impl Image for ImageRGBA64 with color_model(_self) -> &@color.Model {
+  @color.RGBA64Model::{  }
+}
+
+///|
+pub impl Image for ImageRGBA64 with bounds(self) -> Rectangle {
+  self.rect
+}
+
+///|
+pub impl Image for ImageRGBA64 with at(self, x, y) -> &@color.Color {
+  self.rgba64_at(x, y)
+}
+
+///|
+pub impl Image for ImageRGBA64 with set(self, x, y, c) -> Unit {
+  ImageRGBA64::set(self, x, y, c)
 }
 
 ///|

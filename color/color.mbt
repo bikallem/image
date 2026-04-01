@@ -143,50 +143,17 @@ pub impl Color for Gray16 with rgba(self) -> (UInt, UInt, UInt, UInt) {
 }
 
 ///|
-/// AnyColor is a closed enum of all standard color types.
-pub(all) enum AnyColor {
-  RGBA(RGBA)
-  RGBA64(RGBA64)
-  NRGBA(NRGBA)
-  NRGBA64(NRGBA64)
-  Alpha(Alpha)
-  Alpha16(Alpha16)
-  Gray(Gray)
-  Gray16(Gray16)
-  YCbCr(YCbCr)
-  NYCbCrA(NYCbCrA)
-  CMYK(CMYK)
-} derive(Eq, Show)
+/// Standard color constants.
+pub let black : Gray16 = { y: 0 }
 
 ///|
-pub impl Color for AnyColor with rgba(self) -> (UInt, UInt, UInt, UInt) {
-  match self {
-    RGBA(c) => c.rgba()
-    RGBA64(c) => c.rgba()
-    NRGBA(c) => c.rgba()
-    NRGBA64(c) => c.rgba()
-    Alpha(c) => c.rgba()
-    Alpha16(c) => c.rgba()
-    Gray(c) => c.rgba()
-    Gray16(c) => c.rgba()
-    YCbCr(c) => c.rgba()
-    NYCbCrA(c) => c.rgba()
-    CMYK(c) => c.rgba()
-  }
-}
+pub let white : Gray16 = { y: 0xffff }
 
 ///|
-/// Standard color constants matching Go's color package.
-pub let black : AnyColor = AnyColor::Gray16({ y: 0 })
+pub let transparent : Alpha16 = { a: 0 }
 
 ///|
-pub let white : AnyColor = AnyColor::Gray16({ y: 0xffff })
-
-///|
-pub let transparent : AnyColor = AnyColor::Alpha16({ a: 0 })
-
-///|
-pub let fully_opaque : AnyColor = AnyColor::Alpha16({ a: 0xffff })
+pub let fully_opaque : Alpha16 = { a: 0xffff }
 
 ///|
 /// sqDiff returns the squared-difference of x and y, shifted by 2 so that
@@ -200,12 +167,19 @@ pub fn sq_diff(x : UInt, y : UInt) -> UInt {
 ///|
 /// Palette is a palette of colors.
 pub(all) struct Palette {
-  colors : Array[AnyColor]
-} derive(Show)
+  colors : Array[&Color]
+}
+
+///|
+pub impl Show for Palette with output(self, logger) {
+  logger.write_string("Palette(")
+  logger.write_string(self.colors.length().to_string())
+  logger.write_string(" colors)")
+}
 
 ///|
 /// Returns the palette color closest to c in Euclidean R,G,B,A space.
-pub fn Palette::convert(self : Palette, c : AnyColor) -> AnyColor? {
+pub fn Palette::convert(self : Palette, c : &Color) -> &Color? {
   if self.colors.is_empty() {
     return None
   }
@@ -214,7 +188,7 @@ pub fn Palette::convert(self : Palette, c : AnyColor) -> AnyColor? {
 
 ///|
 /// Returns the index of the palette color closest to c in Euclidean R,G,B,A space.
-pub fn Palette::index(self : Palette, c : AnyColor) -> Int {
+pub fn Palette::index(self : Palette, c : &Color) -> Int {
   let (cr, cg, cb, ca) = c.rgba()
   let mut ret = 0
   let mut best_sum : UInt = 0xffffffffU

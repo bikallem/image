@@ -385,7 +385,7 @@ fn scale_quant(unscaled : FixedArray[Int], quality : Int) -> FixedArray[Byte] {
 ///|
 /// Encode an image as a baseline JPEG.
 /// quality: 1 (worst) to 100 (best), default 75.
-pub fn encode(img : @image.AnyImage, quality? : Int = 75) -> Bytes raise Error {
+pub fn encode(img : &@image.Image, quality? : Int = 75) -> Bytes raise Error {
   let e = Encoder::new()
   let bounds = img.bounds()
   let width = bounds.dx()
@@ -407,11 +407,8 @@ pub fn encode(img : @image.AnyImage, quality? : Int = 75) -> Bytes raise Error {
   let (chroma_ac_codes, chroma_ac_lens) = build_enc_huffman_table(
     chroma_ac_counts, chroma_ac_symbols,
   )
-  // Determine if grayscale
-  let is_gray = img is @image.AnyImage::Gray(_) ||
-    img is @image.AnyImage::Gray16(_)
-  let num_components = if is_gray { 1 } else { 3 }
-  // Convert image to component planes
+  // Convert image to YCbCr component planes
+  let num_components = 3
   let y_plane = FixedArray::make(width * height, b'\x00')
   let cb_plane = FixedArray::make(width * height, b'\x80')
   let cr_plane = FixedArray::make(width * height, b'\x80')
@@ -420,59 +417,20 @@ pub fn encode(img : @image.AnyImage, quality? : Int = 75) -> Bytes raise Error {
       let ax = bounds.min_x + px
       let ay = bounds.min_y + py
       let idx = py * width + px
-      match img {
-        @image.AnyImage::Gray(g) => y_plane.unsafe_set(idx, g.gray_at(ax, ay).y)
-        @image.AnyImage::Gray16(g) =>
-          y_plane.unsafe_set(idx, (g.gray16_at(ax, ay).y >> 8).to_byte())
-        @image.AnyImage::YCbCr(ycbcr) => {
-          let c = ycbcr.ycbcr_at(ax, ay)
-          y_plane.unsafe_set(idx, c.y)
-          cb_plane.unsafe_set(idx, c.cb)
-          cr_plane.unsafe_set(idx, c.cr)
-        }
-        @image.AnyImage::RGBA(rgba) => {
-          let si = rgba.pix_offset +
-            (ay - rgba.rect.min_y) * rgba.stride +
-            (ax - rgba.rect.min_x) * 4
-          let (yv, cbv, crv) = @color.rgb_to_ycbcr(
-            rgba.pix.unsafe_get(si),
-            rgba.pix.unsafe_get(si + 1),
-            rgba.pix.unsafe_get(si + 2),
-          )
-          y_plane.unsafe_set(idx, yv)
-          cb_plane.unsafe_set(idx, cbv)
-          cr_plane.unsafe_set(idx, crv)
-        }
-        @image.AnyImage::NRGBA(nrgba) => {
-          let si = nrgba.pix_offset +
-            (ay - nrgba.rect.min_y) * nrgba.stride +
-            (ax - nrgba.rect.min_x) * 4
-          let (yv, cbv, crv) = @color.rgb_to_ycbcr(
-            nrgba.pix.unsafe_get(si),
-            nrgba.pix.unsafe_get(si + 1),
-            nrgba.pix.unsafe_get(si + 2),
-          )
-          y_plane.unsafe_set(idx, yv)
-          cb_plane.unsafe_set(idx, cbv)
-          cr_plane.unsafe_set(idx, crv)
-        }
-        _ => {
-          let (rv, gv, bv, av) = img.at(ax, ay).rgba()
-          let (r8, g8, b8) = if av == 0U {
-            (b'\x00', b'\x00', b'\x00')
-          } else {
-            (
-              (rv * 255U / av).to_byte(),
-              (gv * 255U / av).to_byte(),
-              (bv * 255U / av).to_byte(),
-            )
-          }
-          let (yv, cbv, crv) = @color.rgb_to_ycbcr(r8, g8, b8)
-          y_plane.unsafe_set(idx, yv)
-          cb_plane.unsafe_set(idx, cbv)
-          cr_plane.unsafe_set(idx, crv)
-        }
+      let (rv, gv, bv, av) = img.at(ax, ay).rgba()
+      let (r8, g8, b8) = if av == 0U {
+        (b'\x00', b'\x00', b'\x00')
+      } else {
+        (
+          (rv * 255U / av).to_byte(),
+          (gv * 255U / av).to_byte(),
+          (bv * 255U / av).to_byte(),
+        )
       }
+      let (yv, cbv, crv) = @color.rgb_to_ycbcr(r8, g8, b8)
+      y_plane.unsafe_set(idx, yv)
+      cb_plane.unsafe_set(idx, cbv)
+      cr_plane.unsafe_set(idx, crv)
     }
   }
   // SOI
@@ -494,55 +452,38 @@ pub fn encode(img : @image.AnyImage, quality? : Int = 75) -> Bytes raise Error {
   enc_write_raw(e, b'\x00')
   // DQT segments
   write_dqt(e, 0, luma_q)
-  if !is_gray {
-    write_dqt(e, 1, chroma_q)
-  }
+  write_dqt(e, 1, chroma_q)
   // SOF0
   enc_write_marker(e, marker_sof0)
-  let sof_len = if is_gray { 11U } else { 17U }
-  enc_write_u16(e, sof_len)
+  enc_write_u16(e, 17U)
   enc_write_raw(e, b'\x08')
   enc_write_u16(e, height.reinterpret_as_uint())
   enc_write_u16(e, width.reinterpret_as_uint())
   enc_write_raw(e, num_components.to_byte())
-  if is_gray {
-    enc_write_raw(e, b'\x01')
-    enc_write_raw(e, b'\x11')
-    enc_write_raw(e, b'\x00')
-  } else {
-    enc_write_raw(e, b'\x01')
-    enc_write_raw(e, b'\x22')
-    enc_write_raw(e, b'\x00')
-    enc_write_raw(e, b'\x02')
-    enc_write_raw(e, b'\x11')
-    enc_write_raw(e, b'\x01')
-    enc_write_raw(e, b'\x03')
-    enc_write_raw(e, b'\x11')
-    enc_write_raw(e, b'\x01')
-  }
+  enc_write_raw(e, b'\x01')
+  enc_write_raw(e, b'\x22')
+  enc_write_raw(e, b'\x00')
+  enc_write_raw(e, b'\x02')
+  enc_write_raw(e, b'\x11')
+  enc_write_raw(e, b'\x01')
+  enc_write_raw(e, b'\x03')
+  enc_write_raw(e, b'\x11')
+  enc_write_raw(e, b'\x01')
   // DHT segments
   write_dht(e, 0, 0, luma_dc_counts, luma_dc_symbols)
   write_dht(e, 1, 0, luma_ac_counts, luma_ac_symbols)
-  if !is_gray {
-    write_dht(e, 0, 1, chroma_dc_counts, chroma_dc_symbols)
-    write_dht(e, 1, 1, chroma_ac_counts, chroma_ac_symbols)
-  }
+  write_dht(e, 0, 1, chroma_dc_counts, chroma_dc_symbols)
+  write_dht(e, 1, 1, chroma_ac_counts, chroma_ac_symbols)
   // SOS
   enc_write_marker(e, marker_sos)
-  let sos_len = if is_gray { 8U } else { 12U }
-  enc_write_u16(e, sos_len)
+  enc_write_u16(e, 12U)
   enc_write_raw(e, num_components.to_byte())
-  if is_gray {
-    enc_write_raw(e, b'\x01')
-    enc_write_raw(e, b'\x00')
-  } else {
-    enc_write_raw(e, b'\x01')
-    enc_write_raw(e, b'\x00')
-    enc_write_raw(e, b'\x02')
-    enc_write_raw(e, b'\x11')
-    enc_write_raw(e, b'\x03')
-    enc_write_raw(e, b'\x11')
-  }
+  enc_write_raw(e, b'\x01')
+  enc_write_raw(e, b'\x00')
+  enc_write_raw(e, b'\x02')
+  enc_write_raw(e, b'\x11')
+  enc_write_raw(e, b'\x03')
+  enc_write_raw(e, b'\x11')
   enc_write_raw(e, b'\x00') // Ss
   enc_write_raw(e, b'\x3f') // Se
   enc_write_raw(e, b'\x00') // Ah=0, Al=0
@@ -556,11 +497,13 @@ pub fn encode(img : @image.AnyImage, quality? : Int = 75) -> Bytes raise Error {
   // quant tables as Int arrays for encode_block
   let luma_qi = FixedArray::makei(64, fn(i) { luma_q[i].to_int() })
   let chroma_qi = FixedArray::makei(64, fn(i) { chroma_q[i].to_int() })
-  if is_gray {
-    let block_w = (width + 7) / 8
-    let block_h = (height + 7) / 8
-    for by in 0..<block_h {
-      for bx in 0..<block_w {
+  let mcu_w = (width + 15) / 16
+  let mcu_h = (height + 15) / 16
+  for my in 0..<mcu_h {
+    for mx in 0..<mcu_w {
+      for i in 0..<4 {
+        let bx = mx * 2 + (i & 1)
+        let by = my * 2 + (i >> 1)
         extract_block(y_plane, width, height, bx, by, pixels)
         fdct(pixels, block)
         y_dc_pred = encode_block(
@@ -568,35 +511,18 @@ pub fn encode(img : @image.AnyImage, quality? : Int = 75) -> Bytes raise Error {
           luma_ac_lens,
         )
       }
-    }
-  } else {
-    let mcu_w = (width + 15) / 16
-    let mcu_h = (height + 15) / 16
-    for my in 0..<mcu_h {
-      for mx in 0..<mcu_w {
-        for i in 0..<4 {
-          let bx = mx * 2 + (i & 1)
-          let by = my * 2 + (i >> 1)
-          extract_block(y_plane, width, height, bx, by, pixels)
-          fdct(pixels, block)
-          y_dc_pred = encode_block(
-            e, block, luma_qi, y_dc_pred, luma_dc_codes, luma_dc_lens, luma_ac_codes,
-            luma_ac_lens,
-          )
-        }
-        extract_scaled_block_420(cb_plane, width, height, mx, my, chroma_pixels)
-        fdct(chroma_pixels, block)
-        cb_dc_pred = encode_block(
-          e, block, chroma_qi, cb_dc_pred, chroma_dc_codes, chroma_dc_lens, chroma_ac_codes,
-          chroma_ac_lens,
-        )
-        extract_scaled_block_420(cr_plane, width, height, mx, my, chroma_pixels)
-        fdct(chroma_pixels, block)
-        cr_dc_pred = encode_block(
-          e, block, chroma_qi, cr_dc_pred, chroma_dc_codes, chroma_dc_lens, chroma_ac_codes,
-          chroma_ac_lens,
-        )
-      }
+      extract_scaled_block_420(cb_plane, width, height, mx, my, chroma_pixels)
+      fdct(chroma_pixels, block)
+      cb_dc_pred = encode_block(
+        e, block, chroma_qi, cb_dc_pred, chroma_dc_codes, chroma_dc_lens, chroma_ac_codes,
+        chroma_ac_lens,
+      )
+      extract_scaled_block_420(cr_plane, width, height, mx, my, chroma_pixels)
+      fdct(chroma_pixels, block)
+      cr_dc_pred = encode_block(
+        e, block, chroma_qi, cr_dc_pred, chroma_dc_codes, chroma_dc_lens, chroma_ac_codes,
+        chroma_ac_lens,
+      )
     }
   }
   enc_flush_bits(e)

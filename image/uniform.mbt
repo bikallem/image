@@ -1,27 +1,16 @@
 ///|
 pub(all) struct ImageUniform {
-  c : @color.AnyColor
+  c : &@color.Color
+  model : &@color.Model
 }
 
 ///|
-pub fn ImageUniform::color_model(self : ImageUniform) -> @color.AnyModel {
-  match self.c {
-    @color.AnyColor::RGBA(_) => @color.AnyModel::RGBAModel
-    @color.AnyColor::RGBA64(_) => @color.AnyModel::RGBA64Model
-    @color.AnyColor::NRGBA(_) => @color.AnyModel::NRGBAModel
-    @color.AnyColor::NRGBA64(_) => @color.AnyModel::NRGBA64Model
-    @color.AnyColor::Alpha(_) => @color.AnyModel::AlphaModel
-    @color.AnyColor::Alpha16(_) => @color.AnyModel::Alpha16Model
-    @color.AnyColor::Gray(_) => @color.AnyModel::GrayModel
-    @color.AnyColor::Gray16(_) => @color.AnyModel::Gray16Model
-    @color.AnyColor::YCbCr(_) => @color.AnyModel::YCbCrModel
-    @color.AnyColor::NYCbCrA(_) => @color.AnyModel::NYCbCrAModel
-    @color.AnyColor::CMYK(_) => @color.AnyModel::CMYKModel
-  }
+pub impl Image for ImageUniform with color_model(self) -> &@color.Model {
+  self.model
 }
 
 ///|
-pub fn ImageUniform::bounds(_self : ImageUniform) -> Rectangle {
+pub impl Image for ImageUniform with bounds(_self) -> Rectangle {
   {
     min_x: -1000000000,
     min_y: -1000000000,
@@ -31,21 +20,37 @@ pub fn ImageUniform::bounds(_self : ImageUniform) -> Rectangle {
 }
 
 ///|
+pub impl Image for ImageUniform with at(self, _x, _y) -> &@color.Color {
+  self.c
+}
+
+///|
+pub impl Image for ImageUniform with set(self, _x, _y, _c) -> Unit {
+  ignore(self)
+}
+
+///|
 pub fn ImageUniform::is_opaque(self : ImageUniform) -> Bool {
   let (_, _, _, a) = self.c.rgba()
   a == 0xffffU
 }
 
 ///|
-pub let black : ImageUniform = { c: @color.AnyColor::Gray16({ y: 0U }) }
+pub fn ImageUniform::black() -> ImageUniform {
+  { c: @color.Gray16::{ y: 0U }, model: @color.Gray16Model::{  } }
+}
 
 ///|
-pub let white : ImageUniform = { c: @color.AnyColor::Gray16({ y: 0xffffU }) }
+pub fn ImageUniform::white() -> ImageUniform {
+  { c: @color.Gray16::{ y: 0xffffU }, model: @color.Gray16Model::{  } }
+}
 
 ///|
-pub let transparent : ImageUniform = { c: @color.AnyColor::Alpha16({ a: 0U }) }
+pub fn ImageUniform::transparent() -> ImageUniform {
+  { c: @color.Alpha16::{ a: 0U }, model: @color.Alpha16Model::{  } }
+}
 
 ///|
-pub let fully_opaque : ImageUniform = {
-  c: @color.AnyColor::Alpha16({ a: 0xffffU }),
+pub fn ImageUniform::fully_opaque() -> ImageUniform {
+  { c: @color.Alpha16::{ a: 0xffffU }, model: @color.Alpha16Model::{  } }
 }

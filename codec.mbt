@@ -1,7 +1,4 @@
 ///|
-pub type AnyImage = @coreimage.AnyImage
-
-///|
 pub type Config = @coreimage.Config
 
 ///|
@@ -41,7 +38,7 @@ fn is_gif(data : Bytes) -> Bool {
 ///|
 /// Decodes PNG, JPEG, and GIF directly, and otherwise falls back to the
 /// explicit registry in `bikallem/image/image`.
-pub fn decode(data : Bytes) -> (AnyImage, String) raise {
+pub fn decode(data : Bytes) -> (&@coreimage.Image, String) raise {
   if is_png(data) {
     return (@png.decode(data), "png")
   }
@@ -75,7 +72,7 @@ pub fn decode_config(data : Bytes) -> (Config, String) raise {
 pub fn register_format(
   name : String,
   magic : String,
-  decode : (Bytes) -> AnyImage raise Error,
+  decode : (Bytes) -> &@coreimage.Image raise Error,
   decode_config : (Bytes) -> Config raise Error,
 ) -> Unit {
   @coreimage.register_format(name, magic, decode, decode_config)

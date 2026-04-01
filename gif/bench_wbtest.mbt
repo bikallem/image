@@ -7,12 +7,12 @@ test (b : @bench.T) {
   // Encode benchmark with paletted image
   let pal : @color.Palette = {
     colors: Array::makei(256, fn(i) {
-      @color.AnyColor::RGBA({
+      @color.RGBA::{
         r: i.to_byte(),
         g: (255 - i).to_byte(),
         b: b'\x80',
         a: b'\xff',
-      })
+      }
     }),
   }
   let m = @image.new_image_paletted(@image.rect(0, 0, 256, 256), pal)
@@ -21,9 +21,7 @@ test (b : @bench.T) {
       m.set_color_index(x, y, ((x * 17 + y * 13) % 256).to_byte())
     }
   }
-  b.bench(name="encode_paletted", fn() {
-    b.keep(try? encode(@image.AnyImage::Paletted(m)))
-  })
+  b.bench(name="encode_paletted", fn() { b.keep(try? encode(m)) })
   // Encode RGBA via auto-quantization
   let rgba = @image.new_image_rgba(@image.rect(0, 0, 64, 64))
   for y in 0..<64 {
@@ -36,7 +34,5 @@ test (b : @bench.T) {
       })
     }
   }
-  b.bench(name="encode_rgba", fn() {
-    b.keep(try? encode_image(@image.AnyImage::RGBA(rgba)))
-  })
+  b.bench(name="encode_rgba", fn() { b.keep(try? encode_image(rgba)) })
 }

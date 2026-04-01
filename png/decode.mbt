@@ -4,7 +4,7 @@ priv struct ParsedPNG {
   height : Int
   bit_depth : Byte
   color_type : Byte
-  palette : Array[@color.AnyColor]
+  palette : Array[&@color.Color]
   trns : Bytes
   idat : Bytes
   interlace : Byte
@@ -16,7 +16,7 @@ priv struct ParsedPNGConfig {
   height : Int
   bit_depth : Byte
   color_type : Byte
-  palette : Array[@color.AnyColor]
+  palette : Array[&@color.Color]
 }
 
 ///|
@@ -42,7 +42,7 @@ let png_stage_seen_iend = 6
 
 ///|
 /// Decodes a PNG image from raw bytes.
-pub fn decode(data : Bytes) -> @image.AnyImage raise Error {
+pub fn decode(data : Bytes) -> &@image.Image raise Error {
   let parsed = parse_png(data)
   let decompressed = decompress_png_idat(parsed.idat)
   if parsed.interlace == b'\x00' {
@@ -138,12 +138,12 @@ fn validate_png_dimensions(width : Int, height : Int) -> Unit raise PngError {
 }
 
 ///|
-fn opaque_black() -> @color.AnyColor {
-  @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' })
+fn opaque_black() -> &@color.Color {
+  @color.RGBA::{ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' }
 }
 
 ///|
-fn ensure_palette_index(palette : Array[@color.AnyColor], idx : Int) -> Unit {
+fn ensure_palette_index(palette : Array[&@color.Color], idx : Int) -> Unit {
   while palette.length() <= idx {
     palette.push(opaque_black())
   }
@@ -157,7 +157,7 @@ fn parse_png(data : Bytes) -> ParsedPNG raise PngError {
   let mut height = 0
   let mut bit_depth : Byte = b'\x00'
   let mut color_type : Byte = b'\x00'
-  let mut palette : Array[@color.AnyColor] = []
+  let mut palette : Array[&@color.Color] = []
   let mut trns : Bytes = Bytes::new(0)
   let idat_buf = @blit.Buffer::new()
   let mut interlace : Byte = b'\x00'
@@ -237,14 +237,12 @@ fn parse_png(data : Bytes) -> ParsedPNG raise PngError {
         palette = Array::new(capacity=np)
         for i in 0..<np {
           let off = chunk_data_start + i * 3
-          palette.push(
-            @color.AnyColor::RGBA({
-              r: r.data.unsafe_get(off),
-              g: r.data.unsafe_get(off + 1),
-              b: r.data.unsafe_get(off + 2),
-              a: b'\xff',
-            }),
-          )
+          palette.push(@color.RGBA::{
+            r: r.data.unsafe_get(off),
+            g: r.data.unsafe_get(off + 1),
+            b: r.data.unsafe_get(off + 2),
+            a: b'\xff',
+          })
         }
       }
       t if t == ct_trns => {
@@ -325,7 +323,7 @@ fn parse_png_config(data : Bytes) -> ParsedPNGConfig raise PngError {
   let mut height = 0
   let mut bit_depth : Byte = b'\x00'
   let mut color_type : Byte = b'\x00'
-  let mut palette : Array[@color.AnyColor] = []
+  let mut palette : Array[&@color.Color] = []
   let mut stage = png_stage_start
   while true {
     if r.remaining() < 12 {
@@ -399,14 +397,12 @@ fn parse_png_config(data : Bytes) -> ParsedPNGConfig raise PngError {
         palette = Array::new(capacity=np)
         for i in 0..<np {
           let off = chunk_data_start + i * 3
-          palette.push(
-            @color.AnyColor::RGBA({
-              r: r.data.unsafe_get(off),
-              g: r.data.unsafe_get(off + 1),
-              b: r.data.unsafe_get(off + 2),
-              a: b'\xff',
-            }),
-          )
+          palette.push(@color.RGBA::{
+            r: r.data.unsafe_get(off),
+            g: r.data.unsafe_get(off + 1),
+            b: r.data.unsafe_get(off + 2),
+            a: b'\xff',
+          })
         }
       }
       t if t == ct_trns => {
@@ -525,18 +521,15 @@ fn normalize_trns(
 }
 
 ///|
-fn apply_palette_trns(palette : Array[@color.AnyColor], trns : Bytes) -> Unit {
+fn apply_palette_trns(palette : Array[&@color.Color], trns : Bytes) -> Unit {
   for i in 0..<trns.length() {
     let (r, g, b, _) = palette.unsafe_get(i).rgba()
-    palette.unsafe_set(
-      i,
-      @color.AnyColor::RGBA({
-        r: (r >> 8).to_byte(),
-        g: (g >> 8).to_byte(),
-        b: (b >> 8).to_byte(),
-        a: trns.unsafe_get(i),
-      }),
-    )
+    palette.unsafe_set(i, @color.RGBA::{
+      r: (r >> 8).to_byte(),
+      g: (g >> 8).to_byte(),
+      b: (b >> 8).to_byte(),
+      a: trns.unsafe_get(i),
+    })
   }
 }
 
@@ -587,9 +580,9 @@ fn decode_interlaced(
   height : Int,
   bit_depth : Byte,
   color_type : Byte,
-  palette : Array[@color.AnyColor],
+  palette : Array[&@color.Color],
   trns : Bytes,
-) -> @image.AnyImage raise PngError {
+) -> &@image.Image raise PngError {
   let rect : @image.Rectangle = {
     min_x: 0,
     min_y: 0,
@@ -633,18 +626,7 @@ fn decode_interlaced(
         let dst_x = x_off + px * x_stride
         let dst_y = y_off + py * y_stride
         if dst_x < width && dst_y < height {
-          let palette_index = match pass_img {
-            @image.AnyImage::Paletted(img) =>
-              img.color_index_at(px, py).to_int()
-            _ => -1
-          }
-          set_interlaced_pixel(
-            target,
-            dst_x,
-            dst_y,
-            pass_img.at(px, py),
-            palette_index,
-          )
+          set_interlaced_pixel(target, dst_x, dst_y, pass_img.at(px, py), -1)
         }
       }
     }
@@ -657,49 +639,49 @@ fn new_png_target_image(
   rect : @image.Rectangle,
   bit_depth : Byte,
   color_type : Byte,
-  palette : Array[@color.AnyColor],
+  palette : Array[&@color.Color],
   trns : Bytes,
-) -> @image.AnyImage raise PngError {
+) -> &@image.Image raise PngError {
   match color_type {
     t if t == ct_grayscale =>
       if bit_depth == b'\x10' {
         if has_gray_trns(trns) {
-          @image.AnyImage::NRGBA64(@image.new_image_nrgba64(rect))
+          (@image.new_image_nrgba64(rect) : &@image.Image)
         } else {
-          @image.AnyImage::Gray16(@image.new_image_gray16(rect))
+          (@image.new_image_gray16(rect) : &@image.Image)
         }
       } else if has_gray_trns(trns) {
-        @image.AnyImage::NRGBA(@image.new_image_nrgba(rect))
+        (@image.new_image_nrgba(rect) : &@image.Image)
       } else {
-        @image.AnyImage::Gray(@image.new_image_gray(rect))
+        (@image.new_image_gray(rect) : &@image.Image)
       }
     t if t == ct_true_color =>
       if bit_depth == b'\x10' {
         if has_true_color_trns(trns) {
-          @image.AnyImage::NRGBA64(@image.new_image_nrgba64(rect))
+          (@image.new_image_nrgba64(rect) : &@image.Image)
         } else {
-          @image.AnyImage::RGBA64(@image.new_image_rgba64(rect))
+          (@image.new_image_rgba64(rect) : &@image.Image)
         }
       } else if has_true_color_trns(trns) {
-        @image.AnyImage::NRGBA(@image.new_image_nrgba(rect))
+        (@image.new_image_nrgba(rect) : &@image.Image)
       } else {
-        @image.AnyImage::RGBA(@image.new_image_rgba(rect))
+        (@image.new_image_rgba(rect) : &@image.Image)
       }
     t if t == ct_paletted =>
-      @image.AnyImage::Paletted(
-        @image.new_image_paletted(rect, @color.Palette::{ colors: palette }),
-      )
+      (
+        @image.new_image_paletted(rect, @color.Palette::{ colors: palette }) :
+        &@image.Image)
     t if t == ct_grayscale_alpha =>
       if bit_depth == b'\x10' {
-        @image.AnyImage::NRGBA64(@image.new_image_nrgba64(rect))
+        (@image.new_image_nrgba64(rect) : &@image.Image)
       } else {
-        @image.AnyImage::NRGBA(@image.new_image_nrgba(rect))
+        (@image.new_image_nrgba(rect) : &@image.Image)
       }
     t if t == ct_true_color_alpha =>
       if bit_depth == b'\x10' {
-        @image.AnyImage::NRGBA64(@image.new_image_nrgba64(rect))
+        (@image.new_image_nrgba64(rect) : &@image.Image)
       } else {
-        @image.AnyImage::NRGBA(@image.new_image_nrgba(rect))
+        (@image.new_image_nrgba(rect) : &@image.Image)
       }
     _ =>
       raise PngError::UnsupportedError(
@@ -710,61 +692,14 @@ fn new_png_target_image(
 
 ///|
 fn set_interlaced_pixel(
-  target : @image.AnyImage,
+  target : &@image.Image,
   x : Int,
   y : Int,
-  c : @color.AnyColor,
+  c : &@color.Color,
   palette_index : Int,
 ) -> Unit {
-  match target {
-    @image.AnyImage::Gray(img) => {
-      guard @color.AnyModel::GrayModel.convert(c) is @color.AnyColor::Gray(gc) else {
-        return
-      }
-      img.set_gray(x, y, gc)
-    }
-    @image.AnyImage::Gray16(img) => {
-      guard @color.AnyModel::Gray16Model.convert(c)
-        is @color.AnyColor::Gray16(gc) else {
-        return
-      }
-      img.set_gray16(x, y, gc)
-    }
-    @image.AnyImage::RGBA(img) => {
-      guard @color.AnyModel::RGBAModel.convert(c) is @color.AnyColor::RGBA(rc) else {
-        return
-      }
-      img.set_rgba(x, y, rc)
-    }
-    @image.AnyImage::RGBA64(img) => {
-      guard @color.AnyModel::RGBA64Model.convert(c)
-        is @color.AnyColor::RGBA64(rc) else {
-        return
-      }
-      img.set_rgba64(x, y, rc)
-    }
-    @image.AnyImage::NRGBA(img) => {
-      guard @color.AnyModel::NRGBAModel.convert(c) is @color.AnyColor::NRGBA(nc) else {
-        return
-      }
-      img.set_nrgba(x, y, nc)
-    }
-    @image.AnyImage::NRGBA64(img) => {
-      guard @color.AnyModel::NRGBA64Model.convert(c)
-        is @color.AnyColor::NRGBA64(nc) else {
-        return
-      }
-      img.set_nrgba64(x, y, nc)
-    }
-    @image.AnyImage::Paletted(img) =>
-      if palette_index >= 0 {
-        ensure_palette_index(img.palette.colors, palette_index)
-        img.set_color_index(x, y, palette_index.to_byte())
-      } else {
-        img.set(x, y, c)
-      }
-    _ => ()
-  }
+  ignore(palette_index)
+  target.set(x, y, c)
 }
 
 ///|
@@ -784,9 +719,9 @@ fn decode_image(
   height : Int,
   bit_depth : Byte,
   color_type : Byte,
-  palette : Array[@color.AnyColor],
+  palette : Array[&@color.Color],
   trns : Bytes,
-) -> @image.AnyImage raise PngError {
+) -> &@image.Image raise PngError {
   let bpp = bytes_per_pixel(bit_depth, color_type)
   let stride = bytes_per_row(width, bit_depth, color_type)
   if data.length() < height * (stride + 1) {
@@ -831,7 +766,7 @@ fn decode_image(
           }
           @blit.blit_fixed_array(prev_row, 0, cur_row, 0, stride)
         }
-        @image.AnyImage::NRGBA(img)
+        (img : &@image.Image)
       } else {
         let img = @image.new_image_gray(rect)
         for y in 0..<height {
@@ -853,7 +788,7 @@ fn decode_image(
           }
           @blit.blit_fixed_array(prev_row, 0, cur_row, 0, stride)
         }
-        @image.AnyImage::Gray(img)
+        (img : &@image.Image)
       }
     }
     t if t == ct_grayscale && bit_depth == b'\x08' =>
@@ -874,7 +809,7 @@ fn decode_image(
           }
           @blit.blit_fixed_array(prev_row, 0, cur_row, 0, stride)
         }
-        @image.AnyImage::NRGBA(img)
+        (img : &@image.Image)
       } else {
         let img = @image.new_image_gray(rect)
         for y in 0..<height {
@@ -889,7 +824,7 @@ fn decode_image(
           }
           @blit.blit_fixed_array(prev_row, 0, cur_row, 0, stride)
         }
-        @image.AnyImage::Gray(img)
+        (img : &@image.Image)
       }
     t if t == ct_grayscale && bit_depth == b'\x10' =>
       if has_gray_trns(trns) {
@@ -911,7 +846,7 @@ fn decode_image(
           }
           @blit.blit_fixed_array(prev_row, 0, cur_row, 0, stride)
         }
-        @image.AnyImage::NRGBA64(img)
+        (img : &@image.Image)
       } else {
         let img = @image.new_image_gray16(rect)
         for y in 0..<height {
@@ -933,7 +868,7 @@ fn decode_image(
           }
           @blit.blit_fixed_array(prev_row, 0, cur_row, 0, stride)
         }
-        @image.AnyImage::Gray16(img)
+        (img : &@image.Image)
       }
     t if t == ct_true_color && bit_depth == b'\x08' =>
       if has_true_color_trns(trns) {
@@ -961,7 +896,7 @@ fn decode_image(
           }
           @blit.blit_fixed_array(prev_row, 0, cur_row, 0, stride)
         }
-        @image.AnyImage::NRGBA(img)
+        (img : &@image.Image)
       } else {
         let img = @image.new_image_rgba(rect)
         for y in 0..<height {
@@ -980,7 +915,7 @@ fn decode_image(
           }
           @blit.blit_fixed_array(prev_row, 0, cur_row, 0, stride)
         }
-        @image.AnyImage::RGBA(img)
+        (img : &@image.Image)
       }
     t if t == ct_true_color && bit_depth == b'\x10' =>
       if has_true_color_trns(trns) {
@@ -1010,7 +945,7 @@ fn decode_image(
           }
           @blit.blit_fixed_array(prev_row, 0, cur_row, 0, stride)
         }
-        @image.AnyImage::NRGBA64(img)
+        (img : &@image.Image)
       } else {
         let img = @image.new_image_rgba64(rect)
         for y in 0..<height {
@@ -1033,7 +968,7 @@ fn decode_image(
           }
           @blit.blit_fixed_array(prev_row, 0, cur_row, 0, stride)
         }
-        @image.AnyImage::RGBA64(img)
+        (img : &@image.Image)
       }
     t if t == ct_paletted => {
       let pal = @color.Palette::{ colors: palette }
@@ -1079,7 +1014,7 @@ fn decode_image(
         }
         @blit.blit_fixed_array(prev_row, 0, cur_row, 0, stride)
       }
-      @image.AnyImage::Paletted(img)
+      (img : &@image.Image)
     }
     t if t == ct_grayscale_alpha && bit_depth == b'\x08' => {
       let img = @image.new_image_nrgba(rect)
@@ -1097,7 +1032,7 @@ fn decode_image(
         }
         @blit.blit_fixed_array(prev_row, 0, cur_row, 0, stride)
       }
-      @image.AnyImage::NRGBA(img)
+      (img : &@image.Image)
     }
     t if t == ct_grayscale_alpha && bit_depth == b'\x10' => {
       let img = @image.new_image_nrgba64(rect)
@@ -1117,7 +1052,7 @@ fn decode_image(
         }
         @blit.blit_fixed_array(prev_row, 0, cur_row, 0, stride)
       }
-      @image.AnyImage::NRGBA64(img)
+      (img : &@image.Image)
     }
     t if t == ct_true_color_alpha && bit_depth == b'\x08' => {
       let img = @image.new_image_nrgba(rect)
@@ -1138,7 +1073,7 @@ fn decode_image(
         }
         @blit.blit_fixed_array(prev_row, 0, cur_row, 0, stride)
       }
-      @image.AnyImage::NRGBA(img)
+      (img : &@image.Image)
     }
     t if t == ct_true_color_alpha && bit_depth == b'\x10' => {
       let img = @image.new_image_nrgba64(rect)
@@ -1163,7 +1098,7 @@ fn decode_image(
         }
         @blit.blit_fixed_array(prev_row, 0, cur_row, 0, stride)
       }
-      @image.AnyImage::NRGBA64(img)
+      (img : &@image.Image)
     }
     _ =>
       raise PngError::UnsupportedError(
@@ -1263,28 +1198,30 @@ pub fn decode_config(data : Bytes) -> @image.Config raise Error {
 fn png_color_model(
   bit_depth : Byte,
   color_type : Byte,
-  palette : Array[@color.AnyColor],
-) -> @color.AnyModel raise PngError {
+  palette : Array[&@color.Color],
+) -> &@color.Model raise PngError {
   match color_type {
     t if t == ct_grayscale =>
       if bit_depth == b'\x10' {
-        @color.AnyModel::Gray16Model
+        (@color.Gray16Model::{  } : &@color.Model)
       } else {
-        @color.AnyModel::GrayModel
+        (@color.GrayModel::{  } : &@color.Model)
       }
     t if t == ct_true_color =>
       if bit_depth == b'\x10' {
-        @color.AnyModel::RGBA64Model
+        (@color.RGBA64Model::{  } : &@color.Model)
       } else {
-        @color.AnyModel::RGBAModel
+        (@color.RGBAModel::{  } : &@color.Model)
       }
     t if t == ct_paletted =>
-      @color.AnyModel::PaletteModel(@color.Palette::{ colors: palette })
+      (
+        @color.PaletteModel::{ palette: @color.Palette::{ colors: palette } } :
+        &@color.Model)
     t if t == ct_grayscale_alpha || t == ct_true_color_alpha =>
       if bit_depth == b'\x10' {
-        @color.AnyModel::NRGBA64Model
+        (@color.NRGBA64Model::{  } : &@color.Model)
       } else {
-        @color.AnyModel::NRGBAModel
+        (@color.NRGBAModel::{  } : &@color.Model)
       }
     _ =>
       raise PngError::UnsupportedError(

@@ -23,11 +23,11 @@ pub(all) struct GIF {
 /// as MoonBit allows.
 pub(all) struct Options {
   num_colors : Int
-  quantizer : ((@image.AnyImage, Int) -> @color.Palette)?
+  quantizer : ((&@image.Image, Int) -> @color.Palette)?
   drawer : ((
     @image.ImagePaletted,
     @image.Rectangle,
-    @image.AnyImage,
+    &@image.Image,
     @image.Point,
   ) -> Unit)?
 }

@@ -8,21 +8,18 @@ let default_options : Options = {
 ///|
 /// Encodes any image as a GIF using Go-like defaults and optional hooks.
 pub fn encode(
-  img : @image.AnyImage,
+  img : &@image.Image,
   options? : Options = default_options,
 ) -> Bytes raise Error {
   let max_colors = normalize_num_colors(options.num_colors)
-  let paletted = match img {
-    @image.AnyImage::Paletted(p) if p.palette.colors.length() <= max_colors => p
-    _ => quantize_image(img, options)
-  }
+  let paletted = quantize_image(img, options, max_colors)
   encode_paletted(paletted)
 }
 
 ///|
 /// Backward-compatible helper that only overrides the max palette size.
 pub fn encode_image(
-  img : @image.AnyImage,
+  img : &@image.Image,
   n_colors? : Int = 256,
 ) -> Bytes raise Error {
   encode(img, options={ num_colors: n_colors, quantizer: None, drawer: None })
@@ -39,7 +36,7 @@ pub fn encode_paletted(img : @image.ImagePaletted) -> Bytes raise Error {
     disposal: [b'\x00'],
     background_index: b'\x00',
     config: {
-      color_model: @color.AnyModel::PaletteModel(still.palette),
+      color_model: @color.PaletteModel::{ palette: still.palette },
       width: still.rect.dx(),
       height: still.rect.dy(),
     },
@@ -208,11 +205,12 @@ pub fn encode_all(gif : GIF) -> Bytes raise Error {
 }
 
 ///|
-fn resolve_gif_config(gif : GIF) -> (Int, Int, Array[@color.AnyColor]) {
+fn resolve_gif_config(gif : GIF) -> (Int, Int, Array[&@color.Color]) {
   let mut width = gif.config.width
   let mut height = gif.config.height
-  let global_palette = match gif.config.color_model {
-    @color.AnyModel::PaletteModel(p) if !p.colors.is_empty() => p.colors
+  let global_palette : Array[&@color.Color] = match
+    gif.config.color_model.palette() {
+    Some(p) if !p.colors.is_empty() => p.colors
     _ => []
   }
   if width == 0 && height == 0 {
@@ -224,7 +222,7 @@ fn resolve_gif_config(gif : GIF) -> (Int, Int, Array[@color.AnyColor]) {
 }
 
 ///|
-fn find_transparent_index(palette : Array[@color.AnyColor]) -> Int {
+fn find_transparent_index(palette : Array[&@color.Color]) -> Int {
   for i, c in palette {
     let (_, _, _, a) = c.rgba()
     if a == 0U {
@@ -236,8 +234,8 @@ fn find_transparent_index(palette : Array[@color.AnyColor]) -> Int {
 
 ///|
 fn palette_equals(
-  left : Array[@color.AnyColor],
-  right : Array[@color.AnyColor],
+  left : Array[&@color.Color],
+  right : Array[&@color.Color],
   transparent_index : Int,
 ) -> Bool {
   if left.length() < right.length() {
@@ -283,7 +281,7 @@ fn validate_gif_palette_length(n : Int) -> Unit raise GifError {
 ///|
 fn write_color_table(
   buf : @blit.Buffer,
-  palette : Array[@color.AnyColor],
+  palette : Array[&@color.Color],
   size : Int,
 ) -> Unit {
   for i in 0..<size {

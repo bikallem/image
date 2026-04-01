@@ -28,7 +28,12 @@ test "Gray.rgba" {
 
 ///|
 test "model convert RGBA->Gray" {
-  let c = AnyColor::RGBA({ r: b'\xff', g: b'\xff', b: b'\xff', a: b'\xff' })
-  let g = AnyModel::GrayModel.convert(c)
-  inspect(g, content="Gray({y: b'\\xFF'})")
+  let c : RGBA = { r: b'\xff', g: b'\xff', b: b'\xff', a: b'\xff' }
+  let g = GrayModel::{  }.convert(c)
+  let (r, gr, b, a) = g.rgba()
+  // Gray{0xFF} -> rgba() gives (0xFF00|0xFF, ..., 0xFFFF)
+  inspect(r, content="65535")
+  inspect(gr, content="65535")
+  inspect(b, content="65535")
+  inspect(a, content="65535")
 }

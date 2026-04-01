@@ -35,12 +35,8 @@ test "gif_interlaced_pixels_match_reference" {
     for x = interlaced_frame.rect.min_x
         x < interlaced_frame.rect.max_x
         x = x + 1 {
-      let (r1, g1, b1, a1) = @image.AnyImage::Paletted(interlaced_frame)
-        .at(x, y)
-        .rgba()
-      let (r2, g2, b2, a2) = @image.AnyImage::Paletted(normal_frame)
-        .at(x, y)
-        .rgba()
+      let (r1, g1, b1, a1) = interlaced_frame.at(x, y).rgba()
+      let (r2, g2, b2, a2) = normal_frame.at(x, y).rgba()
       assert_eq(r1, r2)
       assert_eq(g1, g2)
       assert_eq(b1, b2)
@@ -68,12 +64,12 @@ test "gif_bounds" {
 test "gif_writer" {
   let pal : @color.Palette = {
     colors: Array::makei(256, fn(i) {
-      @color.AnyColor::RGBA({
+      @color.RGBA::{
         r: i.to_byte(),
         g: (255 - i).to_byte(),
         b: b'\x80',
         a: b'\xff',
-      })
+      }
     }),
   }
   let m = @image.new_image_paletted(@image.rect(0, 0, 32, 32), pal)
@@ -82,7 +78,7 @@ test "gif_writer" {
       m.set_color_index(x, y, ((x + y) % 256).to_byte())
     }
   }
-  let encoded = encode(@image.AnyImage::Paletted(m))
+  let encoded = encode(m)
   let decoded = decode(encoded)
   let b = decoded.bounds()
   assert_eq(b.dx(), 32)
@@ -218,12 +214,10 @@ fn make_gif_with_unknown_extension() -> Bytes raise Error {
 }
 
 ///|
-fn assert_empty_palette_model(
-  color_model : @color.AnyModel,
-) -> Unit raise Error {
-  match color_model {
-    @color.AnyModel::PaletteModel(p) => assert_eq(p.colors.length(), 0)
-    _ => fail("expected empty palette model")
+fn assert_empty_palette_model(color_model : &@color.Model) -> Unit raise Error {
+  match color_model.palette() {
+    Some(p) => assert_eq(p.colors.length(), 0)
+    None => fail("expected empty palette model")
   }
 }
 
@@ -231,12 +225,12 @@ fn assert_empty_palette_model(
 fn make_test_palette(size : Int) -> @color.Palette {
   {
     colors: Array::makei(size, fn(i) {
-      @color.AnyColor::RGBA({
+      @color.RGBA::{
         r: i.to_byte(),
         g: (i * 3).to_byte(),
         b: (i * 7).to_byte(),
         a: b'\xff',
-      })
+      }
     }),
   }
 }
@@ -300,8 +294,8 @@ test "gif_rejects_unknown_extension" {
 test "gif_loop_count" {
   let pal : @color.Palette = {
     colors: [
-      @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' }),
-      @color.AnyColor::RGBA({ r: b'\xff', g: b'\xff', b: b'\xff', a: b'\xff' }),
+      @color.RGBA::{ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' },
+      @color.RGBA::{ r: b'\xff', g: b'\xff', b: b'\xff', a: b'\xff' },
     ],
   }
   let frame = @image.new_image_paletted(@image.rect(0, 0, 1, 1), pal)
@@ -313,7 +307,7 @@ test "gif_loop_count" {
     disposal: [b'\x00', b'\x00'],
     background_index: b'\x00',
     config: {
-      color_model: @color.AnyModel::PaletteModel(pal),
+      color_model: @color.PaletteModel::{ palette: pal },
       width: 1,
       height: 1,
     },
@@ -327,8 +321,8 @@ test "gif_loop_count" {
 test "gif_roundtrip_frame_metadata" {
   let pal1 : @color.Palette = {
     colors: [
-      @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' }),
-      @color.AnyColor::RGBA({ r: b'\xff', g: b'\x00', b: b'\x00', a: b'\xff' }),
+      @color.RGBA::{ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' },
+      @color.RGBA::{ r: b'\xff', g: b'\x00', b: b'\x00', a: b'\xff' },
     ],
   }
   let frame1 = @image.new_image_paletted(@image.rect(0, 0, 4, 4), pal1)
@@ -347,8 +341,8 @@ test "gif_roundtrip_frame_metadata" {
   }
   let pal2 : @color.Palette = {
     colors: [
-      @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\x00' }),
-      @color.AnyColor::RGBA({ r: b'\x00', g: b'\xff', b: b'\x00', a: b'\xff' }),
+      @color.RGBA::{ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\x00' },
+      @color.RGBA::{ r: b'\x00', g: b'\xff', b: b'\x00', a: b'\xff' },
     ],
   }
   let frame2 = @image.new_image_paletted(@image.rect(1, 1, 3, 3), pal2)
@@ -363,7 +357,7 @@ test "gif_roundtrip_frame_metadata" {
     disposal: [disposal_none, disposal_background],
     background_index: b'\x00',
     config: {
-      color_model: @color.AnyModel::PaletteModel(pal1),
+      color_model: @color.PaletteModel::{ palette: pal1 },
       width: 4,
       height: 4,
     },
@@ -375,12 +369,8 @@ test "gif_roundtrip_frame_metadata" {
   assert_eq(decoded.image.length(), 2)
   assert_eq(decoded.image[0].rect, @image.rect(0, 0, 4, 4))
   assert_eq(decoded.image[1].rect, @image.rect(1, 1, 3, 3))
-  let (_, _, _, a0) = @image.AnyImage::Paletted(decoded.image[1])
-    .at(1, 1)
-    .rgba()
-  let (_, g1, _, a1) = @image.AnyImage::Paletted(decoded.image[1])
-    .at(2, 1)
-    .rgba()
+  let (_, _, _, a0) = decoded.image[1].at(1, 1).rgba()
+  let (_, g1, _, a1) = decoded.image[1].at(2, 1).rgba()
   assert_eq(a0, 0U)
   assert_eq(g1, 0xffffU)
   assert_eq(a1, 0xffffU)
@@ -397,7 +387,7 @@ test "gif_encode_zero" {
     disposal: [],
     background_index: b'\x00',
     config: {
-      color_model: @color.AnyModel::PaletteModel({ colors: [] }),
+      color_model: @color.PaletteModel::{ palette: { colors: [] } },
       width: 1,
       height: 1,
     },
@@ -412,12 +402,12 @@ test "gif_palettes" {
   for size in sizes {
     let pal : @color.Palette = {
       colors: Array::makei(size, fn(i) {
-        @color.AnyColor::RGBA({
+        @color.RGBA::{
           r: (i * (256 / size)).to_byte(),
           g: b'\x00',
           b: b'\x00',
           a: b'\xff',
-        })
+        }
       }),
     }
     let m = @image.new_image_paletted(@image.rect(0, 0, 4, 4), pal)
@@ -426,7 +416,7 @@ test "gif_palettes" {
         m.set_color_index(x, y, ((x + y) % size).to_byte())
       }
     }
-    let encoded = encode(@image.AnyImage::Paletted(m))
+    let encoded = encode(m)
     let decoded = decode(encoded)
     assert_eq(decoded.bounds().dx(), 4)
     assert_eq(decoded.bounds().dy(), 4)
@@ -447,7 +437,7 @@ test "gif_encode_rgba" {
       })
     }
   }
-  let encoded = encode_image(@image.AnyImage::RGBA(m))
+  let encoded = encode_image(m)
   let decoded = decode(encoded)
   assert_eq(decoded.bounds().dx(), 16)
   assert_eq(decoded.bounds().dy(), 16)
@@ -480,7 +470,7 @@ test "gif_encode_image_normalizes_non_zero_generic_bounds" {
     let v = (0x22 + i * 0x11).to_byte()
     img.set_rgba(2 + i, 2 + i, { r: v, g: v, b: v, a: b'\xff' })
   }
-  let decoded = decode(encode_image(@image.AnyImage::RGBA(img)))
+  let decoded = decode(encode_image(img))
   assert_eq(decoded.bounds(), @image.rect(0, 0, 6, 6))
   let (r0, _, _, _) = decoded.at(0, 0).rgba()
   let (r1, _, _, _) = decoded.at(5, 5).rgba()
@@ -499,9 +489,7 @@ test "gif_encode_image_requantizes_paletted_sources_to_requested_cap" {
       frame.set_color_index(x, y, ((x + y * 4) % 16).to_byte())
     }
   }
-  let decoded = decode_all(
-    encode_image(@image.AnyImage::Paletted(frame), n_colors=2),
-  )
+  let decoded = decode_all(encode_image(frame, n_colors=2))
   assert_eq(decoded.image.length(), 1)
   assert_eq(decoded.image[0].palette.colors.length(), 2)
 }
@@ -519,7 +507,7 @@ test "gif_encode_image_supports_one_color" {
       })
     }
   }
-  let decoded = decode_all(encode_image(@image.AnyImage::RGBA(img), n_colors=1))
+  let decoded = decode_all(encode_image(img, n_colors=1))
   assert_eq(decoded.image.length(), 1)
   assert_eq(decoded.image[0].rect, @image.rect(0, 0, 3, 2))
   assert_eq(decoded.image[0].palette.colors.length(), 2)
@@ -544,18 +532,8 @@ test "gif_encode_options_custom_quantizer_and_drawer" {
     quantizer: Some(fn(_src, _n_colors) {
       {
         colors: [
-          @color.AnyColor::RGBA({
-            r: b'\x00',
-            g: b'\x00',
-            b: b'\x00',
-            a: b'\xff',
-          }),
-          @color.AnyColor::RGBA({
-            r: b'\xff',
-            g: b'\xff',
-            b: b'\xff',
-            a: b'\xff',
-          }),
+          @color.RGBA::{ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' },
+          @color.RGBA::{ r: b'\xff', g: b'\xff', b: b'\xff', a: b'\xff' },
         ],
       }
     }),
@@ -578,7 +556,7 @@ test "gif_encode_options_custom_quantizer_and_drawer" {
       }
     }),
   }
-  let decoded = decode_all(encode(@image.AnyImage::RGBA(img), options~))
+  let decoded = decode_all(encode(img, options~))
   assert_eq(decoded.image.length(), 1)
   assert_eq(decoded.image[0].palette.colors.length(), 2)
   for y in 0..<2 {
@@ -594,12 +572,12 @@ test "gif_encode_options_custom_quantizer_and_drawer" {
 test "gif_pixel_parity" {
   let pal : @color.Palette = {
     colors: Array::makei(4, fn(i) {
-      @color.AnyColor::RGBA({
+      @color.RGBA::{
         r: (i * 85).to_byte(),
         g: (i * 85).to_byte(),
         b: (i * 85).to_byte(),
         a: b'\xff',
-      })
+      }
     }),
   }
   let m = @image.new_image_paletted(@image.rect(0, 0, 8, 8), pal)
@@ -608,15 +586,15 @@ test "gif_pixel_parity" {
       m.set_color_index(x, y, ((x + y) % 4).to_byte())
     }
   }
-  let encoded = encode(@image.AnyImage::Paletted(m))
+  let encoded = encode(m)
   let decoded = decode_all(encoded)
   assert_true(decoded.image.length() > 0)
   let frame = decoded.image[0]
   // Compare color indices
   for y in 0..<8 {
     for x in 0..<8 {
-      let (r1, g1, b1, a1) = @image.AnyImage::Paletted(m).at(x, y).rgba()
-      let (r2, g2, b2, a2) = @image.AnyImage::Paletted(frame).at(x, y).rgba()
+      let (r1, g1, b1, a1) = m.at(x, y).rgba()
+      let (r2, g2, b2, a2) = frame.at(x, y).rgba()
       assert_eq(r1, r2)
       assert_eq(g1, g2)
       assert_eq(b1, b2)
@@ -650,7 +628,7 @@ test "gif_encode_image" {
       })
     }
   }
-  let encoded = encode_image(@image.AnyImage::RGBA(img))
+  let encoded = encode_image(img)
   let decoded = decode(encoded)
   assert_eq(decoded.bounds().dx(), 8)
   assert_eq(decoded.bounds().dy(), 8)
@@ -669,8 +647,8 @@ test "gif_decode_config" {
 test "gif_decode_config_local_palette_model" {
   let pal : @color.Palette = {
     colors: [
-      @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' }),
-      @color.AnyColor::RGBA({ r: b'\xff', g: b'\xff', b: b'\xff', a: b'\xff' }),
+      @color.RGBA::{ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' },
+      @color.RGBA::{ r: b'\xff', g: b'\xff', b: b'\xff', a: b'\xff' },
     ],
   }
   let frame = @image.new_image_paletted(@image.rect(0, 0, 1, 1), pal)
@@ -682,7 +660,7 @@ test "gif_decode_config_local_palette_model" {
     disposal: [b'\x00'],
     background_index: b'\x00',
     config: {
-      color_model: @color.AnyModel::PaletteModel({ colors: [] }),
+      color_model: @color.PaletteModel::{ palette: { colors: [] } },
       width: 1,
       height: 1,
     },
@@ -697,14 +675,14 @@ test "gif_decode_config_local_palette_model" {
 test "gif_encode_explicit_canvas_without_global_palette" {
   let pal0 : @color.Palette = {
     colors: [
-      @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' }),
-      @color.AnyColor::RGBA({ r: b'\xff', g: b'\x00', b: b'\x00', a: b'\xff' }),
+      @color.RGBA::{ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' },
+      @color.RGBA::{ r: b'\xff', g: b'\x00', b: b'\x00', a: b'\xff' },
     ],
   }
   let pal1 : @color.Palette = {
     colors: [
-      @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' }),
-      @color.AnyColor::RGBA({ r: b'\x00', g: b'\xff', b: b'\x00', a: b'\xff' }),
+      @color.RGBA::{ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' },
+      @color.RGBA::{ r: b'\x00', g: b'\xff', b: b'\x00', a: b'\xff' },
     ],
   }
   let frame0 = @image.new_image_paletted(@image.rect(0, 0, 1, 1), pal0)
@@ -717,7 +695,7 @@ test "gif_encode_explicit_canvas_without_global_palette" {
     loop_count: -1,
     disposal: [],
     background_index: b'\x00',
-    config: { color_model: @color.AnyModel::RGBAModel, width: 2, height: 1 },
+    config: { color_model: @color.RGBAModel::{  }, width: 2, height: 1 },
   })
   let decoded = decode_all(encoded)
   assert_eq(decoded.config.width, 2)
@@ -732,8 +710,8 @@ test "gif_encode_explicit_canvas_without_global_palette" {
 test "gif_encode_defaults_zero_config_from_first_frame" {
   let pal : @color.Palette = {
     colors: [
-      @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' }),
-      @color.AnyColor::RGBA({ r: b'\xff', g: b'\xff', b: b'\xff', a: b'\xff' }),
+      @color.RGBA::{ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' },
+      @color.RGBA::{ r: b'\xff', g: b'\xff', b: b'\xff', a: b'\xff' },
     ],
   }
   let frame = @image.new_image_paletted(@image.rect(2, 3, 5, 7), pal)
@@ -743,7 +721,7 @@ test "gif_encode_defaults_zero_config_from_first_frame" {
     loop_count: -1,
     disposal: [],
     background_index: b'\x00',
-    config: { color_model: @color.AnyModel::RGBAModel, width: 0, height: 0 },
+    config: { color_model: @color.RGBAModel::{  }, width: 0, height: 0 },
   })
   let decoded = decode_all(encoded)
   assert_eq(decoded.config.width, 5)
@@ -754,8 +732,8 @@ test "gif_encode_defaults_zero_config_from_first_frame" {
 test "gif_encode_rejects_mismatched_delay_length" {
   let pal : @color.Palette = {
     colors: [
-      @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' }),
-      @color.AnyColor::RGBA({ r: b'\xff', g: b'\xff', b: b'\xff', a: b'\xff' }),
+      @color.RGBA::{ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' },
+      @color.RGBA::{ r: b'\xff', g: b'\xff', b: b'\xff', a: b'\xff' },
     ],
   }
   let frame = @image.new_image_paletted(@image.rect(0, 0, 1, 1), pal)
@@ -766,7 +744,7 @@ test "gif_encode_rejects_mismatched_delay_length" {
     disposal: [],
     background_index: b'\x00',
     config: {
-      color_model: @color.AnyModel::PaletteModel(pal),
+      color_model: @color.PaletteModel::{ palette: pal },
       width: 1,
       height: 1,
     },
@@ -778,8 +756,8 @@ test "gif_encode_rejects_mismatched_delay_length" {
 test "gif_encode_rejects_mismatched_disposal_length" {
   let pal : @color.Palette = {
     colors: [
-      @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' }),
-      @color.AnyColor::RGBA({ r: b'\xff', g: b'\xff', b: b'\xff', a: b'\xff' }),
+      @color.RGBA::{ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' },
+      @color.RGBA::{ r: b'\xff', g: b'\xff', b: b'\xff', a: b'\xff' },
     ],
   }
   let frame = @image.new_image_paletted(@image.rect(0, 0, 1, 1), pal)
@@ -790,7 +768,7 @@ test "gif_encode_rejects_mismatched_disposal_length" {
     disposal: [b'\x00', b'\x00'],
     background_index: b'\x00',
     config: {
-      color_model: @color.AnyModel::PaletteModel(pal),
+      color_model: @color.PaletteModel::{ palette: pal },
       width: 1,
       height: 1,
     },
@@ -802,8 +780,8 @@ test "gif_encode_rejects_mismatched_disposal_length" {
 test "gif_encode_non_palette_config_model_means_no_global_palette" {
   let pal : @color.Palette = {
     colors: [
-      @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' }),
-      @color.AnyColor::RGBA({ r: b'\xff', g: b'\xff', b: b'\xff', a: b'\xff' }),
+      @color.RGBA::{ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' },
+      @color.RGBA::{ r: b'\xff', g: b'\xff', b: b'\xff', a: b'\xff' },
     ],
   }
   let frame = @image.new_image_paletted(@image.rect(0, 0, 1, 1), pal)
@@ -814,7 +792,7 @@ test "gif_encode_non_palette_config_model_means_no_global_palette" {
     loop_count: -1,
     disposal: [],
     background_index: b'\x00',
-    config: { color_model: @color.AnyModel::RGBAModel, width: 1, height: 1 },
+    config: { color_model: @color.RGBAModel::{  }, width: 1, height: 1 },
   })
   let decoded = decode_all(encoded)
   assert_empty_palette_model(decoded.config.color_model)
@@ -832,7 +810,7 @@ test "gif_encode_rejects_empty_frame_palette" {
     disposal: [],
     background_index: b'\x00',
     config: {
-      color_model: @color.AnyModel::PaletteModel({ colors: [] }),
+      color_model: @color.PaletteModel::{ palette: { colors: [] } },
       width: 1,
       height: 1,
     },
@@ -855,7 +833,7 @@ test "gif_encode_rejects_oversize_global_palette" {
     disposal: [],
     background_index: b'\x00',
     config: {
-      color_model: @color.AnyModel::PaletteModel(pal),
+      color_model: @color.PaletteModel::{ palette: pal },
       width: 1,
       height: 1,
     },
@@ -875,7 +853,7 @@ test "gif_encode_rejects_oversize_local_palette" {
     disposal: [],
     background_index: b'\x00',
     config: {
-      color_model: @color.AnyModel::PaletteModel(make_test_palette(2)),
+      color_model: @color.PaletteModel::{ palette: make_test_palette(2) },
       width: 1,
       height: 1,
     },
@@ -887,8 +865,8 @@ test "gif_encode_rejects_oversize_local_palette" {
 test "gif_encode_rejects_oversize_canvas" {
   let pal : @color.Palette = {
     colors: [
-      @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' }),
-      @color.AnyColor::RGBA({ r: b'\xff', g: b'\xff', b: b'\xff', a: b'\xff' }),
+      @color.RGBA::{ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' },
+      @color.RGBA::{ r: b'\xff', g: b'\xff', b: b'\xff', a: b'\xff' },
     ],
   }
   let frame = @image.new_image_paletted(@image.rect(0, 0, 1, 1), pal)
@@ -900,7 +878,7 @@ test "gif_encode_rejects_oversize_canvas" {
     disposal: [b'\x00'],
     background_index: b'\x00',
     config: {
-      color_model: @color.AnyModel::PaletteModel(pal),
+      color_model: @color.PaletteModel::{ palette: pal },
       width: 1 << 16,
       height: 1,
     },
@@ -912,8 +890,8 @@ test "gif_encode_rejects_oversize_canvas" {
 test "gif_encode_rejects_oversize_block" {
   let pal : @color.Palette = {
     colors: [
-      @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' }),
-      @color.AnyColor::RGBA({ r: b'\xff', g: b'\xff', b: b'\xff', a: b'\xff' }),
+      @color.RGBA::{ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' },
+      @color.RGBA::{ r: b'\xff', g: b'\xff', b: b'\xff', a: b'\xff' },
     ],
   }
   let frame = @image.new_image_paletted(@image.rect(65535, 0, 65536, 1), pal)
@@ -925,7 +903,7 @@ test "gif_encode_rejects_oversize_block" {
     disposal: [b'\x00'],
     background_index: b'\x00',
     config: {
-      color_model: @color.AnyModel::PaletteModel(pal),
+      color_model: @color.PaletteModel::{ palette: pal },
       width: 65535,
       height: 1,
     },
@@ -938,8 +916,8 @@ test "gif_encode_rejects_oversize_block" {
 test "gif_small_palette" {
   let pal : @color.Palette = {
     colors: [
-      @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' }),
-      @color.AnyColor::RGBA({ r: b'\xff', g: b'\xff', b: b'\xff', a: b'\xff' }),
+      @color.RGBA::{ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' },
+      @color.RGBA::{ r: b'\xff', g: b'\xff', b: b'\xff', a: b'\xff' },
     ],
   }
   let m = @image.new_image_paletted(@image.rect(0, 0, 4, 4), pal)
@@ -948,7 +926,7 @@ test "gif_small_palette" {
       m.set_color_index(x, y, ((x + y) % 2).to_byte())
     }
   }
-  let encoded = encode(@image.AnyImage::Paletted(m))
+  let encoded = encode(m)
   let decoded = decode_all(encoded)
   assert_true(decoded.image.length() > 0)
   let frame = decoded.image[0]

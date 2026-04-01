@@ -1,16 +1,11 @@
 ///|
 /// Decodes a GIF image from bytes.
-pub fn decode(data : Bytes) -> @image.AnyImage raise Error {
+pub fn decode(data : Bytes) -> &@image.Image raise Error {
   let gif = decode_gif(data, false)
   if gif.image.is_empty() {
     raise GifError::FormatError("no image data")
   }
-  @image.AnyImage::Paletted(gif.image.unsafe_get(0))
-}
-
-///|
-fn empty_palette_model() -> @color.AnyModel {
-  @color.AnyModel::PaletteModel(@color.Palette::{ colors: [] })
+  gif.image.unsafe_get(0)
 }
 
 ///|
@@ -25,11 +20,9 @@ pub fn decode_config(data : Bytes) -> @image.Config raise Error {
   r.skip(1)
   let has_gct = (packed.to_int() & 0x80) != 0
   let gct_size = 1 << ((packed.to_int() & 0x07) + 1)
-  let color_model = if has_gct {
-    let palette = read_color_table(r, gct_size)
-    @color.AnyModel::PaletteModel(@color.Palette::{ colors: palette })
-  } else {
-    empty_palette_model()
+  let palette = if has_gct { read_color_table(r, gct_size) } else { [] }
+  let color_model : &@color.Model = @color.PaletteModel::{
+    palette: @color.Palette::{ colors: palette },
   }
   { color_model, width, height }
 }
@@ -56,7 +49,7 @@ pub fn decode_all(data : Bytes) -> GIF raise Error {
 
 ///|
 fn finish_gif(
-  global_palette : Array[@color.AnyColor],
+  global_palette : Array[&@color.Color],
   images : Array[@image.ImagePaletted],
   delays : Array[Int],
   loop_count : Int,
@@ -65,10 +58,8 @@ fn finish_gif(
   width : Int,
   height : Int,
 ) -> GIF {
-  let color_model = if !global_palette.is_empty() {
-    @color.AnyModel::PaletteModel(@color.Palette::{ colors: global_palette })
-  } else {
-    empty_palette_model()
+  let color_model : &@color.Model = @color.PaletteModel::{
+    palette: @color.Palette::{ colors: global_palette },
   }
   {
     image: images,
@@ -240,21 +231,20 @@ fn read_application_extension(
 
 ///|
 fn apply_transparent_index(
-  palette : Array[@color.AnyColor],
+  palette : Array[&@color.Color],
   transparent_index : Int,
-) -> Array[@color.AnyColor] {
+) -> Array[&@color.Color] {
   let out = palette.copy()
-  while out.length() <= transparent_index {
-    out.push(
-      @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\x00' }),
-    )
-  }
-  out[transparent_index] = @color.AnyColor::RGBA({
+  let transparent : &@color.Color = @color.RGBA::{
     r: b'\x00',
     g: b'\x00',
     b: b'\x00',
     a: b'\x00',
-  })
+  }
+  while out.length() <= transparent_index {
+    out.push(transparent)
+  }
+  out[transparent_index] = transparent
   out
 }
 
@@ -303,14 +293,14 @@ fn validate_palette_indices(
 fn read_color_table(
   r : GifByteReader,
   size : Int,
-) -> Array[@color.AnyColor] raise GifError {
-  let palette : Array[@color.AnyColor] = Array::new(capacity=size)
+) -> Array[&@color.Color] raise GifError {
+  let palette : Array[&@color.Color] = Array::new(capacity=size)
   for count in 0..<size {
     ignore(count)
     let cr = r.read_byte()
     let cg = r.read_byte()
     let cb = r.read_byte()
-    palette.push(@color.AnyColor::RGBA({ r: cr, g: cg, b: cb, a: b'\xff' }))
+    palette.push(@color.RGBA::{ r: cr, g: cg, b: cb, a: b'\xff' })
   }
   palette
 }

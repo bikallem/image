@@ -35,19 +35,17 @@ test "root_decode_config_builtin_codecs" {
 }
 
 ///|
-fn decode_fake_image(_data : Bytes) -> AnyImage {
-  @coreimage.AnyImage::Gray(
-    @coreimage.new_image_gray(@coreimage.rect(0, 0, 1, 1)),
-  )
+fn decode_fake_image(_data : Bytes) -> &@coreimage.Image {
+  @coreimage.new_image_gray(@coreimage.rect(0, 0, 1, 1))
 }
 
 ///|
 fn decode_fake_config(_data : Bytes) -> Config {
-  { color_model: @color.AnyModel::GrayModel, width: 1, height: 1 }
+  { color_model: @color.GrayModel::{  }, width: 1, height: 1 }
 }
 
 ///|
-fn decode_fake_image_registered(data : Bytes) -> AnyImage raise Error {
+fn decode_fake_image_registered(data : Bytes) -> &@coreimage.Image raise Error {
   if data.length() < 0 {
     raise @coreimage.ImageError::FormatError("unreachable")
   }

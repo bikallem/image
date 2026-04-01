@@ -6,11 +6,11 @@ import {
 }
 
 // Values
-pub fn draw(@image.AnyImage, @image.Rectangle, @image.AnyImage, @image.Point, Op) -> Unit
+pub fn draw(&@image.Image, @image.Rectangle, &@image.Image, @image.Point, Op) -> Unit
 
-pub fn draw_mask(@image.AnyImage, @image.Rectangle, @image.AnyImage, @image.Point, @image.AnyImage?, @image.Point, Op) -> Unit
+pub fn draw_mask(&@image.Image, @image.Rectangle, &@image.Image, @image.Point, &@image.Image?, @image.Point, Op) -> Unit
 
-pub fn floyd_steinberg_draw(@image.ImagePaletted, @image.Rectangle, @image.AnyImage, @image.Point) -> Unit
+pub fn floyd_steinberg_draw(@image.ImagePaletted, @image.Rectangle, &@image.Image, @image.Point) -> Unit
 
 // Errors
 

@@ -38,9 +38,7 @@ test (b : @bench.T) {
       gray_img.set_gray(x, y, { y: (x + y).to_byte() })
     }
   }
-  b.bench(name="encode_gray", fn() {
-    b.keep(try? encode(@image.AnyImage::Gray(gray_img)))
-  })
+  b.bench(name="encode_gray", fn() { b.keep(try? encode(gray_img)) })
   let rgba_img = @image.new_image_rgba(r)
   for y in 0..<480 {
     for x in 0..<640 {
@@ -52,9 +50,7 @@ test (b : @bench.T) {
       })
     }
   }
-  b.bench(name="encode_rgb_opaque", fn() {
-    b.keep(try? encode(@image.AnyImage::RGBA(rgba_img)))
-  })
+  b.bench(name="encode_rgb_opaque", fn() { b.keep(try? encode(rgba_img)) })
   let nrgba_img = @image.new_image_nrgba(r)
   for y in 0..<480 {
     for x in 0..<640 {
@@ -70,17 +66,15 @@ test (b : @bench.T) {
       })
     }
   }
-  b.bench(name="encode_nrgba", fn() {
-    b.keep(try? encode(@image.AnyImage::NRGBA(nrgba_img)))
-  })
+  b.bench(name="encode_nrgba", fn() { b.keep(try? encode(nrgba_img)) })
   let pal_img = @image.new_image_paletted(r, {
     colors: Array::makei(256, fn(i) {
-      @color.AnyColor::RGBA({
+      @color.RGBA::{
         r: i.to_byte(),
         g: (255 - i).to_byte(),
         b: b'\x80',
         a: b'\xff',
-      })
+      }
     }),
   })
   for y in 0..<480 {
@@ -88,7 +82,5 @@ test (b : @bench.T) {
       pal_img.set_color_index(x, y, ((x + y) % 256).to_byte())
     }
   }
-  b.bench(name="encode_paletted", fn() {
-    b.keep(try? encode(@image.AnyImage::Paletted(pal_img)))
-  })
+  b.bench(name="encode_paletted", fn() { b.keep(try? encode(pal_img)) })
 }

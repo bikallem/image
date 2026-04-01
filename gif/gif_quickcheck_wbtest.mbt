@@ -22,10 +22,10 @@ fn qc_gif_byte_at(data : Bytes, index : Int) -> Byte {
 ///|
 let qc_gif_palette : @color.Palette = {
   colors: [
-    @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' }),
-    @color.AnyColor::RGBA({ r: b'\xff', g: b'\x00', b: b'\x00', a: b'\xff' }),
-    @color.AnyColor::RGBA({ r: b'\x00', g: b'\xff', b: b'\x00', a: b'\xff' }),
-    @color.AnyColor::RGBA({ r: b'\x00', g: b'\x00', b: b'\xff', a: b'\xff' }),
+    @color.RGBA::{ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\xff' },
+    @color.RGBA::{ r: b'\xff', g: b'\x00', b: b'\x00', a: b'\xff' },
+    @color.RGBA::{ r: b'\x00', g: b'\xff', b: b'\x00', a: b'\xff' },
+    @color.RGBA::{ r: b'\x00', g: b'\x00', b: b'\xff', a: b'\xff' },
   ],
 }
 

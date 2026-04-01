@@ -166,12 +166,12 @@ test "clip" {
       sp0_expected,
       mp0_expected,
     ) = tc
-    let dst = @image.AnyImage::RGBA(dst0.sub_image(dr))
-    let src = @image.AnyImage::RGBA(src0.sub_image(sr))
-    let mask : @image.AnyImage? = if nil_mask {
+    let dst : &@image.Image = dst0.sub_image(dr)
+    let src : &@image.Image = src0.sub_image(sr)
+    let mask : &@image.Image? = if nil_mask {
       None
     } else {
-      Some(@image.AnyImage::RGBA(mask0.sub_image(mr)))
+      Some(mask0.sub_image(mr))
     }
     let (r_got, sp_got, _mp_got) = clip(dst, r, src, sp, mask, mp)
     assert_true(r_got.eq(r0_expected))
@@ -189,60 +189,35 @@ test "clip" {
 test "fill" {
   for i in 0..<5 {
     let dst = @image.new_image_rgba(@image.rect(0, 0, 10, 10))
-    let (r, c) = match i {
+    let (r, c) : (@image.Rectangle, @color.RGBA) = match i {
       0 =>
         (
           @image.rect(0, 0, 10, 10),
-          @color.AnyColor::RGBA({
-            r: b'\xff',
-            g: b'\x00',
-            b: b'\x00',
-            a: b'\xff',
-          }),
+          { r: b'\xff', g: b'\x00', b: b'\x00', a: b'\xff' },
         )
       1 =>
         (
           @image.rect(3, 3, 7, 7),
-          @color.AnyColor::RGBA({
-            r: b'\x00',
-            g: b'\xff',
-            b: b'\x00',
-            a: b'\xff',
-          }),
+          { r: b'\x00', g: b'\xff', b: b'\x00', a: b'\xff' },
         )
       2 =>
         (
           @image.rect(0, 0, 0, 0),
-          @color.AnyColor::RGBA({
-            r: b'\x00',
-            g: b'\x00',
-            b: b'\xff',
-            a: b'\xff',
-          }),
+          { r: b'\x00', g: b'\x00', b: b'\xff', a: b'\xff' },
         )
       3 =>
         (
           @image.rect(-10, -10, 20, 20),
-          @color.AnyColor::RGBA({
-            r: b'\xff',
-            g: b'\xff',
-            b: b'\x00',
-            a: b'\xff',
-          }),
+          { r: b'\xff', g: b'\xff', b: b'\x00', a: b'\xff' },
         )
       _ =>
         (
           @image.rect(5, 5, 10, 10),
-          @color.AnyColor::RGBA({
-            r: b'\xff',
-            g: b'\x00',
-            b: b'\xff',
-            a: b'\xff',
-          }),
+          { r: b'\xff', g: b'\x00', b: b'\xff', a: b'\xff' },
         )
     }
-    let src = @image.AnyImage::Uniform(@image.ImageUniform::{ c, })
-    draw(@image.AnyImage::RGBA(dst), r, src, r.min(), Src)
+    let src : @image.ImageUniform = { c, model: @color.RGBAModel::{  } }
+    draw(dst, r, src, r.min(), Src)
     // Verify pixels inside r have the fill color
     let (cr, cg, cb, ca) = c.rgba()
     let clipped = r.intersect(@image.rect(0, 0, 10, 10))
@@ -271,13 +246,7 @@ test "non_zero_src_pt" {
   src.set_rgba(0, 1, { r: b'\x00', g: b'\xff', b: b'\x00', a: b'\xff' })
   src.set_rgba(1, 1, { r: b'\xff', g: b'\x00', b: b'\x00', a: b'\xff' })
   let dst = @image.new_image_rgba(@image.rect(0, 0, 1, 1))
-  draw(
-    @image.AnyImage::RGBA(dst),
-    @image.rect(0, 0, 1, 1),
-    @image.AnyImage::RGBA(src),
-    { x: 1, y: 1 },
-    Src,
-  )
+  draw(dst, @image.rect(0, 0, 1, 1), src, { x: 1, y: 1 }, Src)
   let c = dst.rgba_at(0, 0)
   assert_eq(c.r, b'\xff')
   assert_eq(c.g, b'\x00')
@@ -291,15 +260,13 @@ test "floyd_steinberg_checkerboard" {
   // Floyd-Steinberg dithering of 50% gray on a 2-color palette should
   // produce a checkerboard
   let dst = @image.new_image_paletted(b, {
-    colors: [
-      @color.AnyColor::Gray({ y: b'\x00' }),
-      @color.AnyColor::Gray({ y: b'\xff' }),
-    ],
+    colors: [@color.Gray::{ y: b'\x00' }, @color.Gray::{ y: b'\xff' }],
   })
   // Use Gray16{0x7fff} for close-to-50% gray, matching Go's test
-  let src = @image.AnyImage::Uniform(@image.ImageUniform::{
-    c: @color.AnyColor::Gray16({ y: 0x7fff }),
-  })
+  let src : @image.ImageUniform = {
+    c: @color.Gray16::{ y: 0x7fff },
+    model: @color.Gray16Model::{  },
+  }
   floyd_steinberg_draw(dst, b, src, { x: 0, y: 0 })
   let mut n_err = 0
   let mut y = b.min_y
@@ -345,13 +312,7 @@ test "draw_overlap" {
         // Draw region of m onto itself with offset
         let sr = @image.rect(4, 4, 12, 12)
         let dr = sr.add({ x: xoff, y: yoff })
-        draw(
-          @image.AnyImage::RGBA(m),
-          dr,
-          @image.AnyImage::RGBA(m),
-          sr.min(),
-          op,
-        )
+        draw(m, dr, m, sr.min(), op)
         // Just verify it doesn't crash and produces valid pixels
         y = dr.min_y
         while y < dr.max_y {
@@ -380,13 +341,7 @@ test "draw_src_nonpremultiplied" {
   src.set_nrgba(1, 0, { r: b'\x00', g: b'\x00', b: b'\xff', a: b'\x00' }) // transparent blue
   src.set_nrgba(2, 0, { r: b'\x00', g: b'\xff', b: b'\x00', a: b'\xff' }) // opaque green
   let dst = @image.new_image_rgba(@image.rect(0, 0, 3, 1))
-  draw(
-    @image.AnyImage::RGBA(dst),
-    dst.rect,
-    @image.AnyImage::NRGBA(src),
-    { x: 0, y: 0 },
-    Src,
-  )
+  draw(dst, dst.rect, src, { x: 0, y: 0 }, Src)
   // transparent src with Src op should set dst to transparent (a=0)
   let c0 = dst.rgba_at(0, 0)
   assert_eq(c0.a, b'\x00')

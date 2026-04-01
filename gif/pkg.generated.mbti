@@ -7,7 +7,7 @@ import {
 }
 
 // Values
-pub fn decode(Bytes) -> @image.AnyImage raise
+pub fn decode(Bytes) -> &@image.Image raise
 
 pub fn decode_all(Bytes) -> GIF raise
 
@@ -19,11 +19,11 @@ pub let disposal_none : Byte
 
 pub let disposal_previous : Byte
 
-pub fn encode(@image.AnyImage, options? : Options) -> Bytes raise
+pub fn encode(&@image.Image, options? : Options) -> Bytes raise
 
 pub fn encode_all(GIF) -> Bytes raise
 
-pub fn encode_image(@image.AnyImage, n_colors? : Int) -> Bytes raise
+pub fn encode_image(&@image.Image, n_colors? : Int) -> Bytes raise
 
 pub fn encode_paletted(@image.ImagePaletted) -> Bytes raise
 
@@ -46,8 +46,8 @@ pub(all) struct GIF {
 
 pub(all) struct Options {
   num_colors : Int
-  quantizer : ((@image.AnyImage, Int) -> @color.Palette)?
-  drawer : ((@image.ImagePaletted, @image.Rectangle, @image.AnyImage, @image.Point) -> Unit)?
+  quantizer : ((&@image.Image, Int) -> @color.Palette)?
+  drawer : ((@image.ImagePaletted, @image.Rectangle, &@image.Image, @image.Point) -> Unit)?
 }
 
 // Type aliases

@@ -31,7 +31,7 @@ fn diffuse(
 pub fn floyd_steinberg_draw(
   dst : @image.ImagePaletted,
   r : @image.Rectangle,
-  src : @image.AnyImage,
+  src : &@image.Image,
   sp : @image.Point,
 ) -> Unit {
   if r.empty() || dst.palette.colors.is_empty() {
@@ -59,7 +59,7 @@ pub fn floyd_steinberg_draw(
       let ea = clamp16(
         sa.reinterpret_as_int() + quant_err_cur.unsafe_get(ei + 3),
       )
-      let wanted = @color.AnyColor::RGBA64({ r: er, g: eg, b: eb, a: ea })
+      let wanted : @color.RGBA64 = { r: er, g: eg, b: eb, a: ea }
       let idx = dst.palette.index(wanted)
       dst.set_color_index(x, y, idx.to_byte())
       let (pr, pg, pb, pa) = dst.palette.colors.unsafe_get(idx).rgba()

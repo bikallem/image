@@ -51,19 +51,43 @@ pub fn ImageCMYK::set(
   self : ImageCMYK,
   x : Int,
   y : Int,
-  c : @color.AnyColor,
+  c : &@color.Color,
 ) -> Unit {
   let r = self.rect
   if x < r.min_x || x >= r.max_x || y < r.min_y || y >= r.max_y {
     return
   }
-  let c1 = @color.AnyModel::CMYKModel.convert(c)
-  guard c1 is @color.AnyColor::CMYK(cc) else { return }
+  let (cr, cg, cb, _) = c.rgba()
+  let (cc, mm, yy, kk) = @color.rgb_to_cmyk(
+    (cr >> 8).to_byte(),
+    (cg >> 8).to_byte(),
+    (cb >> 8).to_byte(),
+  )
   let i = self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x) * 4
-  self.pix.unsafe_set(i, cc.c)
-  self.pix.unsafe_set(i + 1, cc.m)
-  self.pix.unsafe_set(i + 2, cc.y)
-  self.pix.unsafe_set(i + 3, cc.k)
+  self.pix.unsafe_set(i, cc)
+  self.pix.unsafe_set(i + 1, mm)
+  self.pix.unsafe_set(i + 2, yy)
+  self.pix.unsafe_set(i + 3, kk)
+}
+
+///|
+pub impl Image for ImageCMYK with color_model(_self) -> &@color.Model {
+  @color.CMYKModel::{  }
+}
+
+///|
+pub impl Image for ImageCMYK with bounds(self) -> Rectangle {
+  self.rect
+}
+
+///|
+pub impl Image for ImageCMYK with at(self, x, y) -> &@color.Color {
+  self.cmyk_at(x, y)
+}
+
+///|
+pub impl Image for ImageCMYK with set(self, x, y, c) -> Unit {
+  ImageCMYK::set(self, x, y, c)
 }
 
 ///|

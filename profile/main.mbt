@@ -112,9 +112,7 @@ fn main {
   @fs.write_bytes_to_file("testdata/roundtrip_moonbit.png", png_enc) catch {
     _ => ()
   }
-  let jpeg_enc = @jpeg.encode(
-    @image.AnyImage::RGBA(@image.new_image_rgba(@image.rect(0, 0, 32, 32))),
-  ) catch {
+  let jpeg_enc = @jpeg.encode(@image.new_image_rgba(@image.rect(0, 0, 32, 32))) catch {
     _ => Bytes::new(0)
   }
   @fs.write_bytes_to_file("testdata/roundtrip_moonbit.jpeg", jpeg_enc) catch {
@@ -122,12 +120,12 @@ fn main {
   }
   let pal : @color.Palette = {
     colors: Array::makei(256, fn(i) {
-      @color.AnyColor::RGBA({
+      @color.RGBA::{
         r: i.to_byte(),
         g: i.to_byte(),
         b: i.to_byte(),
         a: b'\xff',
-      })
+      }
     }),
   }
   let pal_img = @image.new_image_paletted(@image.rect(0, 0, 32, 32), pal)
@@ -136,9 +134,7 @@ fn main {
       pal_img.set_color_index(x, y, ((x + y) % 256).to_byte())
     }
   }
-  let gif_enc = @gif.encode(@image.AnyImage::Paletted(pal_img)) catch {
-    _ => Bytes::new(0)
-  }
+  let gif_enc = @gif.encode(pal_img) catch { _ => Bytes::new(0) }
   if gif_enc.length() > 0 {
     @fs.write_bytes_to_file("testdata/roundtrip_moonbit.gif", gif_enc) catch {
       _ => ()

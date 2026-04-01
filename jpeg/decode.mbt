@@ -1,6 +1,6 @@
 ///|
 /// Decodes a JPEG image from raw bytes.
-pub fn decode(data : Bytes) -> @image.AnyImage raise Error {
+pub fn decode(data : Bytes) -> &@image.Image raise Error {
   let d = Decoder::new(data)
   decode_jpeg(d)
 }
@@ -95,16 +95,16 @@ fn reject_unknown_marker(marker : UInt) -> Unit raise JpegError {
 }
 
 ///|
-fn jpeg_color_model(d : Decoder) -> @color.AnyModel raise JpegError {
+fn jpeg_color_model(d : Decoder) -> &@color.Model raise JpegError {
   match d.num_components {
-    1 => @color.AnyModel::GrayModel
+    1 => @color.GrayModel::{  } as &@color.Model
     3 =>
       if is_rgb_jpeg(d) {
-        @color.AnyModel::RGBAModel
+        @color.RGBAModel::{  } as &@color.Model
       } else {
-        @color.AnyModel::YCbCrModel
+        @color.YCbCrModel::{  } as &@color.Model
       }
-    4 => @color.AnyModel::CMYKModel
+    4 => @color.CMYKModel::{  } as &@color.Model
     _ => raise JpegError::FormatError("missing SOF marker")
   }
 }
@@ -170,7 +170,7 @@ fn process_app14_marker(d : Decoder) -> Unit raise JpegError {
 
 ///|
 /// Main JPEG decode function.
-fn decode_jpeg(d : Decoder) -> @image.AnyImage raise JpegError {
+fn decode_jpeg(d : Decoder) -> &@image.Image raise JpegError {
   let soi = read_marker(d)
   if soi != marker_soi {
     raise JpegError::FormatError("missing SOI marker")

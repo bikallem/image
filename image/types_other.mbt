@@ -14,6 +14,7 @@ pub fn ImageNRGBA::pix_offset(self : ImageNRGBA, x : Int, y : Int) -> Int {
 }
 
 ///|
+#borrow(self)
 pub fn ImageNRGBA::nrgba_at(
   self : ImageNRGBA,
   x : Int,
@@ -71,19 +72,53 @@ pub fn ImageNRGBA::set(
   self : ImageNRGBA,
   x : Int,
   y : Int,
-  c : @color.AnyColor,
+  c : &@color.Color,
 ) -> Unit {
   let r = self.rect
   if x < r.min_x || x >= r.max_x || y < r.min_y || y >= r.max_y {
     return
   }
-  let c1 = @color.AnyModel::NRGBAModel.convert(c)
-  guard c1 is @color.AnyColor::NRGBA(nc) else { return }
+  let (cr, cg, cb, ca) = c.rgba()
   let i = self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x) * 4
-  self.pix.unsafe_set(i, nc.r)
-  self.pix.unsafe_set(i + 1, nc.g)
-  self.pix.unsafe_set(i + 2, nc.b)
-  self.pix.unsafe_set(i + 3, nc.a)
+  if ca == 0xffffU {
+    self.pix.unsafe_set(i, (cr >> 8).to_byte())
+    self.pix.unsafe_set(i + 1, (cg >> 8).to_byte())
+    self.pix.unsafe_set(i + 2, (cb >> 8).to_byte())
+    self.pix.unsafe_set(i + 3, b'\xff')
+  } else if ca == 0U {
+    self.pix.unsafe_set(i, b'\x00')
+    self.pix.unsafe_set(i + 1, b'\x00')
+    self.pix.unsafe_set(i + 2, b'\x00')
+    self.pix.unsafe_set(i + 3, b'\x00')
+  } else {
+    let nr = cr * 0xffffU / ca
+    let ng = cg * 0xffffU / ca
+    let nb = cb * 0xffffU / ca
+    self.pix.unsafe_set(i, (nr >> 8).to_byte())
+    self.pix.unsafe_set(i + 1, (ng >> 8).to_byte())
+    self.pix.unsafe_set(i + 2, (nb >> 8).to_byte())
+    self.pix.unsafe_set(i + 3, (ca >> 8).to_byte())
+  }
+}
+
+///|
+pub impl Image for ImageNRGBA with color_model(_self) -> &@color.Model {
+  @color.NRGBAModel::{  }
+}
+
+///|
+pub impl Image for ImageNRGBA with bounds(self) -> Rectangle {
+  self.rect
+}
+
+///|
+pub impl Image for ImageNRGBA with at(self, x, y) -> &@color.Color {
+  self.nrgba_at(x, y)
+}
+
+///|
+pub impl Image for ImageNRGBA with set(self, x, y, c) -> Unit {
+  ImageNRGBA::set(self, x, y, c)
 }
 
 ///|
@@ -128,6 +163,7 @@ pub fn ImageNRGBA64::pix_offset(self : ImageNRGBA64, x : Int, y : Int) -> Int {
 }
 
 ///|
+#borrow(self)
 pub fn ImageNRGBA64::nrgba64_at(
   self : ImageNRGBA64,
   x : Int,
@@ -177,15 +213,60 @@ pub fn ImageNRGBA64::set(
   self : ImageNRGBA64,
   x : Int,
   y : Int,
-  c : @color.AnyColor,
+  c : &@color.Color,
 ) -> Unit {
   let r = self.rect
   if x < r.min_x || x >= r.max_x || y < r.min_y || y >= r.max_y {
     return
   }
-  let c1 = @color.AnyModel::NRGBA64Model.convert(c)
-  guard c1 is @color.AnyColor::NRGBA64(nc) else { return }
-  self.set_nrgba64(x, y, nc)
+  let (cr, cg, cb, ca) = c.rgba()
+  let i = self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x) * 8
+  if ca == 0xffffU {
+    self.pix.unsafe_set(i, (cr >> 8).to_byte())
+    self.pix.unsafe_set(i + 1, cr.to_byte())
+    self.pix.unsafe_set(i + 2, (cg >> 8).to_byte())
+    self.pix.unsafe_set(i + 3, cg.to_byte())
+    self.pix.unsafe_set(i + 4, (cb >> 8).to_byte())
+    self.pix.unsafe_set(i + 5, cb.to_byte())
+    self.pix.unsafe_set(i + 6, b'\xff')
+    self.pix.unsafe_set(i + 7, b'\xff')
+  } else if ca == 0U {
+    for j in 0..<8 {
+      self.pix.unsafe_set(i + j, b'\x00')
+    }
+  } else {
+    let nr = cr * 0xffffU / ca
+    let ng = cg * 0xffffU / ca
+    let nb = cb * 0xffffU / ca
+    self.pix.unsafe_set(i, (nr >> 8).to_byte())
+    self.pix.unsafe_set(i + 1, nr.to_byte())
+    self.pix.unsafe_set(i + 2, (ng >> 8).to_byte())
+    self.pix.unsafe_set(i + 3, ng.to_byte())
+    self.pix.unsafe_set(i + 4, (nb >> 8).to_byte())
+    self.pix.unsafe_set(i + 5, nb.to_byte())
+    self.pix.unsafe_set(i + 6, (ca >> 8).to_byte())
+    self.pix.unsafe_set(i + 7, ca.to_byte())
+  }
+}
+
+///|
+pub impl Image for ImageNRGBA64 with color_model(_self) -> &@color.Model {
+  @color.NRGBA64Model::{  }
+}
+
+///|
+pub impl Image for ImageNRGBA64 with bounds(self) -> Rectangle {
+  self.rect
+}
+
+///|
+pub impl Image for ImageNRGBA64 with at(self, x, y) -> &@color.Color {
+  self.nrgba64_at(x, y)
+}
+
+///|
+pub impl Image for ImageNRGBA64 with set(self, x, y, c) -> Unit {
+  ImageNRGBA64::set(self, x, y, c)
 }
 
 ///|
@@ -231,6 +312,7 @@ pub fn ImageAlpha::pix_offset(self : ImageAlpha, x : Int, y : Int) -> Int {
 }
 
 ///|
+#borrow(self)
 pub fn ImageAlpha::alpha_at(
   self : ImageAlpha,
   x : Int,
@@ -282,18 +364,37 @@ pub fn ImageAlpha::set(
   self : ImageAlpha,
   x : Int,
   y : Int,
-  c : @color.AnyColor,
+  c : &@color.Color,
 ) -> Unit {
   let r = self.rect
   if x < r.min_x || x >= r.max_x || y < r.min_y || y >= r.max_y {
     return
   }
-  let c1 = @color.AnyModel::AlphaModel.convert(c)
-  guard c1 is @color.AnyColor::Alpha(ac) else { return }
+  let (_, _, _, a) = c.rgba()
   self.pix.unsafe_set(
     self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x),
-    ac.a,
+    (a >> 8).to_byte(),
   )
+}
+
+///|
+pub impl Image for ImageAlpha with color_model(_self) -> &@color.Model {
+  @color.AlphaModel::{  }
+}
+
+///|
+pub impl Image for ImageAlpha with bounds(self) -> Rectangle {
+  self.rect
+}
+
+///|
+pub impl Image for ImageAlpha with at(self, x, y) -> &@color.Color {
+  self.alpha_at(x, y)
+}
+
+///|
+pub impl Image for ImageAlpha with set(self, x, y, c) -> Unit {
+  ImageAlpha::set(self, x, y, c)
 }
 
 ///|
@@ -338,6 +439,7 @@ pub fn ImageAlpha16::pix_offset(self : ImageAlpha16, x : Int, y : Int) -> Int {
 }
 
 ///|
+#borrow(self)
 pub fn ImageAlpha16::alpha16_at(
   self : ImageAlpha16,
   x : Int,
@@ -375,15 +477,36 @@ pub fn ImageAlpha16::set(
   self : ImageAlpha16,
   x : Int,
   y : Int,
-  c : @color.AnyColor,
+  c : &@color.Color,
 ) -> Unit {
   let r = self.rect
   if x < r.min_x || x >= r.max_x || y < r.min_y || y >= r.max_y {
     return
   }
-  let c1 = @color.AnyModel::Alpha16Model.convert(c)
-  guard c1 is @color.AnyColor::Alpha16(ac) else { return }
-  self.set_alpha16(x, y, ac)
+  let (_, _, _, a) = c.rgba()
+  let i = self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x) * 2
+  self.pix.unsafe_set(i, (a >> 8).to_byte())
+  self.pix.unsafe_set(i + 1, a.to_byte())
+}
+
+///|
+pub impl Image for ImageAlpha16 with color_model(_self) -> &@color.Model {
+  @color.Alpha16Model::{  }
+}
+
+///|
+pub impl Image for ImageAlpha16 with bounds(self) -> Rectangle {
+  self.rect
+}
+
+///|
+pub impl Image for ImageAlpha16 with at(self, x, y) -> &@color.Color {
+  self.alpha16_at(x, y)
+}
+
+///|
+pub impl Image for ImageAlpha16 with set(self, x, y, c) -> Unit {
+  ImageAlpha16::set(self, x, y, c)
 }
 
 ///|
@@ -429,6 +552,7 @@ pub fn ImageGray::pix_offset(self : ImageGray, x : Int, y : Int) -> Int {
 }
 
 ///|
+#borrow(self)
 pub fn ImageGray::gray_at(self : ImageGray, x : Int, y : Int) -> @color.Gray {
   let r = self.rect
   if x < r.min_x || x >= r.max_x || y < r.min_y || y >= r.max_y {
@@ -460,18 +584,38 @@ pub fn ImageGray::set(
   self : ImageGray,
   x : Int,
   y : Int,
-  c : @color.AnyColor,
+  c : &@color.Color,
 ) -> Unit {
   let r = self.rect
   if x < r.min_x || x >= r.max_x || y < r.min_y || y >= r.max_y {
     return
   }
-  let c1 = @color.AnyModel::GrayModel.convert(c)
-  guard c1 is @color.AnyColor::Gray(gc) else { return }
+  let (cr, cg, cb, _) = c.rgba()
+  let yy = (19595U * cr + 38470U * cg + 7471U * cb + (1U << 15)) >> 24
   self.pix.unsafe_set(
     self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x),
-    gc.y,
+    yy.to_byte(),
   )
+}
+
+///|
+pub impl Image for ImageGray with color_model(_self) -> &@color.Model {
+  @color.GrayModel::{  }
+}
+
+///|
+pub impl Image for ImageGray with bounds(self) -> Rectangle {
+  self.rect
+}
+
+///|
+pub impl Image for ImageGray with at(self, x, y) -> &@color.Color {
+  self.gray_at(x, y)
+}
+
+///|
+pub impl Image for ImageGray with set(self, x, y, c) -> Unit {
+  ImageGray::set(self, x, y, c)
 }
 
 ///|
@@ -516,6 +660,7 @@ pub fn ImageGray16::pix_offset(self : ImageGray16, x : Int, y : Int) -> Int {
 }
 
 ///|
+#borrow(self)
 pub fn ImageGray16::gray16_at(
   self : ImageGray16,
   x : Int,
@@ -553,15 +698,37 @@ pub fn ImageGray16::set(
   self : ImageGray16,
   x : Int,
   y : Int,
-  c : @color.AnyColor,
+  c : &@color.Color,
 ) -> Unit {
   let r = self.rect
   if x < r.min_x || x >= r.max_x || y < r.min_y || y >= r.max_y {
     return
   }
-  let c1 = @color.AnyModel::Gray16Model.convert(c)
-  guard c1 is @color.AnyColor::Gray16(gc) else { return }
-  self.set_gray16(x, y, gc)
+  let (cr, cg, cb, _) = c.rgba()
+  let yy = (19595U * cr + 38470U * cg + 7471U * cb + (1U << 15)) >> 16
+  let i = self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x) * 2
+  self.pix.unsafe_set(i, (yy >> 8).to_byte())
+  self.pix.unsafe_set(i + 1, yy.to_byte())
+}
+
+///|
+pub impl Image for ImageGray16 with color_model(_self) -> &@color.Model {
+  @color.Gray16Model::{  }
+}
+
+///|
+pub impl Image for ImageGray16 with bounds(self) -> Rectangle {
+  self.rect
+}
+
+///|
+pub impl Image for ImageGray16 with at(self, x, y) -> &@color.Color {
+  self.gray16_at(x, y)
+}
+
+///|
+pub impl Image for ImageGray16 with set(self, x, y, c) -> Unit {
+  ImageGray16::set(self, x, y, c)
 }
 
 ///|
@@ -609,14 +776,9 @@ pub fn ImagePaletted::at(
   self : ImagePaletted,
   x : Int,
   y : Int,
-) -> @color.AnyColor {
+) -> &@color.Color {
   if self.palette.colors.is_empty() {
-    return @color.AnyColor::RGBA({
-      r: b'\x00',
-      g: b'\x00',
-      b: b'\x00',
-      a: b'\x00',
-    })
+    return @color.RGBA::{ r: b'\x00', g: b'\x00', b: b'\x00', a: b'\x00' }
   }
   let r = self.rect
   if x < r.min_x || x >= r.max_x || y < r.min_y || y >= r.max_y {
@@ -665,7 +827,7 @@ pub fn ImagePaletted::set(
   self : ImagePaletted,
   x : Int,
   y : Int,
-  c : @color.AnyColor,
+  c : &@color.Color,
 ) -> Unit {
   let r = self.rect
   if x < r.min_x || x >= r.max_x || y < r.min_y || y >= r.max_y {
@@ -676,6 +838,26 @@ pub fn ImagePaletted::set(
     self.pix_offset + (y - r.min_y) * self.stride + (x - r.min_x),
     idx.to_byte(),
   )
+}
+
+///|
+pub impl Image for ImagePaletted with color_model(self) -> &@color.Model {
+  @color.PaletteModel::{ palette: self.palette }
+}
+
+///|
+pub impl Image for ImagePaletted with bounds(self) -> Rectangle {
+  self.rect
+}
+
+///|
+pub impl Image for ImagePaletted with at(self, x, y) -> &@color.Color {
+  ImagePaletted::at(self, x, y)
+}
+
+///|
+pub impl Image for ImagePaletted with set(self, x, y, c) -> Unit {
+  ImagePaletted::set(self, x, y, c)
 }
 
 ///|

@@ -1,8 +1,6 @@
 import {
   "bikallem/image/image",
   "bikallem/image/color",
-  "bikallem/image/internal/imageutil",
-  "bikallem/blit",
 }
 
 import {

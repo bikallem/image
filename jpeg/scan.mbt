@@ -381,7 +381,7 @@ fn read_bit(d : Decoder) -> Bool raise JpegError {
 
 ///|
 /// Reconstruct the full image from progressive coefficients.
-fn reconstruct_coefficients(d : Decoder) -> @image.AnyImage raise JpegError {
+fn reconstruct_coefficients(d : Decoder) -> &@image.Image raise JpegError {
   let (max_h, max_v) = max_sampling(d)
   let mcu_cols = (d.width + max_h * 8 - 1) / (max_h * 8)
   let mcu_rows = (d.height + max_v * 8 - 1) / (max_v * 8)
@@ -457,7 +457,7 @@ fn reconstruct_coefficients(d : Decoder) -> @image.AnyImage raise JpegError {
         )
       }
     }
-    @image.AnyImage::Gray(img)
+    (img : &@image.Image)
   } else {
     build_output_image(d, comp_data, comp_width, comp_height, rect)
   }
@@ -470,7 +470,7 @@ fn build_output_image(
   comp_width : FixedArray[Int],
   comp_height : FixedArray[Int],
   rect : @image.Rectangle,
-) -> @image.AnyImage raise JpegError {
+) -> &@image.Image raise JpegError {
   if d.num_components == 4 {
     components_to_cmyk(d, comp_data, comp_width, rect)
   } else if is_rgb_jpeg(d) {
@@ -536,7 +536,7 @@ fn components_to_ycbcr(
   comp_width : FixedArray[Int],
   comp_height : FixedArray[Int],
   rect : @image.Rectangle,
-) -> @image.AnyImage raise JpegError {
+) -> &@image.Image raise JpegError {
   if is_flex_ycbcr(d) {
     return components_to_ycbcr444(d, comp_data, comp_width, comp_height, rect)
   }
@@ -554,7 +554,7 @@ fn components_to_ycbcr(
     full.cb.unsafe_set(i, cb_plane.unsafe_get(i))
     full.cr.unsafe_set(i, cr_plane.unsafe_get(i))
   }
-  @image.AnyImage::YCbCr(full.sub_image(rect))
+  full.sub_image(rect)
 }
 
 ///|
@@ -564,7 +564,7 @@ fn components_to_ycbcr444(
   comp_width : FixedArray[Int],
   comp_height : FixedArray[Int],
   rect : @image.Rectangle,
-) -> @image.AnyImage {
+) -> &@image.Image {
   let (max_h, max_v) = max_sampling(d)
   let mut full_width = 0
   let mut full_height = 0
@@ -603,7 +603,7 @@ fn components_to_ycbcr444(
       )
     }
   }
-  @image.AnyImage::YCbCr(full.sub_image(rect))
+  full.sub_image(rect)
 }
 
 ///|
@@ -630,7 +630,7 @@ fn rgb_to_rgba(
   comp_data : FixedArray[FixedArray[Byte]],
   comp_width : FixedArray[Int],
   rect : @image.Rectangle,
-) -> @image.AnyImage {
+) -> &@image.Image {
   let (max_h, max_v) = max_sampling(d)
   let img = @image.new_image_rgba(rect)
   for y in 0..<d.height {
@@ -658,7 +658,7 @@ fn rgb_to_rgba(
       img.pix.unsafe_set(di + 3, b'\xff')
     }
   }
-  @image.AnyImage::RGBA(img)
+  img
 }
 
 ///|
@@ -667,7 +667,7 @@ fn components_to_cmyk(
   comp_data : FixedArray[FixedArray[Byte]],
   comp_width : FixedArray[Int],
   rect : @image.Rectangle,
-) -> @image.AnyImage raise JpegError {
+) -> &@image.Image raise JpegError {
   let (max_h, max_v) = max_sampling(d)
   if !d.adobe_transform_valid {
     raise JpegError::UnsupportedError(
@@ -719,7 +719,7 @@ fn components_to_cmyk(
       }
     }
   }
-  @image.AnyImage::CMYK(img)
+  img
 }
 
 ///|

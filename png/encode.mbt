@@ -10,7 +10,7 @@ pub(all) enum CompressionLevel {
 ///|
 /// Encodes an image as PNG.
 pub fn encode(
-  img : @image.AnyImage,
+  img : &@image.Image,
   compression? : CompressionLevel = DefaultCompression,
 ) -> Bytes raise Error {
   encode_with_compressor(img, compression, zlib_compress_png_data)
@@ -18,7 +18,7 @@ pub fn encode(
 
 ///|
 fn encode_with_compressor(
-  img : @image.AnyImage,
+  img : &@image.Image,
   compression : CompressionLevel,
   compressor : (Bytes, CompressionLevel) -> Bytes raise PngError,
 ) -> Bytes raise Error {
@@ -32,35 +32,11 @@ fn encode_with_compressor(
     buf.write_byte(png_header.unsafe_get(i))
   }
   let all_opaque = png_is_opaque(img)
-  if img is @image.AnyImage::Paletted(p) {
-    validate_png_palette_length(p.palette.colors.length())
-  }
-  // Determine color type based on image type
-  let (color_type, bit_depth) : (Byte, Byte) = match img {
-    @image.AnyImage::Gray(_) => (ct_grayscale, b'\x08')
-    @image.AnyImage::Gray16(_) => (ct_grayscale, b'\x10')
-    @image.AnyImage::Paletted(p) =>
-      (ct_paletted, png_palette_bit_depth(p.palette.colors.length()))
-    @image.AnyImage::RGBA(_)
-    | @image.AnyImage::NRGBA(_)
-    | @image.AnyImage::Alpha(_) =>
-      if all_opaque {
-        (ct_true_color, b'\x08')
-      } else {
-        (ct_true_color_alpha, b'\x08')
-      }
-    @image.AnyImage::RGBA64(_)
-    | @image.AnyImage::NRGBA64(_)
-    | @image.AnyImage::Alpha16(_)
-    | @image.AnyImage::YCbCr(_)
-    | @image.AnyImage::NYCbCrA(_)
-    | @image.AnyImage::CMYK(_)
-    | @image.AnyImage::Uniform(_) =>
-      if all_opaque {
-        (ct_true_color, b'\x10')
-      } else {
-        (ct_true_color_alpha, b'\x10')
-      }
+  // Determine color type: always use true color (with or without alpha), 8-bit
+  let (color_type, bit_depth) : (Byte, Byte) = if all_opaque {
+    (ct_true_color, b'\x08')
+  } else {
+    (ct_true_color_alpha, b'\x08')
   }
   // Write IHDR
   let ihdr = FixedArray::make(13, b'\x00')
@@ -72,75 +48,14 @@ fn encode_with_compressor(
   ihdr.unsafe_set(11, b'\x00') // filter
   ihdr.unsafe_set(12, b'\x00') // interlace
   write_chunk(buf, ct_ihdr, ihdr)
-  // Write PLTE if paletted
-  if img is @image.AnyImage::Paletted(p) {
-    let pal_data = FixedArray::make(p.palette.colors.length() * 3, b'\x00')
-    let mut has_alpha = false
-    for i, c in p.palette.colors {
-      let (r, g, b, a) = c.rgba()
-      pal_data.unsafe_set(i * 3, (r >> 8).to_byte())
-      pal_data.unsafe_set(i * 3 + 1, (g >> 8).to_byte())
-      pal_data.unsafe_set(i * 3 + 2, (b >> 8).to_byte())
-      if a != 0xffffU {
-        has_alpha = true
-      }
-    }
-    write_chunk(buf, ct_plte, pal_data)
-    if has_alpha {
-      let trns_data = FixedArray::make(p.palette.colors.length(), b'\xff')
-      for i, c in p.palette.colors {
-        let (_, _, _, a) = c.rgba()
-        trns_data.unsafe_set(i, (a >> 8).to_byte())
-      }
-      write_chunk(buf, ct_trns, trns_data)
-    }
-  }
+  // No PLTE chunk needed - always encoding as true color
   // Build raw image data (filter byte + row data)
   let raw_buf = @blit.Buffer::new()
   for y = bounds.min_y; y < bounds.max_y; y = y + 1 {
     // Write filter byte (None for simplicity)
     raw_buf.write_byte(ft_none)
     match color_type {
-      t if t == ct_grayscale && bit_depth == b'\x08' =>
-        match img {
-          @image.AnyImage::Gray(g) =>
-            for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
-              raw_buf.write_byte(g.gray_at(x, y).y)
-            }
-          _ =>
-            for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
-              guard @color.AnyModel::GrayModel.convert(img.at(x, y))
-                is @color.AnyColor::Gray(c) else {
-                continue
-              }
-              raw_buf.write_byte(c.y)
-            }
-        }
-      t if t == ct_grayscale && bit_depth == b'\x10' =>
-        match img {
-          @image.AnyImage::Gray16(g) =>
-            for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
-              let c = g.gray16_at(x, y)
-              raw_buf.write_byte((c.y >> 8).to_byte())
-              raw_buf.write_byte(c.y.to_byte())
-            }
-          _ =>
-            for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
-              guard @color.AnyModel::Gray16Model.convert(img.at(x, y))
-                is @color.AnyColor::Gray16(c) else {
-                continue
-              }
-              raw_buf.write_byte((c.y >> 8).to_byte())
-              raw_buf.write_byte(c.y.to_byte())
-            }
-        }
-      t if t == ct_paletted =>
-        match img {
-          @image.AnyImage::Paletted(p) =>
-            write_paletted_row(raw_buf, p, bounds, y, bit_depth)
-          _ => ()
-        }
-      t if t == ct_true_color && bit_depth == b'\x08' =>
+      t if t == ct_true_color =>
         for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
           let (r, g, b, a) = img.at(x, y).rgba()
           let (rr, gg, bb) = if a == 0U {
@@ -154,103 +69,27 @@ fn encode_with_compressor(
           raw_buf.write_byte((gg >> 8).to_byte())
           raw_buf.write_byte((bb >> 8).to_byte())
         }
-      t if t == ct_true_color && bit_depth == b'\x10' =>
+      _ =>
+        // ct_true_color_alpha, 8-bit
         for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
           let (r, g, b, a) = img.at(x, y).rgba()
-          let (rr, gg, bb) = if a == 0U {
-            (0U, 0U, 0U)
+          if a == 0U {
+            raw_buf.write_byte(b'\x00')
+            raw_buf.write_byte(b'\x00')
+            raw_buf.write_byte(b'\x00')
+            raw_buf.write_byte(b'\x00')
           } else if a == 0xffffU {
-            (r, g, b)
+            raw_buf.write_byte((r >> 8).to_byte())
+            raw_buf.write_byte((g >> 8).to_byte())
+            raw_buf.write_byte((b >> 8).to_byte())
+            raw_buf.write_byte(b'\xff')
           } else {
-            (r * 0xffffU / a, g * 0xffffU / a, b * 0xffffU / a)
+            raw_buf.write_byte(((r * 0xffffU / a) >> 8).to_byte())
+            raw_buf.write_byte(((g * 0xffffU / a) >> 8).to_byte())
+            raw_buf.write_byte(((b * 0xffffU / a) >> 8).to_byte())
+            raw_buf.write_byte((a >> 8).to_byte())
           }
-          raw_buf.write_byte((rr >> 8).to_byte())
-          raw_buf.write_byte(rr.to_byte())
-          raw_buf.write_byte((gg >> 8).to_byte())
-          raw_buf.write_byte(gg.to_byte())
-          raw_buf.write_byte((bb >> 8).to_byte())
-          raw_buf.write_byte(bb.to_byte())
         }
-      t if t == ct_true_color_alpha && bit_depth == b'\x08' =>
-        match img {
-          @image.AnyImage::NRGBA(n) =>
-            for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
-              let c = n.nrgba_at(x, y)
-              raw_buf.write_byte(c.r)
-              raw_buf.write_byte(c.g)
-              raw_buf.write_byte(c.b)
-              raw_buf.write_byte(c.a)
-            }
-          @image.AnyImage::RGBA(rgba) => {
-            let row_off = rgba.pix_offset +
-              (y - rgba.rect.min_y) * rgba.stride +
-              (bounds.min_x - rgba.rect.min_x) * 4
-            for x in 0..<width {
-              let si = row_off + x * 4
-              let r = rgba.pix.unsafe_get(si)
-              let g = rgba.pix.unsafe_get(si + 1)
-              let b = rgba.pix.unsafe_get(si + 2)
-              let a = rgba.pix.unsafe_get(si + 3)
-              if a == b'\xff' {
-                raw_buf.write_byte(r)
-                raw_buf.write_byte(g)
-                raw_buf.write_byte(b)
-                raw_buf.write_byte(b'\xff')
-              } else if a == b'\x00' {
-                raw_buf.write_byte(b'\x00')
-                raw_buf.write_byte(b'\x00')
-                raw_buf.write_byte(b'\x00')
-                raw_buf.write_byte(b'\x00')
-              } else {
-                let aa = a.to_uint()
-                raw_buf.write_byte((r.to_uint() * 0xffU / aa).to_byte())
-                raw_buf.write_byte((g.to_uint() * 0xffU / aa).to_byte())
-                raw_buf.write_byte((b.to_uint() * 0xffU / aa).to_byte())
-                raw_buf.write_byte(a)
-              }
-            }
-          }
-          _ =>
-            for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
-              let (r, g, b, a) = img.at(x, y).rgba()
-              if a == 0U {
-                raw_buf.write_byte(b'\x00')
-                raw_buf.write_byte(b'\x00')
-                raw_buf.write_byte(b'\x00')
-                raw_buf.write_byte(b'\x00')
-              } else if a == 0xffffU {
-                raw_buf.write_byte((r >> 8).to_byte())
-                raw_buf.write_byte((g >> 8).to_byte())
-                raw_buf.write_byte((b >> 8).to_byte())
-                raw_buf.write_byte(b'\xff')
-              } else {
-                raw_buf.write_byte(((r * 0xffffU / a) >> 8).to_byte())
-                raw_buf.write_byte(((g * 0xffffU / a) >> 8).to_byte())
-                raw_buf.write_byte(((b * 0xffffU / a) >> 8).to_byte())
-                raw_buf.write_byte((a >> 8).to_byte())
-              }
-            }
-        }
-      t if t == ct_true_color_alpha && bit_depth == b'\x10' =>
-        for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
-          let (r, g, b, a) = img.at(x, y).rgba()
-          let (rr, gg, bb) = if a == 0U {
-            (0U, 0U, 0U)
-          } else if a == 0xffffU {
-            (r, g, b)
-          } else {
-            (r * 0xffffU / a, g * 0xffffU / a, b * 0xffffU / a)
-          }
-          raw_buf.write_byte((rr >> 8).to_byte())
-          raw_buf.write_byte(rr.to_byte())
-          raw_buf.write_byte((gg >> 8).to_byte())
-          raw_buf.write_byte(gg.to_byte())
-          raw_buf.write_byte((bb >> 8).to_byte())
-          raw_buf.write_byte(bb.to_byte())
-          raw_buf.write_byte((a >> 8).to_byte())
-          raw_buf.write_byte(a.to_byte())
-        }
-      _ => ()
     }
   }
   let raw_bytes = filter_png_rows(
@@ -317,7 +156,7 @@ fn zlib_compress_png_data(
 }
 
 ///|
-fn png_is_opaque(img : @image.AnyImage) -> Bool {
+fn png_is_opaque(img : &@image.Image) -> Bool {
   let bounds = img.bounds()
   for y = bounds.min_y; y < bounds.max_y; y = y + 1 {
     for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
@@ -331,13 +170,6 @@ fn png_is_opaque(img : @image.AnyImage) -> Bool {
 }
 
 ///|
-fn validate_png_palette_length(n : Int) -> Unit raise PngError {
-  if n < 1 || n > 256 {
-    raise PngError::FormatError("bad palette length: " + n.to_string())
-  }
-}
-
-///|
 fn validate_png_image_size(
   width : Int64,
   height : Int64,
@@ -346,19 +178,6 @@ fn validate_png_image_size(
     raise PngError::FormatError(
       "invalid image size: " + width.to_string() + "x" + height.to_string(),
     )
-  }
-}
-
-///|
-fn png_palette_bit_depth(n : Int) -> Byte {
-  if n <= 2 {
-    b'\x01'
-  } else if n <= 4 {
-    b'\x02'
-  } else if n <= 16 {
-    b'\x04'
-  } else {
-    b'\x08'
   }
 }
 
@@ -486,42 +305,6 @@ fn select_png_filter(
   }
 
   best_filter
-}
-
-///|
-fn write_paletted_row(
-  raw_buf : @blit.Buffer,
-  img : @image.ImagePaletted,
-  bounds : @image.Rectangle,
-  y : Int,
-  bit_depth : Byte,
-) -> Unit {
-  if bit_depth == b'\x08' {
-    for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
-      raw_buf.write_byte(img.color_index_at(x, y))
-    }
-    return
-  }
-  let bits_per_pixel = bit_depth.to_int()
-  let pixels_per_byte = 8 / bits_per_pixel
-  let mut packed = 0
-  let mut count = 0
-  for x = bounds.min_x; x < bounds.max_x; x = x + 1 {
-    packed = (packed << bits_per_pixel) | img.color_index_at(x, y).to_int()
-    count += 1
-    if count == pixels_per_byte {
-      raw_buf.write_byte(packed.to_byte())
-      packed = 0
-      count = 0
-    }
-  }
-  if count != 0 {
-    while count < pixels_per_byte {
-      packed = packed << bits_per_pixel
-      count += 1
-    }
-    raw_buf.write_byte(packed.to_byte())
-  }
 }
 
 ///|

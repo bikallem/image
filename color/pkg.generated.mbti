@@ -2,11 +2,11 @@
 package "bikallem/image/color"
 
 // Values
-pub let black : AnyColor
+pub let black : Gray16
 
 pub fn cmyk_to_rgb(Byte, Byte, Byte, Byte) -> (Byte, Byte, Byte)
 
-pub let fully_opaque : AnyColor
+pub let fully_opaque : Alpha16
 
 pub fn rgb_to_cmyk(Byte, Byte, Byte) -> (Byte, Byte, Byte, Byte)
 
@@ -14,9 +14,9 @@ pub fn rgb_to_ycbcr(Byte, Byte, Byte) -> (Byte, Byte, Byte)
 
 pub fn sq_diff(UInt, UInt) -> UInt
 
-pub let transparent : AnyColor
+pub let transparent : Alpha16
 
-pub let white : AnyColor
+pub let white : Gray16
 
 pub fn ycbcr_to_rgb(Byte, Byte, Byte) -> (Byte, Byte, Byte)
 
@@ -33,36 +33,13 @@ pub(all) struct Alpha16 {
 } derive(Eq, Show)
 pub impl Color for Alpha16
 
-pub(all) enum AnyColor {
-  RGBA(RGBA)
-  RGBA64(RGBA64)
-  NRGBA(NRGBA)
-  NRGBA64(NRGBA64)
-  Alpha(Alpha)
-  Alpha16(Alpha16)
-  Gray(Gray)
-  Gray16(Gray16)
-  YCbCr(YCbCr)
-  NYCbCrA(NYCbCrA)
-  CMYK(CMYK)
-} derive(Eq, Show)
-pub impl Color for AnyColor
-
-pub(all) enum AnyModel {
-  RGBAModel
-  RGBA64Model
-  NRGBAModel
-  NRGBA64Model
-  AlphaModel
-  Alpha16Model
-  GrayModel
-  Gray16Model
-  YCbCrModel
-  NYCbCrAModel
-  CMYKModel
-  PaletteModel(Palette)
+pub(all) struct Alpha16Model {
 } derive(Show)
-pub fn AnyModel::convert(Self, AnyColor) -> AnyColor
+pub impl Model for Alpha16Model
+
+pub(all) struct AlphaModel {
+} derive(Show)
+pub impl Model for AlphaModel
 
 pub(all) struct CMYK {
   c : Byte
@@ -71,6 +48,10 @@ pub(all) struct CMYK {
   k : Byte
 } derive(Eq, Show)
 pub impl Color for CMYK
+
+pub(all) struct CMYKModel {
+} derive(Show)
+pub impl Model for CMYKModel
 
 pub(all) struct Gray {
   y : Byte
@@ -81,6 +62,14 @@ pub(all) struct Gray16 {
   y : UInt
 } derive(Eq, Show)
 pub impl Color for Gray16
+
+pub(all) struct Gray16Model {
+} derive(Show)
+pub impl Model for Gray16Model
+
+pub(all) struct GrayModel {
+} derive(Show)
+pub impl Model for GrayModel
 
 pub(all) struct NRGBA {
   r : Byte
@@ -98,6 +87,14 @@ pub(all) struct NRGBA64 {
 } derive(Eq, Show)
 pub impl Color for NRGBA64
 
+pub(all) struct NRGBA64Model {
+} derive(Show)
+pub impl Model for NRGBA64Model
+
+pub(all) struct NRGBAModel {
+} derive(Show)
+pub impl Model for NRGBAModel
+
 pub(all) struct NYCbCrA {
   y : Byte
   cb : Byte
@@ -107,11 +104,21 @@ pub(all) struct NYCbCrA {
 pub fn NYCbCrA::ycbcr(Self) -> YCbCr
 pub impl Color for NYCbCrA
 
-pub(all) struct Palette {
-  colors : Array[AnyColor]
+pub(all) struct NYCbCrAModel {
 } derive(Show)
-pub fn Palette::convert(Self, AnyColor) -> AnyColor?
-pub fn Palette::index(Self, AnyColor) -> Int
+pub impl Model for NYCbCrAModel
+
+pub(all) struct Palette {
+  colors : Array[&Color]
+}
+pub fn Palette::convert(Self, &Color) -> &Color?
+pub fn Palette::index(Self, &Color) -> Int
+pub impl Show for Palette
+
+pub(all) struct PaletteModel {
+  palette : Palette
+}
+pub impl Model for PaletteModel
 
 pub(all) struct RGBA {
   r : Byte
@@ -129,6 +136,14 @@ pub(all) struct RGBA64 {
 } derive(Eq, Show)
 pub impl Color for RGBA64
 
+pub(all) struct RGBA64Model {
+} derive(Show)
+pub impl Model for RGBA64Model
+
+pub(all) struct RGBAModel {
+} derive(Show)
+pub impl Model for RGBAModel
+
 pub(all) struct YCbCr {
   y : Byte
   cb : Byte
@@ -136,10 +151,19 @@ pub(all) struct YCbCr {
 } derive(Eq, Show)
 pub impl Color for YCbCr
 
+pub(all) struct YCbCrModel {
+} derive(Show)
+pub impl Model for YCbCrModel
+
 // Type aliases
 
 // Traits
 pub(open) trait Color {
   rgba(Self) -> (UInt, UInt, UInt, UInt)
+}
+
+pub(open) trait Model {
+  convert(Self, &Color) -> &Color
+  palette(Self) -> Palette? = _
 }
 

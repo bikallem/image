@@ -8,13 +8,13 @@ import {
 // Values
 pub fn build_huffman_table(HuffmanTable, FixedArray[Int], FixedArray[Int]) -> Unit raise JpegError
 
-pub fn decode(Bytes) -> @image.AnyImage raise
+pub fn decode(Bytes) -> &@image.Image raise
 
 pub fn decode_config(Bytes) -> @image.Config raise
 
 pub fn decode_huffman(Decoder, HuffmanTable) -> Int raise JpegError
 
-pub fn encode(@image.AnyImage, quality? : Int) -> Bytes raise
+pub fn encode(&@image.Image, quality? : Int) -> Bytes raise
 
 pub fn fdct(FixedArray[Byte], FixedArray[Int]) -> Unit
 

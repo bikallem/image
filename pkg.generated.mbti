@@ -2,19 +2,17 @@
 package "bikallem/image"
 
 // Values
-pub fn decode(Bytes) -> (@bikallem/image/image.AnyImage, String) raise
+pub fn decode(Bytes) -> (&@bikallem/image/image.Image, String) raise
 
 pub fn decode_config(Bytes) -> (@bikallem/image/image.Config, String) raise
 
-pub fn register_format(String, String, (Bytes) -> @bikallem/image/image.AnyImage raise, (Bytes) -> @bikallem/image/image.Config raise) -> Unit
+pub fn register_format(String, String, (Bytes) -> &@bikallem/image/image.Image raise, (Bytes) -> @bikallem/image/image.Config raise) -> Unit
 
 // Errors
 
 // Types and methods
 
 // Type aliases
-pub using @bikallem/image/image {type AnyImage}
-
 pub using @bikallem/image/image {type Config}
 
 pub using @bikallem/image/image {type ImageError}
