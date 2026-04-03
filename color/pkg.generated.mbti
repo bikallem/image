@@ -1,6 +1,10 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "bikallem/image/color"
 
+import {
+  "moonbitlang/core/debug",
+}
+
 // Values
 pub let black : Gray16
 
@@ -25,20 +29,20 @@ pub fn ycbcr_to_rgb(Byte, Byte, Byte) -> (Byte, Byte, Byte)
 // Types and methods
 pub(all) struct Alpha {
   a : Byte
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 pub impl Color for Alpha
 
 pub(all) struct Alpha16 {
   a : UInt
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 pub impl Color for Alpha16
 
 pub(all) struct Alpha16Model {
-} derive(Show)
+} derive(@debug.Debug)
 pub impl Model for Alpha16Model
 
 pub(all) struct AlphaModel {
-} derive(Show)
+} derive(@debug.Debug)
 pub impl Model for AlphaModel
 
 pub(all) struct CMYK {
@@ -46,29 +50,29 @@ pub(all) struct CMYK {
   m : Byte
   y : Byte
   k : Byte
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 pub impl Color for CMYK
 
 pub(all) struct CMYKModel {
-} derive(Show)
+} derive(@debug.Debug)
 pub impl Model for CMYKModel
 
 pub(all) struct Gray {
   y : Byte
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 pub impl Color for Gray
 
 pub(all) struct Gray16 {
   y : UInt
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 pub impl Color for Gray16
 
 pub(all) struct Gray16Model {
-} derive(Show)
+} derive(@debug.Debug)
 pub impl Model for Gray16Model
 
 pub(all) struct GrayModel {
-} derive(Show)
+} derive(@debug.Debug)
 pub impl Model for GrayModel
 
 pub(all) struct NRGBA {
@@ -76,7 +80,7 @@ pub(all) struct NRGBA {
   g : Byte
   b : Byte
   a : Byte
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 pub impl Color for NRGBA
 
 pub(all) struct NRGBA64 {
@@ -84,15 +88,15 @@ pub(all) struct NRGBA64 {
   g : UInt
   b : UInt
   a : UInt
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 pub impl Color for NRGBA64
 
 pub(all) struct NRGBA64Model {
-} derive(Show)
+} derive(@debug.Debug)
 pub impl Model for NRGBA64Model
 
 pub(all) struct NRGBAModel {
-} derive(Show)
+} derive(@debug.Debug)
 pub impl Model for NRGBAModel
 
 pub(all) struct NYCbCrA {
@@ -100,12 +104,12 @@ pub(all) struct NYCbCrA {
   cb : Byte
   cr : Byte
   a : Byte
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 pub fn NYCbCrA::ycbcr(Self) -> YCbCr
 pub impl Color for NYCbCrA
 
 pub(all) struct NYCbCrAModel {
-} derive(Show)
+} derive(@debug.Debug)
 pub impl Model for NYCbCrAModel
 
 pub(all) struct Palette {
@@ -125,7 +129,7 @@ pub(all) struct RGBA {
   g : Byte
   b : Byte
   a : Byte
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 pub impl Color for RGBA
 
 pub(all) struct RGBA64 {
@@ -133,26 +137,26 @@ pub(all) struct RGBA64 {
   g : UInt
   b : UInt
   a : UInt
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 pub impl Color for RGBA64
 
 pub(all) struct RGBA64Model {
-} derive(Show)
+} derive(@debug.Debug)
 pub impl Model for RGBA64Model
 
 pub(all) struct RGBAModel {
-} derive(Show)
+} derive(@debug.Debug)
 pub impl Model for RGBAModel
 
 pub(all) struct YCbCr {
   y : Byte
   cb : Byte
   cr : Byte
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 pub impl Color for YCbCr
 
 pub(all) struct YCbCrModel {
-} derive(Show)
+} derive(@debug.Debug)
 pub impl Model for YCbCrModel
 
 // Type aliases

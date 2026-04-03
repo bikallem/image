@@ -5,7 +5,7 @@ pub(all) enum CompressionLevel {
   NoCompression
   BestSpeed
   BestCompression
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 /// Encodes an image as PNG.
@@ -141,16 +141,18 @@ fn zlib_compress_png_data(
         "zlib compression failed: " + e.to_string(),
       )
   }
-  loop deflater.encode(None) {
-    @zlib.Data(chunk) => {
-      out.write_bytesview(chunk)
-      continue deflater.encode(None)
+  for enc = deflater.encode(None) {
+    match enc {
+      @zlib.Data(chunk) => {
+        out.write_bytesview(chunk)
+        continue deflater.encode(None)
+      }
+      @zlib.End | @zlib.Ok => break
+      @zlib.Error(e) =>
+        raise PngError::CompressionError(
+          "zlib compression failed: " + e.to_string(),
+        )
     }
-    @zlib.End | @zlib.Ok => break
-    @zlib.Error(e) =>
-      raise PngError::CompressionError(
-        "zlib compression failed: " + e.to_string(),
-      )
   }
   out.to_bytes()
 }

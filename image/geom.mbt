@@ -4,7 +4,7 @@
 pub(all) struct Point {
   x : Int
   y : Int
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub fn Point::add(self : Point, q : Point) -> Point {
@@ -54,7 +54,14 @@ pub(all) struct Rectangle {
   min_y : Int
   max_x : Int
   max_y : Int
-} derive(Eq, Show)
+} derive(Eq, Debug)
+
+///|
+pub impl Show for Rectangle with output(self, logger) {
+  logger.write_string(
+    "(\{self.min_x},\{self.min_y})-(\{self.max_x},\{self.max_y})",
+  )
+}
 
 ///|
 pub fn Rectangle::min(self : Rectangle) -> Point {

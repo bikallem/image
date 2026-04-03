@@ -12,7 +12,7 @@ fn div65535(x : UInt) -> UInt {
 pub(all) enum Op {
   Over
   Src
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub fn draw(

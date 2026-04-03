@@ -7,16 +7,6 @@ pub(all) struct Config {
 }
 
 ///|
-pub impl Show for Config with output(self, logger) {
-  logger
-  ..write_string("Config { width: ")
-  ..write_string(self.width.to_string())
-  ..write_string(", height: ")
-  ..write_string(self.height.to_string())
-  .write_string(" }")
-}
-
-///|
 pub(open) trait Image {
   color_model(Self) -> &@color.Model
   bounds(Self) -> Rectangle
@@ -27,4 +17,4 @@ pub(open) trait Image {
 ///|
 pub(all) suberror ImageError {
   FormatError(String)
-} derive(Show)
+} derive(Debug)

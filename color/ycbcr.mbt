@@ -47,7 +47,7 @@ pub(all) struct YCbCr {
   y : Byte
   cb : Byte
   cr : Byte
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub impl Color for YCbCr with rgba(self) -> (UInt, UInt, UInt, UInt) {
@@ -73,7 +73,7 @@ pub(all) struct NYCbCrA {
   cb : Byte
   cr : Byte
   a : Byte
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub fn NYCbCrA::ycbcr(self : NYCbCrA) -> YCbCr {
@@ -138,7 +138,7 @@ pub(all) struct CMYK {
   m : Byte
   y : Byte
   k : Byte
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub impl Color for CMYK with rgba(self) -> (UInt, UInt, UInt, UInt) {

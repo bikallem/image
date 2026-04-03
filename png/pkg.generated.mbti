@@ -3,6 +3,7 @@ package "bikallem/image/png"
 
 import {
   "bikallem/image/image",
+  "moonbitlang/core/debug",
 }
 
 // Values
@@ -20,7 +21,7 @@ pub(all) suberror PngError {
   UnsupportedError(String)
   CompressionError(String)
   UnexpectedEOF
-} derive(Show)
+} derive(@debug.Debug)
 
 // Types and methods
 pub(all) struct ByteReader {
@@ -39,7 +40,7 @@ pub(all) enum CompressionLevel {
   NoCompression
   BestSpeed
   BestCompression
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 
 // Type aliases
 

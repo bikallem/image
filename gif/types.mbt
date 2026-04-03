@@ -3,7 +3,7 @@ pub(all) suberror GifError {
   FormatError(String)
   UnsupportedError(String)
   UnexpectedEOF
-} derive(Show)
+} derive(Debug)
 
 ///|
 /// GIF represents the multiple frames of a GIF image.

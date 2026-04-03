@@ -3,7 +3,7 @@ pub(all) suberror JpegError {
   FormatError(String)
   UnsupportedError(String)
   UnexpectedEOF
-} derive(Show)
+} derive(Debug)
 
 ///|
 // JPEG marker constants

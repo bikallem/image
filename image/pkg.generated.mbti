@@ -3,6 +3,7 @@ package "bikallem/image/image"
 
 import {
   "bikallem/image/color",
+  "moonbitlang/core/debug",
 }
 
 // Values
@@ -45,7 +46,7 @@ pub fn register_format(String, String, (Bytes) -> &Image raise, (Bytes) -> Confi
 // Errors
 pub(all) suberror ImageError {
   FormatError(String)
-} derive(Show)
+} derive(@debug.Debug)
 
 // Types and methods
 pub(all) struct Config {
@@ -53,7 +54,6 @@ pub(all) struct Config {
   width : Int
   height : Int
 }
-pub impl Show for Config
 
 pub(all) struct ImageAlpha {
   pix : FixedArray[Byte]
@@ -236,7 +236,7 @@ pub impl Image for ImageYCbCr
 pub(all) struct Point {
   x : Int
   y : Int
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 pub fn Point::add(Self, Self) -> Self
 pub fn Point::div(Self, Int) -> Self
 pub fn Point::in_(Self, Rectangle) -> Bool
@@ -249,7 +249,7 @@ pub(all) struct Rectangle {
   min_y : Int
   max_x : Int
   max_y : Int
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 pub fn Rectangle::add(Self, Point) -> Self
 pub fn Rectangle::canon(Self) -> Self
 pub fn Rectangle::dx(Self) -> Int
@@ -265,6 +265,7 @@ pub fn Rectangle::overlaps(Self, Self) -> Bool
 pub fn Rectangle::size(Self) -> Point
 pub fn Rectangle::sub(Self, Point) -> Self
 pub fn Rectangle::union(Self, Self) -> Self
+pub impl Show for Rectangle
 
 pub(all) enum YCbCrSubsampleRatio {
   Ratio444
@@ -273,7 +274,7 @@ pub(all) enum YCbCrSubsampleRatio {
   Ratio440
   Ratio411
   Ratio410
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 
 // Type aliases
 

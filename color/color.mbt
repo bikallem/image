@@ -14,7 +14,7 @@ pub(all) struct RGBA {
   g : Byte
   b : Byte
   a : Byte
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub impl Color for RGBA with rgba(self) -> (UInt, UInt, UInt, UInt) {
@@ -38,7 +38,7 @@ pub(all) struct RGBA64 {
   g : UInt
   b : UInt
   a : UInt
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub impl Color for RGBA64 with rgba(self) -> (UInt, UInt, UInt, UInt) {
@@ -53,7 +53,7 @@ pub(all) struct NRGBA {
   g : Byte
   b : Byte
   a : Byte
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub impl Color for NRGBA with rgba(self) -> (UInt, UInt, UInt, UInt) {
@@ -77,7 +77,7 @@ pub(all) struct NRGBA64 {
   g : UInt
   b : UInt
   a : UInt
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub impl Color for NRGBA64 with rgba(self) -> (UInt, UInt, UInt, UInt) {
@@ -93,7 +93,7 @@ pub impl Color for NRGBA64 with rgba(self) -> (UInt, UInt, UInt, UInt) {
 #valtype
 pub(all) struct Alpha {
   a : Byte
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub impl Color for Alpha with rgba(self) -> (UInt, UInt, UInt, UInt) {
@@ -107,7 +107,7 @@ pub impl Color for Alpha with rgba(self) -> (UInt, UInt, UInt, UInt) {
 #valtype
 pub(all) struct Alpha16 {
   a : UInt
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub impl Color for Alpha16 with rgba(self) -> (UInt, UInt, UInt, UInt) {
@@ -120,7 +120,7 @@ pub impl Color for Alpha16 with rgba(self) -> (UInt, UInt, UInt, UInt) {
 #valtype
 pub(all) struct Gray {
   y : Byte
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub impl Color for Gray with rgba(self) -> (UInt, UInt, UInt, UInt) {
@@ -134,7 +134,7 @@ pub impl Color for Gray with rgba(self) -> (UInt, UInt, UInt, UInt) {
 #valtype
 pub(all) struct Gray16 {
   y : UInt
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub impl Color for Gray16 with rgba(self) -> (UInt, UInt, UInt, UInt) {

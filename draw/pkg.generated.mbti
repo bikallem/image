@@ -3,6 +3,7 @@ package "bikallem/image/draw"
 
 import {
   "bikallem/image/image",
+  "moonbitlang/core/debug",
 }
 
 // Values
@@ -18,7 +19,7 @@ pub fn floyd_steinberg_draw(@image.ImagePaletted, @image.Rectangle, &@image.Imag
 pub(all) enum Op {
   Over
   Src
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
 
 // Type aliases
 

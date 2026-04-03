@@ -11,7 +11,7 @@ impl Model with palette(_self) -> Palette? {
 }
 
 ///|
-pub(all) struct RGBAModel {} derive(Show)
+pub(all) struct RGBAModel {} derive(Debug)
 
 ///|
 pub impl Model for RGBAModel with convert(_self, c) -> &Color {
@@ -25,7 +25,7 @@ pub impl Model for RGBAModel with convert(_self, c) -> &Color {
 }
 
 ///|
-pub(all) struct RGBA64Model {} derive(Show)
+pub(all) struct RGBA64Model {} derive(Debug)
 
 ///|
 pub impl Model for RGBA64Model with convert(_self, c) -> &Color {
@@ -34,7 +34,7 @@ pub impl Model for RGBA64Model with convert(_self, c) -> &Color {
 }
 
 ///|
-pub(all) struct NRGBAModel {} derive(Show)
+pub(all) struct NRGBAModel {} derive(Debug)
 
 ///|
 pub impl Model for NRGBAModel with convert(_self, c) -> &Color {
@@ -62,7 +62,7 @@ pub impl Model for NRGBAModel with convert(_self, c) -> &Color {
 }
 
 ///|
-pub(all) struct NRGBA64Model {} derive(Show)
+pub(all) struct NRGBA64Model {} derive(Debug)
 
 ///|
 pub impl Model for NRGBA64Model with convert(_self, c) -> &Color {
@@ -80,7 +80,7 @@ pub impl Model for NRGBA64Model with convert(_self, c) -> &Color {
 }
 
 ///|
-pub(all) struct AlphaModel {} derive(Show)
+pub(all) struct AlphaModel {} derive(Debug)
 
 ///|
 pub impl Model for AlphaModel with convert(_self, c) -> &Color {
@@ -89,7 +89,7 @@ pub impl Model for AlphaModel with convert(_self, c) -> &Color {
 }
 
 ///|
-pub(all) struct Alpha16Model {} derive(Show)
+pub(all) struct Alpha16Model {} derive(Debug)
 
 ///|
 pub impl Model for Alpha16Model with convert(_self, c) -> &Color {
@@ -98,7 +98,7 @@ pub impl Model for Alpha16Model with convert(_self, c) -> &Color {
 }
 
 ///|
-pub(all) struct GrayModel {} derive(Show)
+pub(all) struct GrayModel {} derive(Debug)
 
 ///|
 pub impl Model for GrayModel with convert(_self, c) -> &Color {
@@ -108,7 +108,7 @@ pub impl Model for GrayModel with convert(_self, c) -> &Color {
 }
 
 ///|
-pub(all) struct Gray16Model {} derive(Show)
+pub(all) struct Gray16Model {} derive(Debug)
 
 ///|
 pub impl Model for Gray16Model with convert(_self, c) -> &Color {
@@ -118,7 +118,7 @@ pub impl Model for Gray16Model with convert(_self, c) -> &Color {
 }
 
 ///|
-pub(all) struct YCbCrModel {} derive(Show)
+pub(all) struct YCbCrModel {} derive(Debug)
 
 ///|
 pub impl Model for YCbCrModel with convert(_self, c) -> &Color {
@@ -132,7 +132,7 @@ pub impl Model for YCbCrModel with convert(_self, c) -> &Color {
 }
 
 ///|
-pub(all) struct NYCbCrAModel {} derive(Show)
+pub(all) struct NYCbCrAModel {} derive(Debug)
 
 ///|
 pub impl Model for NYCbCrAModel with convert(_self, c) -> &Color {
@@ -151,7 +151,7 @@ pub impl Model for NYCbCrAModel with convert(_self, c) -> &Color {
 }
 
 ///|
-pub(all) struct CMYKModel {} derive(Show)
+pub(all) struct CMYKModel {} derive(Debug)
 
 ///|
 pub impl Model for CMYKModel with convert(_self, c) -> &Color {

@@ -6,7 +6,7 @@ pub(all) enum YCbCrSubsampleRatio {
   Ratio440
   Ratio411
   Ratio410
-} derive(Eq, Show)
+} derive(Eq, Debug)
 
 ///|
 pub(all) struct ImageYCbCr {

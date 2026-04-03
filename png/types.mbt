@@ -4,7 +4,7 @@ pub(all) suberror PngError {
   UnsupportedError(String)
   CompressionError(String)
   UnexpectedEOF
-} derive(Show)
+} derive(Debug)
 
 ///|
 let png_header : FixedArray[Byte] = [
